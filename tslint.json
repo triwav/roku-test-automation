@@ -19,6 +19,7 @@
             "tabs",
             4
         ],
+        "curly": false,
         "no-console": false,
         "object-literal-sort-keys": false,
         "trailing-comma": false,
@@ -46,7 +47,8 @@
         "object-literal-shorthand": false,
         "only-arrow-functions": false,
         "space-before-function-paren": false,
-        "no-unused-expression": false
+        "no-unused-expression": false,
+        "no-floating-promises": true
     },
     "rulesDirectory": []
 }

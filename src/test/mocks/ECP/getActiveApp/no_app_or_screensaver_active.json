@@ -1,0 +1,11 @@
+{
+	"name": "active-app",
+	"value": "",
+	"attributes": {},
+	"children": [{
+		"name": "app",
+		"value": "Roku",
+		"attributes": {},
+		"children": []
+	}]
+}

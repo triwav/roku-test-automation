@@ -1,0 +1,24 @@
+{
+	"name": "active-app",
+	"value": "",
+	"attributes": {},
+	"children": [{
+		"name": "app",
+		"value": "mockAppTitle",
+		"attributes": {
+			"id": "dev",
+			"type": "appl",
+			"version": "1.0.0"
+		},
+		"children": []
+	}, {
+		"name": "screensaver",
+		"value": "Aquatic Life",
+		"attributes": {
+			"id": "261525",
+			"type": "ssvr",
+			"version": "13.0.90000006"
+		},
+		"children": []
+	}]
+}

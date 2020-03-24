@@ -1,0 +1,16 @@
+{
+	"device": {
+		"ip": "",
+		"password": "",
+		"proxy": "",
+		"screenshotFormat": "png"
+	},
+	"channel": {
+		"id": "dev"
+	},
+	"defaults": {
+		"ecp": {
+			"keyPressDelay": 1000
+		}
+	}
+}
