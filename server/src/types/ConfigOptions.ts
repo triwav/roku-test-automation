@@ -7,7 +7,7 @@ export interface ConfigOptions {
 export interface DeviceConfigOptions {
 	ip: string;
 	password: string;
-	proxy?: string;
+	debugProxy?: string;
 	screenshotFormat?: ScreenshotFormat;
 }
 

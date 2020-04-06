@@ -13,7 +13,7 @@ export const ConfigOptions = t.iface([], {
 export const DeviceConfigOptions = t.iface([], {
   "ip": "string",
   "password": "string",
-  "proxy": t.opt("string"),
+  "debugProxy": t.opt("string"),
   "screenshotFormat": t.opt("ScreenshotFormat"),
 });
 

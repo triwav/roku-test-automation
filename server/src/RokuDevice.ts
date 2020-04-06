@@ -1,11 +1,12 @@
 import * as needle from 'needle';
 import querystring from 'needle/lib/querystring';
 import { ScreenshotFormat } from './types/ConfigOptions';
+import * as utils from './utils';
 
 export class RokuDevice {
 	public ip: string;
 	public password: string;
-	private proxy = '';
+	private debugProxy = '';
 	private screenshotFormat: ScreenshotFormat;
 
 	constructor(ip: string, password: string, screenshotFormat: ScreenshotFormat = 'jpg') {
@@ -14,8 +15,8 @@ export class RokuDevice {
 		this.screenshotFormat = screenshotFormat;
 	}
 
-	public setProxy(proxy: string) {
-		this.proxy = proxy;
+	public setDebugProxy(debugProxy: string) {
+		this.debugProxy = debugProxy;
 	}
 
 	public async sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {
@@ -41,9 +42,7 @@ export class RokuDevice {
 	}
 
 	public async getTestScreenshot(contextOrSuite: Mocha.Context | Mocha.Suite) {
-		// TODO FIXME
-		// let outputFilePath = `${currentSuite.title}-${currentSuite.ctx.test?.title}`;
-		// await this.getScreenshot(outputFilePath);
+		await this.getScreenshot(utils.getTestTitlePath(contextOrSuite).join('/'));
 	}
 
 	private async generateScreenshot() {
@@ -58,6 +57,7 @@ export class RokuDevice {
 	}
 
 	private async saveScreenshot(outputFilePath: string) {
+		await utils.ensureDirExistForFilePath(outputFilePath);
 		const options = this.getOptions(true);
 		const ext = `.${this.screenshotFormat}`;
 		options.output = outputFilePath + ext;
@@ -76,8 +76,8 @@ export class RokuDevice {
 			options.auth = 'digest';
 		}
 
-		if (this.proxy.length > 0) {
-			options.proxy = this.proxy;
+		if (this.debugProxy.length > 0) {
+			options.proxy = this.debugProxy;
 		}
 		return options;
 	}

@@ -1,0 +1,6 @@
+<?rokuml version="1.0" encoding="utf-8" ?>
+<component name="RTA_OnDeviceTask" extends="Task">
+	<script type="text/brightscript" uri="RTA_OnDeviceTask.brs" />
+	<script type="text/brightscript" uri="pkg:/source/RTA_OnDeviceTask.brs" />
+	<!-- Placeholder for now -->
+</component>

@@ -1,5 +1,7 @@
 import * as fsExtra from 'fs-extra';
+import * as path from 'path';
 import * as Mocha from 'mocha';
+
 import { ECP } from './ECP';
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
@@ -26,8 +28,8 @@ export function setupFromConfig(config: ConfigOptions) {
 	const deviceConfig = config.device;
 
 	const device = new RokuDevice(deviceConfig.ip, deviceConfig.password, deviceConfig.screenshotFormat);
-	if (deviceConfig.proxy) {
-		device.setProxy(deviceConfig.proxy);
+	if (deviceConfig.debugProxy) {
+		device.setDebugProxy(deviceConfig.debugProxy);
 	}
 	const ecp = new ECP(device, config);
 
@@ -72,4 +74,8 @@ export function getTestTitlePath(contextOrSuite: Mocha.Context | Mocha.Suite) {
 export function generateFileNameForTest(contextOrSuite: Mocha.Context | Mocha.Suite, extension: string) {
 	const titlePath = getTestTitlePath(contextOrSuite);
 	return titlePath.join('/') + `.${extension}`;
+}
+
+export async function ensureDirExistForFilePath(filePath: string) {
+	await fsExtra.ensureDir(path.dirname(filePath));
 }

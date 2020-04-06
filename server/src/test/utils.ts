@@ -20,7 +20,7 @@ export async function getTestMock(contextOrSuite: Mocha.Context | Mocha.Suite, e
 export async function getNeedleMockResponse(contextOrSuite: Mocha.Context | Mocha.Suite, extension: MockFileFormat = 'json'): Promise<needle.NeedleResponse> {
 	const mock: any = {
 		body: await getTestMock(contextOrSuite, extension)
-	}
+	};
 	return mock;
 }
 

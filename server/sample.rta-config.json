@@ -2,7 +2,7 @@
 	"device": {
 		"ip": "",
 		"password": "",
-		"proxy": "",
+		"debugProxy": "",
 		"screenshotFormat": "png"
 	},
 	"channel": {
