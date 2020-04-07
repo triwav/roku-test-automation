@@ -8,6 +8,7 @@ const options: Options = {
     changeOrigin: true,             // Needed for virtual hosted sites - may be able to remove
     followRedirects: true,
     onProxyReq: onProxyRequest,
+    onProxyRes: onProxyResponse,
     //FIXME: this is not fixing the missing image errors within the app - was seeing cached images that appeared to make this fix good
     router: {
         'gn-imgx.fubo.tv': 'https://gn-imgx.fubo.tv',
@@ -21,4 +22,8 @@ let networkProxy: NetworkProxy = new NetworkProxy(path, options, port);
 
 function onProxyRequest(proxyReq, req, res) {
     console.log('onProxy Request', req.url);
+}
+
+function onProxyResponse(proxyRes, req, res) {
+    console.log('onProxy Response', req.url);
 }
