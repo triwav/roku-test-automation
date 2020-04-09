@@ -1,5 +1,5 @@
 import { Options, RequestHandler } from 'http-proxy-middleware';
-import { NetworkProxy } from './NetworkProxy';
+import { NetworkProxy } from '../src/NetworkProxy';
 
 const path: string = '/';
 const options: Options = {
