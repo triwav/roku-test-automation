@@ -1,0 +1,5 @@
+<?rokuml version="1.0" encoding="utf-8" ?>
+<component name="RTA_OnDeviceComponent" extends="Group">
+	<script type="text/brightscript" uri="RTA_OnDeviceComponent.brs" />
+	<script type="text/brightscript" uri="RTA_common.brs" />
+</component>

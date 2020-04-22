@@ -1,11 +1,12 @@
 {
-	"folders": [
-		{
+	"folders": [{
 			"path": "server"
 		},
 		{
 			"path": "device"
+		},
+		{
+			"path": "testProject"
 		}
-	],
-	"settings": {}
+	]
 }

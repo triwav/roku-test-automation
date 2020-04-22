@@ -26,6 +26,7 @@
         "forin": false,
         "no-empty": false,
         "no-angle-bracket-type-assertion": false,
+        "no-bitwise": false,
         "radix": false,
         "eofline": false,
         "interface-name": false,

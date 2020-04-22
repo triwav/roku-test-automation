@@ -2,8 +2,10 @@ import * as fsExtra from 'fs-extra';
 import * as path from 'path';
 import * as Mocha from 'mocha';
 
-import { ECP } from './ECP';
 import { RokuDevice } from './RokuDevice';
+import { ECP } from './ECP';
+import { OnDeviceComponent } from './OnDeviceComponent';
+
 import { ConfigOptions } from './types/ConfigOptions';
 import ConfigOptionsTi from './types/ConfigOptions-ti';
 import { createCheckers } from 'ts-interface-checker';
@@ -33,9 +35,12 @@ export function setupFromConfig(config: ConfigOptions) {
 	}
 	const ecp = new ECP(device, config);
 
+	const odc = new OnDeviceComponent(device, config);
+
 	return {
 		device: device,
-		ecp: ecp
+		ecp: ecp,
+		odc: odc
 	};
 }
 
@@ -46,6 +51,20 @@ export function setupFromConfigFile(configFilePath: string = 'rta-config.json') 
 
 export function sleep(milliseconds: number) {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+export function promiseTimeout<T>(promise: Promise<T>, milliseconds: number) {
+	let timeout = new Promise<T>((resolve, reject) => {
+		setTimeout(() => {
+			reject('Timed out after ' + milliseconds + 'ms.');
+		}, milliseconds);
+	});
+
+	// Returns a race between our timeout and the passed in promise
+	return Promise.race([
+		promise,
+		timeout
+	]);
 }
 
 export function makeError(name: string, message: string) {
@@ -78,4 +97,9 @@ export function generateFileNameForTest(contextOrSuite: Mocha.Context | Mocha.Su
 
 export async function ensureDirExistForFilePath(filePath: string) {
 	await fsExtra.ensureDir(path.dirname(filePath));
+}
+
+export function randomStringGenerator(length: number = 7) {
+	const p = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	return [...Array(length)].reduce((a) => a + p[~~(Math.random() * p.length)], '');
 }

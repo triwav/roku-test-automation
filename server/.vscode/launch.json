@@ -9,9 +9,9 @@
             "type": "node",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "args": ["-r", "ts-node/register", "-r", "source-map-support/register", "--exclude", "./src/RokuDevice.spec.ts", "./src/**/*.spec.ts"],
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceFolder}",
             "protocol": "inspector",
             "internalConsoleOptions": "openOnSessionStart",
             "skipFiles": [
@@ -22,9 +22,9 @@
             "type": "node",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "args": ["-r", "ts-node/register", "-r", "source-map-support/register", "./src/RokuDevice.spec.ts"],
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceFolder}",
             "protocol": "inspector",
             "internalConsoleOptions": "openOnSessionStart",
             "skipFiles": [
@@ -35,22 +35,9 @@
             "type": "node",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "args": ["-r", "ts-node/register", "-r", "source-map-support/register", "./src/**/*.spec.ts", "--grep", "testName"],
-            "cwd": "${workspaceRoot}",
-            "protocol": "inspector",
-            "internalConsoleOptions": "openOnSessionStart",
-            "skipFiles": [
-                "${workspaceFolder}/node_modules/**",
-            ]
-        }, {
-            "name": "Debug Sample Tests",
-            "type": "node",
-            "request": "launch",
-            "preLaunchTask": "build",
-            "program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-            "args": ["--timeout", "60000", "-r", "ts-node/register", "-r", "source-map-support/register", "./samples/**/*.spec.ts"],
-            "cwd": "${workspaceRoot}",
+            "cwd": "${workspaceFolder}",
             "protocol": "inspector",
             "internalConsoleOptions": "openOnSessionStart",
             "skipFiles": [
