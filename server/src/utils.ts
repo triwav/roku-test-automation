@@ -20,6 +20,8 @@ export function readConfigFile(configFilePath: string = 'rta-config.json'): Conf
 	return config;
 }
 
+const deviceClasses = {};
+
 export function setupFromConfig(config: ConfigOptions) {
 	try {
 		createCheckers(ConfigOptionsTi).ConfigOptions.check(config);
@@ -28,7 +30,7 @@ export function setupFromConfig(config: ConfigOptions) {
 	}
 
 	const deviceConfig = config.device;
-
+	if (deviceClasses[deviceConfig.ip]) return deviceClasses[deviceConfig.ip];
 	const device = new RokuDevice(deviceConfig.ip, deviceConfig.password, deviceConfig.screenshotFormat);
 	if (deviceConfig.debugProxy) {
 		device.setDebugProxy(deviceConfig.debugProxy);
@@ -37,11 +39,13 @@ export function setupFromConfig(config: ConfigOptions) {
 
 	const odc = new OnDeviceComponent(device, config);
 
-	return {
+	const classes = {
 		device: device,
 		ecp: ecp,
 		odc: odc
 	};
+	deviceClasses[deviceConfig.ip] = classes;
+	return classes;
 }
 
 export function setupFromConfigFile(configFilePath: string = 'rta-config.json') {

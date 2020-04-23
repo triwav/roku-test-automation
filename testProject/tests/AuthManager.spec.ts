@@ -6,7 +6,7 @@ const {device, odc, ecp} = utils.setupFromConfigFile();
 
 describe('AuthManager', function () {
 	it('user should not be logged on load', async () => {
-		const result = await odc.getValueAtKeyPath('global', 'authManager');
-		expect(result.isLoggedIn).to.eq(false)
+		const value = await odc.getValueAtKeyPath('global', 'authManager.isLoggedIn');
+		expect(value).to.eq(false);
 	});
 });

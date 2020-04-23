@@ -176,42 +176,42 @@ end function
 
 ' /**
 ' * @description Used to find a nested value in an object
-' * @param {Object} aa Object to drill down into.
-' * @param {String} keyPath A dot notation based string to the expected value.
-' * @param {Dynamic} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
-' * @param {Function} validator A function used to validate the output value matches what you expected.
+' * @param {Object} base - Object to drill down into.
+' * @param {String} keyPath - A dot notation based string to the expected value.
+' * @param {Dynamic} fallback - A return fallback value if the requested field could not be found or did not pass the validator function.
+' * @param {Function} validator - A function used to validate the output value matches what you expected.
 ' * @return {Dynamic} The result of the drill down process
 ' */
-function getValueAtKeyPath(aa as Object, keyPath as String, fallback = Invalid as Dynamic, validator = isNotInvalid as Function) as Dynamic
-	if NOT isKeyedValueType(aa) OR keyPath.isEmpty() then return fallback
+function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid as Dynamic, validator = isNotInvalid as Function) as Dynamic
+	if NOT isKeyedValueType(base) OR keyPath = "" then return fallback
 
-	level = aa
 	keys = keyPath.tokenize(".")
-	while keys.count() > 1
-		key = keys.shift()
-		level = level[key]
+	level = base
 
-		if NOT isKeyedValueType(level) then
-			if isNonEmptyArray(level) then
-				key = keys.shift()
-				level = level[toNumber(key)]
-				if keys.isEmpty() then
-					if validator(level) = false then return fallback
-					return level
-				else if NOT isKeyedValueType(level) then
-					return fallback
+	while NOT keys.isEmpty()
+		key = keys.shift()
+		if isKeyedValueType(level) then
+			nextLevel = level[key]
+			if nextLevel = Invalid and isNode(level) then
+				index = key.toInt()
+				if index = 0 AND key <> "0" then
+					level = level.findNode(key)
+				else
+					level = level.getChild(index)
 				end if
 			else
-				return fallback
+				level = nextLevel
 			end if
+		else if isNonEmptyArray(level) then
+			level = level[key.toInt()]
+		else
+			return fallback
 		end if
 	end while
 
-	finalKey = keys.shift()
-	value = level[finalKey]
-	if NOT validator(value) then return fallback
+	if NOT validator(level) then return fallback
 
-	return value
+	return level
 end function
 
 ' /**
