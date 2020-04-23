@@ -3,10 +3,13 @@
 		"ip": "",
 		"password": "",
 		"debugProxy": "",
-		"screenshotFormat": "png"
+		"screenshotFormat": "jpg"
 	},
 	"channel": {
 		"id": "dev"
+	},
+	"server": {
+		"callbackListenPort": 20000
 	},
 	"defaults": {
 		"ecp": {

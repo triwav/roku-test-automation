@@ -5,21 +5,19 @@ import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { OnDeviceComponentRequest, RequestType, KeyPathBaseTypes } from './types/OnDeviceComponentRequest';
 import * as utils from './utils';
-import { rejects } from 'assert';
 
 export class OnDeviceComponent {
-	private static callbackListenPorts = [20000];
 	private callbackListenPort?: number;
 	private static readonly version = '1.0.0';
 	private device: RokuDevice;
-	private config?: ConfigOptions;
+	private config: ConfigOptions;
 	private client = new net.Socket();
 	private socketConnected = false;
 	private handshakeComplete = false;
 	private sentRequests: { [key: string]: OnDeviceComponentRequest } = {};
 	private app: express.Express;
 
-	constructor(device: RokuDevice, config?: ConfigOptions) {
+	constructor(device: RokuDevice, config: ConfigOptions) {
 		this.device = device;
 		this.config = config;
 		this.app = this.setupExpress();
@@ -84,12 +82,9 @@ export class OnDeviceComponent {
 		// If we already have everything we need then don't want to rerun
 		if (this.socketConnected && this.callbackListenPort) return;
 
-		const callbackListenPort = OnDeviceComponent.callbackListenPorts.pop();
-		if (!callbackListenPort) {
-			throw new Error('No callbackListenPorts available currently');
-		}
+		const callbackListenPort = this.config.server!.callbackListenPort;
 		const server = this.app.listen(callbackListenPort, function() {
-			console.log(`Listening on ${callbackListenPort}`);
+			console.log(`Listening for callbacks on ${callbackListenPort}`);
 		});
 		this.callbackListenPort = callbackListenPort;
 
