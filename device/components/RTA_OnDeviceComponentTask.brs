@@ -61,8 +61,8 @@ sub runTaskThread()
 				fieldName = message.getField()
 				if message.getField() = "renderThreadResponse" then
 					response = message.getData()
-					print " response " response
 					request = m.activeRequests[response.id]
+					m.activeRequests.delete(response.id)
 					sendBackResponse(request, response)
 				else
 					logWarn(fieldName + " not handled")
