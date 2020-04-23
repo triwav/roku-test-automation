@@ -19,10 +19,10 @@ sub runTaskThread()
 
 	listenSocket = CreateObject("roStreamSocket")
 	listenSocketId = stri(listenSocket.getID())
-    listenSocket.setMessagePort(m.port)
-    listenSocket.setAddress(address)
-    listenSocket.notifyReadable(true)
-    listenSocket.listen(4)
+	listenSocket.setMessagePort(m.port)
+	listenSocket.setAddress(address)
+	listenSocket.notifyReadable(true)
+	listenSocket.listen(4)
 	clientSockets = {}
 	m.activeRequests = {}
 
