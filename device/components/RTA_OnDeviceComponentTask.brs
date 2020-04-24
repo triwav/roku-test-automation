@@ -14,6 +14,11 @@ function getCallbackUrl(request as Object) as String
 end function
 
 sub runTaskThread()
+	m.validRequestTypes = {
+		"getValueAtKeyPath": true
+		"getValuesAtKeyPaths": true
+	}
+
 	address = CreateObject("roSocketAddress")
 	address.setPort(9000)
 
@@ -89,15 +94,8 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 	request.callbackHost = socket.getReceivedFromAddress().getHostName()
 
 	requestType = getStringAtKeyPath(request, "type")
-	if requestType = "handshake" then
-		version = getVersion()
-		if getStringAtKeyPath(request, "args.version") = version then
-			sendBackResponse(request, {
-				"success": true
-				"version": version
-			})
-		end if
-	else if requestType = "getValueAtKeyPath" then
+
+	if m.validRequestTypes[requestType] = true then
 		if NOT isNonEmptyAA(request.args) then
 			sendBackError(request, "No args supplied for request type '" + requestType + "'")
 			return
@@ -105,6 +103,14 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 
 		m.activeRequests[request.id] = request
 		m.top.renderThreadRequest = request
+	else if requestType = "handshake" then
+		version = getVersion()
+		if getStringAtKeyPath(request, "args.version") = version then
+			sendBackResponse(request, {
+				"success": true
+				"version": version
+			})
+		end if
 	else
 		sendBackError(request, "request type '" + requestType + "' not currently handled")
 	end if

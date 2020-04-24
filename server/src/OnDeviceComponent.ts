@@ -31,7 +31,21 @@ export class OnDeviceComponent {
 				keyPath: keyPath
 			}
 		});
-		return result.body.value;
+		const json = result.body;
+		if (!json.success) throw new Error(json.error.message);
+		return json.value;
+	}
+
+	public async getValuesAtKeyPaths(requests: {[key: string]: {base: keyof typeof KeyPathBaseTypes, keyPath: string}}) {
+		const result = await this.sendRequest({
+			type: RequestType.getValuesAtKeyPaths,
+			args: {
+				requests: requests
+			}
+		});
+		const json = result.body;
+		if (!json.success) throw new Error(json.error.message);
+		return json;
 	}
 
 	public async setValueAtKeyPath(keyPath: string, value: string | number | boolean | [string]) {

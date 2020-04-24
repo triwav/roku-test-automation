@@ -5,6 +5,7 @@ export enum RequestType {
 	hasFocus,
 	isInFocusChain,
 	getValueAtKeyPath,
+	getValuesAtKeyPaths,
 	handshake,
 	observeField,
 	observeFocus,

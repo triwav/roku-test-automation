@@ -20,7 +20,11 @@ export function readConfigFile(configFilePath: string = 'rta-config.json'): Conf
 	return config;
 }
 
-const deviceClasses = {};
+const deviceClasses: {[key: string]: {
+	device: RokuDevice;
+	ecp: ECP;
+	odc: OnDeviceComponent;
+	}} = {};
 
 export function setupFromConfig(config: ConfigOptions) {
 	try {

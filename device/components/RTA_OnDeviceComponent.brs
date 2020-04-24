@@ -7,14 +7,16 @@ end sub
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
 	requestType = request.type
+	args = request.args
 	if requestType = "getValueAtKeyPath" then
-		response = processGetValueAtKeyPathRequest(request)
+		response = processGetValueAtKeyPathRequest(args)
+	else if requestType = "getValuesAtKeyPaths" then
+		response = processGetValuesAtKeyPathsRequest(args)
 	end if
 	sendBackResponse(request, response)
 end sub
 
-function processGetValueAtKeyPathRequest(request as Object, convertNodeType = true as Boolean) as Dynamic
-	args = request.args
+function processGetValueAtKeyPathRequest(args as Object) as Object
 	baseType = args.base
 	if NOT isString(baseType) then
 		return buildErrorResponseObject("getValueAtKeyPath had invalid base")
@@ -37,6 +39,22 @@ function processGetValueAtKeyPathRequest(request as Object, convertNodeType = tr
 	return {
 		"value": value
 	}
+end function
+
+function processGetValuesAtKeyPathsRequest(args as Object) as Object
+	requests = args.requests
+	if NOT isNonEmptyAA(requests) then
+		return buildErrorResponseObject("getValuesAtKeyPaths did not have have any requests")
+	end if
+	response = {}
+	for each key in requests
+		result = processGetValueAtKeyPathRequest(requests[key])
+		if result.value = Invalid then
+			return buildErrorResponseObject(result.error.message)
+		end if
+		response[key] = result.value
+	end for
+	return response
 end function
 
 sub sendBackResponse(request as Object, response as Object)
