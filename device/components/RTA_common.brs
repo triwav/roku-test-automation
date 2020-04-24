@@ -166,6 +166,27 @@ function createNode(nodeType = "Node" as String) as Object
 	return createObject("roSGNode", nodeType)
 end function
 
+
+function findChildNodeWithId(parentNode as Object, id as String, maxDepth = 10 as Integer, depth = 0 as Integer) as Dynamic
+	if depth > maxDepth then
+		logWarn(depth.toStr() + " exceeded maxium depth of " + maxDepth.toStr())
+		return Invalid
+	end if
+
+	for i = 0 to getLastIndex(parentNode)
+		child = parentNode.getChild(i)
+		if child.id = id then
+			return child
+		end if
+
+		match = findChildNodeWithId(child, id, maxDepth, depth + 1)
+		if match <> Invalid then
+			return match
+		end if
+	end for
+	return Invalid
+end function
+
 '*************************************************************************
 '#endregion *** SG NODE UTILITIES
 '*************************************************************************
@@ -195,7 +216,7 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 			if nextLevel = Invalid and isNode(level) then
 				index = key.toInt()
 				if index = 0 AND key <> "0" then
-					level = level.findNode(key)
+					level = findChildNodeWithId(level, key)
 				else
 					level = level.getChild(index)
 				end if
