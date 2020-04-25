@@ -26,12 +26,12 @@
         "fs-extra": "^7.0.1",
         "needle": "^2.3.2",
         "path": "^0.12.7",
-        "ts-interface-checker": "^0.1.10"
-    },
-    "devDependencies": {
+        "ts-interface-checker": "^0.1.10",
         "@types/chai": "^4.1.2",
         "@types/fs-extra": "^5.0.1",
-        "@types/mocha": "^5.2.5",
+        "@types/mocha": "^5.2.5"
+    },
+    "devDependencies": {
         "@types/sinon": "^7.5.2",
         "@types/xmljs": "^0.3.0",
         "express": "^4.17.1",
