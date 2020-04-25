@@ -3,7 +3,7 @@
 		"ip": "",
 		"password": "",
 		"debugProxy": "",
-		"screenshotFormat": "png"
+		"screenshotFormat": "jpg"
 	},
 	"channel": {
 		"id": "dev"
