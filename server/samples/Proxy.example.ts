@@ -4,7 +4,7 @@ import { NetworkProxy } from '../src/NetworkProxy';
 // Typescript class describing service specific config.
 import { ProxyConfig } from './fubo/Proxy.config';
 // Json objects describing the error mapping and custom errors to return.
-import * as responseConfig from "./fubo/Proxy.response.search.json";
+import * as responseConfig from "./fubo/Proxy.response.home.json";
 import * as errorMap from "./fubo/Proxy.error.map.json";
 
 const path: string = '/';
@@ -29,8 +29,7 @@ function onProxyRequest(proxyReq, req, res) {
     // Handling API responses only atm
     if (requestHostname === targetHostname) {
         mapErrorResponse(responseConfig[requestPath], req, res);
-        console.log('API response', requestHostname, requestPath, req.query);
-        // console.log('API response', requestHostname, requestPath);
+        // console.log('API response', requestHostname, requestPath, req.query);
     }
 }
 
@@ -50,7 +49,11 @@ function mapErrorResponse(responseToMap, req, res) {
                     httpStatus = responseToMap;
                     res.statusMessage = 'Custom error response from Proxy.';
                     res.status(httpStatus).end();
-                    console.log("httpStatus Error only", res.statusCode, res.statusMessage)
+                    console.log("httpStatus Error only", res.statusCode, res.statusMessage);
+                }
+                else
+                {
+                    console.log('Ignored domain and path', getHostName(req.url), getPath(req.path));
                 }
                 break;
             case 'string':
@@ -59,7 +62,7 @@ function mapErrorResponse(responseToMap, req, res) {
                 httpStatus = errorObj['httpStatus'];
                 res.statusMessage = JSON.stringify(error);
                 res.status(httpStatus).end();
-                console.log("Custom error", res.statusCode, res.statusMessage)
+                console.log("Custom error", res.statusCode, res.statusMessage);
                 break;
             case 'object':
                 for (let responseKey in responseToMap) {
