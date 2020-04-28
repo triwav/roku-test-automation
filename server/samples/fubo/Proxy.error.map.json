@@ -31,7 +31,7 @@
         "httpStatus": 403,
         "error": {
             "code": "LOCATION_IS_NOT_ALLOWED",
-            "message": "country is not supported from this country"
+            "message": "country is not supported"
         }
     },
     "station_id_not_in_allowed_stations_list": {

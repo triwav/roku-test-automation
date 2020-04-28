@@ -4,7 +4,7 @@ import { NetworkProxy } from '../src/NetworkProxy';
 // Typescript class describing service specific config.
 import { ProxyConfig } from './fubo/Proxy.config';
 // Json objects describing the error mapping and custom errors to return.
-import * as responseConfig from "./fubo/Proxy.response.set.home.json";
+import * as responseConfig from "./fubo/Proxy.response.search.json";
 import * as errorMap from "./fubo/Proxy.error.map.json";
 
 const path: string = '/';
@@ -17,7 +17,6 @@ const options: Options = {
     onProxyRes: onProxyResponse,
     router: ProxyConfig.routerConfig
 }
-const ignoreList = responseConfig['_ignore'];
 const port: number = 8888;
 let networkProxy: NetworkProxy = new NetworkProxy(path, options, port);
 
@@ -28,10 +27,10 @@ function onProxyRequest(proxyReq, req, res) {
     let targetHostname = getHostName(ProxyConfig.targetDomain);
 
     // Handling API responses only atm
-    if (requestHostname === targetHostname && typeof ignoreList !== 'undefined' && ignoreList.indexOf(requestPath) === -1) {
+    if (requestHostname === targetHostname) {
         mapErrorResponse(responseConfig[requestPath], req, res);
-        //console.log('API response', requestHostname, requestPath, req.query);
-        //console.log('API response', requestHostname, requestPath);
+        console.log('API response', requestHostname, requestPath, req.query);
+        // console.log('API response', requestHostname, requestPath);
     }
 }
 
@@ -46,18 +45,21 @@ function mapErrorResponse(responseToMap, req, res) {
         let httpStatus: number = -1;
         switch (typeof responseToMap) {
             case 'number':
-                httpStatus = responseToMap;
-                res.statusMessage = 'Custom error response from Proxy.';
-                res.status(httpStatus).end();
-                // console.log("httpStatus Error only",res.statusCode, res.statusMessage)
+                //Ignoring any error values that are set to -1
+                if (responseToMap !== -1) {
+                    httpStatus = responseToMap;
+                    res.statusMessage = 'Custom error response from Proxy.';
+                    res.status(httpStatus).end();
+                    console.log("httpStatus Error only", res.statusCode, res.statusMessage)
+                }
                 break;
             case 'string':
                 let errorObj: object = errorMap[responseToMap];
                 let error: object = errorObj['error'];
                 httpStatus = errorObj['httpStatus'];
                 res.statusMessage = JSON.stringify(error);
-                res.status(httpStatus).end()
-                // console.log("Custom error",res.statusCode, res.statusMessage)
+                res.status(httpStatus).end();
+                console.log("Custom error", res.statusCode, res.statusMessage)
                 break;
             case 'object':
                 for (let responseKey in responseToMap) {
