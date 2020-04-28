@@ -80,7 +80,7 @@ function mapErrorResponse(responseToMap, req, res) {
     }
 }
 
-// Formats the URL path to ensure we can map it from the Proxy.response.set keys.
+// Formats the URL path to ensure we can map it from the Proxy.response.*.json keys.
 function getPath(path: string) {
     let str = path.replace(/\//g, "_");  //Replacing all forward slash's with underscore.
     str = str.substring(1, str.length);  //Removing the first underscore.
