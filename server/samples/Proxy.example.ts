@@ -1,4 +1,5 @@
 import { Options, RequestHandler } from 'http-proxy-middleware';
+import * as Url from 'url';
 import { NetworkProxy } from '../src/NetworkProxy';
 
 // Typescript class describing service specific config.
@@ -22,9 +23,9 @@ let networkProxy: NetworkProxy = new NetworkProxy(path, options, port);
 
 // Proxy callback when a URL is requested.
 function onProxyRequest(proxyReq, req, res) {
-    let requestHostname = getHostName(req.url);
+    let requestHostname = Url.parse(req.url).host;
     let requestPath = getPath(req.path);
-    let targetHostname = getHostName(ProxyConfig.targetDomain);
+    let targetHostname = Url.parse(ProxyConfig.targetDomain).host;
 
     // Handling API responses only atm
     if (requestHostname === targetHostname) {
@@ -53,7 +54,7 @@ function mapErrorResponse(responseToMap, req, res) {
                 }
                 else
                 {
-                    console.log('Ignored domain and path', getHostName(req.url), getPath(req.path));
+                    console.log('Ignored domain and path', Url.parse(req.url).host, getPath(req.path));
                 }
                 break;
             case 'string':
@@ -85,13 +86,4 @@ function getPath(path: string) {
     let str = path.replace(/\//g, "_");  //Replacing all forward slash's with underscore.
     str = str.substring(1, str.length);  //Removing the first underscore.
     return str;
-}
-
-// Returns the hostname anywhere within the URL request. This fixes an issue when passing the request back to a hosted box IP. The native `req.hostname` only returns the IP address.
-function getHostName(url: string) {
-    let match = url.match(/:\/\/(www[0-9]?\.)?(.[^/:]+)/i);
-    if (match != null && match.length > 2 && typeof match[2] === 'string' && match[2].length > 0) {
-        return match[2];
-    }
-    return null;
 }
