@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MainScene" extends="Scene">
+	<script type="text/brightscript" uri="MainScene.brs" />
+	<script type="text/brightscript" uri="RTA_common.brs" />
+	<children>
+		<Group id="testTarget">
+			<Group id="child1" />
+			<Group id="child2">
+				<Group id="subchild1" />
+				<Group id="subchild2" />
+				<Group id="subchild3" />
+			</Group>
+			<Group id="child3" />
+		</Group>
+	</children>
+</component>

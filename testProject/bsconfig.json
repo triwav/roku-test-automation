@@ -1,0 +1,14 @@
+{
+	"rootDir": "./",
+	"files": [
+		{
+			"src": [
+				"../device/**/*"
+			],
+			"dest": "/"
+		},
+		"**/*.xml",
+		"**/*.brs",
+		"manifest"
+	]
+}

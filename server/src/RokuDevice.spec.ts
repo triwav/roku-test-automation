@@ -9,7 +9,7 @@ describe('RokuDevice', function () {
 	let device: RokuDevice;
 	beforeEach(() => {
 		device = new RokuDevice('192.168.10.134', '5536');
-		device.setProxy('http://192.168.10.40:8888');
+		device.setDebugProxy('http://192.168.10.40:8888');
 	});
 
 	this.timeout(10000);

@@ -1,6 +1,7 @@
 export interface ConfigOptions {
 	device: DeviceConfigOptions;
 	channel?: ChannelConfigOptions;
+	server?: ServerConfigOptions;
 	defaults?: DefaultConfigOptions;
 }
 
@@ -9,6 +10,10 @@ export interface DeviceConfigOptions {
 	password: string;
 	debugProxy?: string;
 	screenshotFormat?: ScreenshotFormat;
+}
+
+export interface ServerConfigOptions {
+	callbackListenPort: number;
 }
 
 export interface ChannelConfigOptions {

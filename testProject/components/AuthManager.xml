@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="AuthManager" extends="Node">
+	<script type="text/brightscript" uri="AuthManager.brs" />
+	<interface>
+		<field id="isLoggedIn" type="boolean" />
+	</interface>
+</component>

@@ -1,25 +1,8 @@
 import { RokuDevice } from './RokuDevice';
 import { ActiveAppResponse } from './types/ActiveAppResponse';
 import { ConfigOptions } from './types/ConfigOptions';
+import { ECPKeys } from './types/ECPKeys';
 import * as utils from './utils';
-
-enum Key {
-	BACK = 'Back',
-	BACKSPACE = 'Backspace',
-	DOWN = 'Down',
-	ENTER = 'Enter',
-	FORWARD = 'Fwd',
-	HOME = 'Home',
-	LEFT = 'Left',
-	OK = 'Select',
-	OPTIONS = 'Info',
-	PLAY = 'Play',
-	REPLAY = 'InstantReplay',
-	REWIND = 'Rev',
-	RIGHT = 'Right',
-	SEARCH = 'Search',
-	UP = 'Up'
-}
 
 export class ECP {
 	//store the import on the class to make testing easier
@@ -28,7 +11,7 @@ export class ECP {
 	private device: RokuDevice;
 	private config?: ConfigOptions;
 
-	public static readonly Key = Key;
+	public static readonly Key = ECPKeys;
 	public readonly Key = ECP.Key;
 
 	constructor(device: RokuDevice, config?: ConfigOptions) {
@@ -43,7 +26,7 @@ export class ECP {
 		}
 	}
 
-	public async sendKeyPress(key: Key, wait = 0) {
+	public async sendKeyPress(key: ECPKeys, wait = 0) {
 		await this.device.sendECP(`keypress/${encodeURIComponent(key)}`, {}, '');
 		if (!wait) {
 			wait = this.config?.defaults?.ecp.keyPressDelay ?? wait;
@@ -52,7 +35,7 @@ export class ECP {
 		if (wait) await this.utils.sleep(wait);
 	}
 
-	public async sendKeyPressSequence(keys: Key[], wait = 0) {
+	public async sendKeyPressSequence(keys: ECPKeys[], wait = 0) {
 		for (const key of keys) {
 			await this.sendKeyPress(key, wait);
 		}
