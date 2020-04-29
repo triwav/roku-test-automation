@@ -10,7 +10,7 @@ npm install roku-test-automation --save
 ```
 
 ## Usage example
-create a config file with the below format
+create a config file with the following format
 [Sample Config File](sample.rta-config.json)
 
 [Test Project](../testProject)
