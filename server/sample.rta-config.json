@@ -8,6 +8,9 @@
 	"channel": {
 		"id": "dev"
 	},
+	"server": {
+		"callbackListenPort": 20000
+	},
 	"defaults": {
 		"ecp": {
 			"keyPressDelay": 1000

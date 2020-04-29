@@ -1,0 +1,4 @@
+node_modules
+rta-config.json
+out
+.env

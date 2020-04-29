@@ -7,6 +7,7 @@ import * as t from "ts-interface-checker";
 export const ConfigOptions = t.iface([], {
   "device": "DeviceConfigOptions",
   "channel": t.opt("ChannelConfigOptions"),
+  "server": t.opt("ServerConfigOptions"),
   "defaults": t.opt("DefaultConfigOptions"),
 });
 
@@ -15,6 +16,10 @@ export const DeviceConfigOptions = t.iface([], {
   "password": "string",
   "debugProxy": t.opt("string"),
   "screenshotFormat": t.opt("ScreenshotFormat"),
+});
+
+export const ServerConfigOptions = t.iface([], {
+  "callbackListenPort": "number",
 });
 
 export const ChannelConfigOptions = t.iface([], {
@@ -34,6 +39,7 @@ export const ScreenshotFormat = t.union(t.lit('png'), t.lit('jpg'));
 const exportedTypeSuite: t.ITypeSuite = {
   ConfigOptions,
   DeviceConfigOptions,
+  ServerConfigOptions,
   ChannelConfigOptions,
   DefaultECPConfigOptions,
   DefaultConfigOptions,

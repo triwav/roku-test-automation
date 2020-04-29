@@ -1,0 +1,9 @@
+<?rokuml version="1.0" encoding="utf-8" ?>
+<component name="RTA_OnDeviceComponentTask" extends="Task">
+	<script type="text/brightscript" uri="RTA_OnDeviceComponentTask.brs" />
+	<script type="text/brightscript" uri="RTA_common.brs" />
+	<interface>
+		<field id="renderThreadRequest" type="assocarray" />
+		<field id="renderThreadResponse" type="assocarray" />
+	</interface>
+</component>
