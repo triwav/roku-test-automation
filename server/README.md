@@ -11,7 +11,6 @@ npm install roku-test-automation --save
 
 ## Usage example
 create a config file with the below format
-[a relative link](sample.rta-config.json)
+[Sample Config File](sample.rta-config.json)
 
-## Sample Project
-[a relative link](../testProject)
+[Test Project](../testProject)
