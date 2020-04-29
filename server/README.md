@@ -11,23 +11,7 @@ npm install roku-test-automation --save
 
 ## Usage example
 create a config file with the below format
-{
-	"device": {
-		"ip": "",
-		"password": "",
-		"debugProxy": "",
-		"screenshotFormat": "png"
-	},
-	"channel": {
-		"id": "dev"
-	},
-	"defaults": {
-		"ecp": {
-			"keyPressDelay": 1000
-		}
-	}
-}
+[a relative link](sample.rta-config.json)
 
-await ecp.sendKeyPressSequence([ecp.Key.HOME, ecp.Key.HOME]);
-await ecp.sendLaunchChannel();
-await ecp.sendText('username');
+## Sample Project
+[a relative link](../testProject)
