@@ -1,9 +1,10 @@
 import * as express from 'express';
 
-export enum RequestType {
+export enum RequestEnum {
 	callFunc,
 	hasFocus,
 	isInFocusChain,
+	getRoots,
 	getValueAtKeyPath,
 	getValuesAtKeyPaths,
 	handshake,
@@ -12,14 +13,16 @@ export enum RequestType {
 	setFocus,
 	setValueAtKeyPath
 }
+export type RequestTypes = keyof typeof RequestEnum;
 
-export enum KeyPathBaseTypes {
+export enum KeyPathBaseEnum {
 	global,
 	scene
 }
+export type KeyPathBaseTypes = keyof typeof KeyPathBaseEnum;
 
 export interface OnDeviceComponentRequest {
-	type: RequestType;
+	type: RequestTypes;
 	args: object;
 	callback?: OnDeviceComponentRequestCallback;
 }

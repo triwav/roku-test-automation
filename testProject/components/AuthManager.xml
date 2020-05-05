@@ -3,5 +3,6 @@
 	<script type="text/brightscript" uri="AuthManager.brs" />
 	<interface>
 		<field id="isLoggedIn" type="boolean" />
+		<field id="profiles" type="assocarray" />
 	</interface>
 </component>
