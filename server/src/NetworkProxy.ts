@@ -2,7 +2,7 @@ import * as express from 'express';
 import { createProxyMiddleware, Options, RequestHandler } from 'http-proxy-middleware';
 
 export class NetworkProxy {
-	private app: express;
+	private app: express.Express;
 
     constructor(path: string, options: Options, port: number) {
         this.app = express();

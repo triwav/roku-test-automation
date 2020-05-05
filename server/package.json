@@ -1,12 +1,12 @@
 {
     "name": "roku-test-automation",
-    "version": "1.0.0",
+    "version": "1.0.18",
     "description": "Helps with automating functional tests",
     "main": "dist/index.js",
     "typings": "dist/index.d.ts",
     "scripts": {
         "build": "rimraf out && tsc",
-        "preversion": "npm run build && npm run tslint && npm run test",
+        "prepublishOnly": "npm run build && npm run tslint && npm run test",
         "test": "nyc --exclude src/RokuDevice.ts mocha --full-trace --exclude src/RokuDevice.spec.ts src/**/*.spec.ts",
         "test:device": "nyc mocha --full-trace src/RokuDevice.spec.ts",
         "test:all": "nyc mocha --full-trace src/**/*.spec.ts",
