@@ -4,7 +4,7 @@ import * as express from 'express';
 
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
-import { OnDeviceComponentRequest, RequestType, KeyPathBaseTypes } from './types/OnDeviceComponentRequest';
+import { OnDeviceComponentRequest, RequestTypes, KeyPathBaseTypes, RequestEnum } from './types/OnDeviceComponentRequest';
 import * as utils from './utils';
 
 export class OnDeviceComponent {
@@ -23,33 +23,42 @@ export class OnDeviceComponent {
 		this.config = config;
 	}
 
-	public async getValueAtKeyPath(base: keyof typeof KeyPathBaseTypes, keyPath: string) {
+	public async getValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string) {
 		const result = await this.sendRequest({
-			type: RequestType.getValueAtKeyPath,
+			type: 'getValueAtKeyPath',
 			args: {
 				base: base,
 				keyPath: keyPath
 			}
 		});
-		const json = result.body;
-		if (!json.success) throw new Error(json.error.message);
-		return json.value;
+		return result.body.value;
 	}
 
-	public async getValuesAtKeyPaths(requests: {[key: string]: {base: keyof typeof KeyPathBaseTypes, keyPath: string}}) {
+	public async getValuesAtKeyPaths(requests: {[key: string]: {base: KeyPathBaseTypes, keyPath: string}}) {
 		const result = await this.sendRequest({
-			type: RequestType.getValuesAtKeyPaths,
+			type: 'getValuesAtKeyPaths',
 			args: {
 				requests: requests
 			}
 		});
-		const json = result.body;
-		if (!json.success) throw new Error(json.error.message);
-		return json;
+		return result.body;
 	}
 
-	public async setValueAtKeyPath(keyPath: string, value: string | number | boolean | [string]) {
-		console.log('Not implemented yet');
+	public async setValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string, value: any) {
+		// More efficient to split here than on device
+		const keyPathParts = keyPath.split('.');
+		const args: any = {
+			base: base,
+			field: keyPathParts.pop(),
+			keyPath: keyPathParts.join('.'),
+			value: value
+		};
+
+		const result = await this.sendRequest({
+			type: 'setValueAtKeyPath',
+			args: args
+		});
+		return result.body;
 	}
 
 	private async sendHandShakeRequest() {
@@ -57,7 +66,7 @@ export class OnDeviceComponent {
 		while (retryCount > 0) {
 			try {
 				let result = await this.sendRequest({
-					type: RequestType.handshake,
+					type: 'handshake',
 					args: {
 						version: OnDeviceComponent.version,
 						logLevel: this.config.device.odc?.logLevel ?? 'info'
@@ -74,7 +83,7 @@ export class OnDeviceComponent {
 
 	private async sendRequest(request: OnDeviceComponentRequest, timeoutMilliseconds: number = 5000) {
 		await this.setupConnections();
-		if (request.type !== RequestType.handshake && !this.handshakeComplete) {
+		if (request.type !== RequestEnum[RequestEnum.handshake] && !this.handshakeComplete) {
 			throw new Error(`Handshake not complete. Can't continue`);
 		}
 
@@ -82,7 +91,7 @@ export class OnDeviceComponent {
 		const formattedRequest = {
 			id: requestId,
 			callbackPort: this.callbackListenPort,
-			type: RequestType[request.type],
+			type: request.type,
 			args: request.args
 		};
 		const promise = new Promise<express.Request>((resolve, reject) => {
@@ -138,6 +147,7 @@ export class OnDeviceComponent {
 			if (request) {
 				request.callback?.(req);
 				res.send('OK');
+				delete this.sentRequests[id];
 			} else {
 				res.statusCode = 404;
 				res.send(`Request ${id} not found`);

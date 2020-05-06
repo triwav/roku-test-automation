@@ -18,6 +18,7 @@ sub runTaskThread()
 	m.validRequestTypes = {
 		"getValueAtKeyPath": true
 		"getValuesAtKeyPaths": true
+		"setValueAtKeyPath": true
 	}
 
 	address = createObject("roSocketAddress")
@@ -68,8 +69,8 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 		return
 	end if
 
-	if (NOT isNumber(request.callbackPort)) then
-		logError("Received message did not callbackPort " + receivedString)
+	if (NOT isInteger(request.callbackPort)) then
+		logError("Received message did not have callbackPort " + receivedString)
 		return
 	end if
 
@@ -114,7 +115,7 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 end sub
 
 sub sendBackError(request as Object, message as String)
-	sendBackResponse(request, buildErrorResponseObject(request, message))
+	sendBackResponse(request, buildErrorResponseObject(message))
 end sub
 
 sub sendBackResponse(request as Object, response as Dynamic)
