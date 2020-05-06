@@ -277,32 +277,35 @@ end function
 '*************************************************************************
 
 sub logVerbose(message as String, value = "nil" as Dynamic)
-	_log(0, message, value)
+	_log(5, message, value)
 end sub
 
 sub logDebug(message as String, value = "nil" as Dynamic)
-	_log(1, message, value)
-end sub
-
-sub logInfo(message as String, value = "nil" as Dynamic)
-	_log(2, message, value)
-end sub
-
-sub logWarn(message as String, value = "nil" as Dynamic)
-	_log(3, message, value)
-end sub
-
-sub logError(message as String, value = "nil" as Dynamic)
 	_log(4, message, value)
 end sub
 
+sub logInfo(message as String, value = "nil" as Dynamic)
+	_log(3, message, value)
+end sub
+
+sub logWarn(message as String, value = "nil" as Dynamic)
+	_log(2, message, value)
+end sub
+
+sub logError(message as String, value = "nil" as Dynamic)
+	_log(1, message, value)
+end sub
+
 sub _log(level as Integer, message as String, value = "nil" as Dynamic)
+	if m.logLevel < level then return
+
 	levels = [
-		"VERBOSE"
-		"DEBUG"
-		"INFO"
-		"WARN"
+		"OFF"
 		"ERROR"
+		"WARN"
+		"INFO"
+		"DEBUG"
+		"VERBOSE"
 	]
 	print "[RTA][" + levels[level] + "] " message
 	if NOT isString(value) OR value <> "nil" then

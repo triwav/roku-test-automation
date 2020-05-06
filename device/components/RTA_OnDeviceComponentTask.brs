@@ -3,6 +3,7 @@ sub init()
 	m.top.observeFieldScoped("renderThreadResponse", m.port)
 	m.top.functionName = "runTaskThread"
 	m.top.control = "RUN"
+	m.logLevel = 0
 end sub
 
 function getVersion() as String
@@ -72,7 +73,7 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 		return
 	end if
 
-	request.callbackHost = socket.getReceivedFromAddress().getHostName()
+	request["callbackHost"] = socket.getReceivedFromAddress().getHostName()
 
 	requestType = getStringAtKeyPath(request, "type")
 
@@ -85,6 +86,21 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 		m.activeRequests[request.id] = request
 		m.top.renderThreadRequest = request
 	else if requestType = "handshake" then
+		logLevel = getStringAtKeyPath(request, "args.logLevel")
+		if logLevel = "verbose" then
+			m.logLevel = 5
+		else if logLevel = "debug" then
+			m.logLevel = 4
+		else if logLevel = "info" then
+			m.logLevel = 3
+		else if logLevel = "warn" then
+			m.logLevel = 2
+		else if logLevel = "error" then
+			m.logLevel = 1
+		else if logLevel = "off" then
+			m.logLevel = 0
+		end if
+
 		version = getVersion()
 		if getStringAtKeyPath(request, "args.version") = version then
 			sendBackResponse(request, {

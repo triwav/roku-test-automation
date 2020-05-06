@@ -3,6 +3,9 @@
 		"ip": "",
 		"password": "",
 		"debugProxy": "",
+		"odc": {
+			"logLevel": "info"
+		},
 		"screenshotFormat": "jpg"
 	},
 	"channel": {

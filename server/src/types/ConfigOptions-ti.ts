@@ -15,6 +15,9 @@ export const DeviceConfigOptions = t.iface([], {
   "ip": "string",
   "password": "string",
   "debugProxy": t.opt("string"),
+  "odc": t.opt(t.iface([], {
+    "logLevel": t.opt(t.union(t.lit('off'), t.lit('error'), t.lit('warn'), t.lit('info'), t.lit('debug'), t.lit('verbose'))),
+  })),
   "screenshotFormat": t.opt("ScreenshotFormat"),
 });
 

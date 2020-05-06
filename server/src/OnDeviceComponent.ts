@@ -53,13 +53,23 @@ export class OnDeviceComponent {
 	}
 
 	private async sendHandShakeRequest() {
-		let result = await this.sendRequest({
-			type: RequestType.handshake,
-			args: {
-				version: OnDeviceComponent.version
+		let retryCount = 5;
+		while (retryCount > 0) {
+			try {
+				let result = await this.sendRequest({
+					type: RequestType.handshake,
+					args: {
+						version: OnDeviceComponent.version,
+						logLevel: this.config.device.odc?.logLevel ?? 'info'
+					}
+				}, 1000);
+				return result.body;
+			} catch (e) {
+				retryCount--;
+				if (retryCount) console.log('Send handshake failed. Retrying');
 			}
-		});
-		return result.body;
+		}
+		throw new Error('Handshake failed');
 	}
 
 	private async sendRequest(request: OnDeviceComponentRequest, timeoutMilliseconds: number = 5000) {
