@@ -1,5 +1,5 @@
-import * as net from 'net';
 import * as http from 'http';
+import * as udp from 'dgram';
 import * as express from 'express';
 
 import { RokuDevice } from './RokuDevice';
@@ -8,21 +8,19 @@ import { OnDeviceComponentRequest, RequestType, KeyPathBaseTypes } from './types
 import * as utils from './utils';
 
 export class OnDeviceComponent {
-	private callbackListenPort?: number;
 	private static readonly version = '1.0.0';
+	private callbackListenPort?: number;
 	private device: RokuDevice;
 	private config: ConfigOptions;
-	private client = new net.Socket();
-	private socketConnected = false;
+	private client = udp.createSocket('udp4');
 	private handshakeComplete = false;
 	private sentRequests: { [key: string]: OnDeviceComponentRequest } = {};
-	private app: express.Express;
+	private app = this.setupExpress();
 	private server?: http.Server;
 
 	constructor(device: RokuDevice, config: ConfigOptions) {
 		this.device = device;
 		this.config = config;
-		this.app = this.setupExpress();
 	}
 
 	public async getValueAtKeyPath(base: keyof typeof KeyPathBaseTypes, keyPath: string) {
@@ -61,7 +59,7 @@ export class OnDeviceComponent {
 				version: OnDeviceComponent.version
 			}
 		});
-		return result;
+		return result.body;
 	}
 
 	private async sendRequest(request: OnDeviceComponentRequest, timeoutMilliseconds: number = 5000) {
@@ -88,45 +86,34 @@ export class OnDeviceComponent {
 			};
 		});
 		this.sentRequests[requestId] = request;
-		this.client.write(JSON.stringify(formattedRequest));
+		this.client.send(JSON.stringify(formattedRequest), 9000, this.device.ip, (err) => {
+			if (err) {
+				throw err;
+			}
+		});
 		return await utils.promiseTimeout(promise, timeoutMilliseconds);
 	}
 
 	// Starts up express server and our connection to the OnDeviceComponent
 	public async setupConnections() {
 		// If we already have everything we need then don't want to rerun
-		if (this.socketConnected && this.callbackListenPort) return;
+		if (this.server) return;
 
-		const callbackListenPort = this.config.server!.callbackListenPort;
+		const callbackListenPort = this.config.server?.callbackListenPort;
+		if (!callbackListenPort) throw new Error('Config did not have a callback listen port');
+
 		this.server = this.app.listen(callbackListenPort, function() {
 			console.log(`Listening for callbacks on ${callbackListenPort}`);
 		});
 		this.callbackListenPort = callbackListenPort;
-
-		return new Promise<void>((resolve, reject) => {
-			this.client.connect(9000, this.device.ip, async () => {
-				this.socketConnected = true;
-				try {
-					await this.sendHandShakeRequest();
-					this.handshakeComplete = true;
-					resolve();
-				} catch (e) {
-					this.shutdown();
-					reject(e.message);
-				}
-			});
-			this.client.once('error', function(e) {
-				console.log(e);
-			});
-		});
+		await this.sendHandShakeRequest();
+		this.handshakeComplete = true;
 	}
-	
+
 	public shutdown() {
-		if (this.socketConnected) {
-			this.callbackListenPort = undefined;
-			this.socketConnected = false;
-			this.client.end();
-			this.server?.close();
+		if (this.server) {
+			this.server.close();
+			this.server = undefined;
 		}
 	}
 
