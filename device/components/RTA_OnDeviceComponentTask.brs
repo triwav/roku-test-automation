@@ -3,6 +3,7 @@ sub init()
 	m.top.observeFieldScoped("renderThreadResponse", m.port)
 	m.top.functionName = "runTaskThread"
 	m.top.control = "RUN"
+	m.logLevel = 0
 end sub
 
 function getVersion() as String
@@ -20,16 +21,14 @@ sub runTaskThread()
 		"setValueAtKeyPath": true
 	}
 
-	address = CreateObject("roSocketAddress")
+	address = createObject("roSocketAddress")
 	address.setPort(9000)
 
-	listenSocket = CreateObject("roStreamSocket")
-	listenSocketId = stri(listenSocket.getID())
-	listenSocket.setMessagePort(m.port)
-	listenSocket.setAddress(address)
-	listenSocket.notifyReadable(true)
-	listenSocket.listen(4)
-	clientSockets = {}
+	udpSocket = createObject("roDatagramSocket")
+	udpSocketId = stri(udpSocket.getID())
+	udpSocket.setMessagePort(m.port)
+	udpSocket.setAddress(address)
+	udpSocket.notifyReadable(true)
 	m.activeRequests = {}
 
 	while true
@@ -38,30 +37,13 @@ sub runTaskThread()
 			messageType = type(message)
 			if messageType = "roSocketEvent" then
 				messageSocketId = stri(message.getSocketID())
-				if messageSocketId = listenSocketId
-					if listenSocket.isReadable() then
-						clientSocket = listenSocket.accept()
-						if clientSocket = Invalid then
-							logError("Connection accept failed")
-						end if
-						clientSocket.notifyReadable(true)
-						clientSockets[stri(clientSocket.getID())] = clientSocket
+				if messageSocketId = udpSocketId
+					if udpSocket.isReadable() then
+						receivedString = udpSocket.receiveStr(udpSocket.getCountRcvBuf())
+						verifyAndHandleRequest(receivedString, udpSocket)
 					end if
 				else
-					clientSocket = clientSockets[messageSocketId]
-					if clientSocket = Invalid then
-						logWarn("Received roSocketEvent for unknown socket")
-					else if clientSocket.isReadable() then
-						bufferLength = clientSocket.getCountRcvBuf()
-						if bufferLength > 0 then
-							receivedString = clientSocket.receiveStr(bufferLength)
-							verifyAndHandleRequest(receivedString, clientSocket)
-						else
-							logInfo("Client closed connection")
-							clientSocket.close()
-							clientSockets.delete(messageSocketId)
-						end if
-					end if
+					logWarn("Received roSocketEvent for unknown socket")
 				end if
 			else if messageType = "roSGNodeEvent" then
 				fieldName = message.getField()
@@ -92,7 +74,7 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 		return
 	end if
 
-	request.callbackHost = socket.getReceivedFromAddress().getHostName()
+	request["callbackHost"] = socket.getReceivedFromAddress().getHostName()
 
 	requestType = getStringAtKeyPath(request, "type")
 
@@ -105,6 +87,21 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 		m.activeRequests[request.id] = request
 		m.top.renderThreadRequest = request
 	else if requestType = "handshake" then
+		logLevel = getStringAtKeyPath(request, "args.logLevel")
+		if logLevel = "verbose" then
+			m.logLevel = 5
+		else if logLevel = "debug" then
+			m.logLevel = 4
+		else if logLevel = "info" then
+			m.logLevel = 3
+		else if logLevel = "warn" then
+			m.logLevel = 2
+		else if logLevel = "error" then
+			m.logLevel = 1
+		else if logLevel = "off" then
+			m.logLevel = 0
+		end if
+
 		version = getVersion()
 		if getStringAtKeyPath(request, "args.version") = version then
 			sendBackResponse(request, {

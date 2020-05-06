@@ -9,6 +9,9 @@ export interface DeviceConfigOptions {
 	ip: string;
 	password: string;
 	debugProxy?: string;
+	odc?: {
+		logLevel?: 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
+	};
 	screenshotFormat?: ScreenshotFormat;
 }
 
