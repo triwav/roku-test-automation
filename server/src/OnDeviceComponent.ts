@@ -1,4 +1,5 @@
 import * as net from 'net';
+import * as http from 'http';
 import * as express from 'express';
 
 import { RokuDevice } from './RokuDevice';
@@ -16,6 +17,7 @@ export class OnDeviceComponent {
 	private handshakeComplete = false;
 	private sentRequests: { [key: string]: OnDeviceComponentRequest } = {};
 	private app: express.Express;
+	private server?: http.Server;
 
 	constructor(device: RokuDevice, config: ConfigOptions) {
 		this.device = device;
@@ -75,7 +77,6 @@ export class OnDeviceComponent {
 			type: RequestType[request.type],
 			args: request.args
 		};
-
 		const promise = new Promise<express.Request>((resolve, reject) => {
 			request.callback = (req) => {
 				const json = req.body;
@@ -97,7 +98,7 @@ export class OnDeviceComponent {
 		if (this.socketConnected && this.callbackListenPort) return;
 
 		const callbackListenPort = this.config.server!.callbackListenPort;
-		const server = this.app.listen(callbackListenPort, function() {
+		this.server = this.app.listen(callbackListenPort, function() {
 			console.log(`Listening for callbacks on ${callbackListenPort}`);
 		});
 		this.callbackListenPort = callbackListenPort;
@@ -110,14 +111,23 @@ export class OnDeviceComponent {
 					this.handshakeComplete = true;
 					resolve();
 				} catch (e) {
-					server.close();
-					this.callbackListenPort = undefined;
-					this.client.end();
-					this.socketConnected = false;
+					this.shutdown();
 					reject(e.message);
 				}
 			});
+			this.client.once('error', function(e) {
+				console.log(e);
+			});
 		});
+	}
+	
+	public shutdown() {
+		if (this.socketConnected) {
+			this.callbackListenPort = undefined;
+			this.socketConnected = false;
+			this.client.end();
+			this.server?.close();
+		}
 	}
 
 	private setupExpress() {
