@@ -192,6 +192,28 @@ end function
 '*************************************************************************
 
 '*************************************************************************
+'#region *** ASSOCIATIVE ARRAY UTILITIES
+'*************************************************************************
+
+' /**
+' * @description Used to create case sensitive AssociativeArray and also set an initial value. If no key is provided makes an empty AssociativeArray.
+' * Useful for cases where the key is coming from a variable as you can't use a variable for a key in initial declaration.
+' * @param {String} key Initial key.
+' * @param {Dynamic} value Initial value.
+' * @return {AssociativeArray}
+' */
+function createCaseSensitiveAA(key = "" as String, value = Invalid as Dynamic) as Object
+	aa = {}
+	aa.setModeCaseSensitive()
+	if isNonEmptyString(key) then aa[key] = value
+	return aa
+end function
+
+'*************************************************************************
+'#endregion *** ASSOCIATIVE ARRAY UTILITIES
+'*************************************************************************
+
+'*************************************************************************
 '#region *** KEYED VALUE UTILITIES
 '*************************************************************************
 
@@ -224,7 +246,11 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 				level = nextLevel
 			end if
 		else if isNonEmptyArray(level) then
-			level = level[key.toInt()]
+			key = key.toInt()
+			if key < 0 then
+				key = level.count() - key
+			end if
+			level = level[key]
 		else
 			return fallback
 		end if
@@ -233,6 +259,38 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 	if NOT validator(level) then return fallback
 
 	return level
+end function
+
+' /**
+' * @description Used to set a nested String value in the supplied object
+' * @param {Object} base - Object to drill down into.
+' * @param {String} keyPath - A dot notation based string to the expected value.
+' * @param {Dynamic} value - The value to be set.
+' * @return {Boolean} True if set successfully.
+' */
+function setValueAtKeyPath(base as Object, keyPath as String, value as Dynamic) as Boolean
+	if NOT isAA(base) AND NOT isArray(base) then return false
+
+	level = base
+	keys = keyPath.tokenize(".")
+	while keys.count() > 1
+		key = keys.shift()
+		if isAA(level[key]) then
+			level = level[key]
+		else if isNonEmptyArray(level) then
+			key = key.toInt()
+			if key < 0 then
+				key = level.count() - key
+			end if
+			level = level[key]
+		else
+			level[key] = {}
+		end if
+	end while
+
+	finalKey = keys.shift()
+	level[finalKey] = value
+	return true
 end function
 
 ' /**
