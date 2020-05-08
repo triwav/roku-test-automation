@@ -31,7 +31,7 @@ export class OnDeviceComponent {
 				keyPath: keyPath
 			}
 		});
-		return result.body.value;
+		return result.body;
 	}
 
 	public async getValuesAtKeyPaths(requests: {[key: string]: {base: KeyPathBaseTypes, keyPath: string}}) {

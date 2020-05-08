@@ -8,5 +8,11 @@
 		{
 			"path": "testProject"
 		}
-	]
+	],
+	"settings": {
+		"cSpell.words": [
+			"findnode",
+			"subchild"
+		]
+	}
 }
