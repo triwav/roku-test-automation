@@ -1,4 +1,5 @@
-export * from './utils';
+import * as utils from './utils';
+export { utils };
 export * from './ECP';
 export * from './NetworkProxy';
 export * from './OnDeviceComponent';
