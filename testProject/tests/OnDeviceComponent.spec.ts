@@ -1,5 +1,6 @@
 import * as chai from 'chai';
 const expect = chai.expect;
+import * as assert from 'assert';
 
 import * as utils from '../../server/src/utils';
 import { KeyPathBaseTypes } from '../../server/src/types/OnDeviceComponentRequest';
@@ -48,12 +49,6 @@ describe('OnDeviceComponent', function () {
 	});
 
 	describe('setValueAtKeyPath', function () {
-		async function setAndVerifyValue(base: KeyPathBaseTypes, keyPath: string, value: any, startingValue: any) {
-			expect(await odc.getValueAtKeyPath(base, keyPath)).to.equal(startingValue, `${base}.${keyPath} did not match expected value before set`);
-			const result = await odc.setValueAtKeyPath(base, keyPath, value);
-			expect(result.success).to.be.true;
-			expect(await odc.getValueAtKeyPath(base, keyPath)).to.equal(value, `${base}.${keyPath} did not match expected value after set`);
-		}
 
 		it('should be able to set a key on global', async () => {
 			await setAndVerifyValue('global', 'booleanValue', false, true);
@@ -67,4 +62,70 @@ describe('OnDeviceComponent', function () {
 			await setAndVerifyValue('global', 'authManager.profiles.profile1.settings.personalization.showContinueWatching', false, true);
 		});
 	});
+
+	describe('observeField', function () {
+		it('should fail if given invalid keyPath', async () => {
+			try {
+				await odc.observeField('global', 'does.not.exist');
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it('should succeed if given a valid node for its parent keyPath', async () => {
+			const keyPath = 'AuthManager.isLoggedIn';
+			await setAndVerifyValue('global', keyPath, false);
+			const observePromise = odc.observeField('global', keyPath);
+			await setAndVerifyValue('global', keyPath, true);
+			const {value} = await observePromise;
+			expect(value).to.be.true;
+		});
+
+		it('should wait for value to match if requested', async () => {
+			const keyPath = 'stringValue';
+			const expectedValue = utils.addRandomPostfix('secondValue');
+			const observePromise = odc.observeField('global', keyPath, expectedValue);
+			await setAndVerifyValue('global', keyPath, utils.addRandomPostfix('firstValue'));
+			await setAndVerifyValue('global', keyPath, expectedValue);
+			const {value} = await observePromise;
+			expect(value).to.equal(expectedValue);
+		});
+
+		it('if the match key path does not exist it should throw an error', async () => {
+			const keyPath = 'stringValue';
+			const observePromise = odc.observeField('global', keyPath, 'willNeverMatch', 'global', 'invalid.key.path');
+			const setValuePromise = setAndVerifyValue('global', keyPath, utils.addRandomPostfix('trigger'));
+			try {
+				await Promise.all([observePromise, setValuePromise]);
+			} catch (e) {
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it('it should allow match on other key paths and wait until that value matches', async () => {
+			const keyPath = 'stringValue';
+			const matchValue = 42;
+			const matchKeyPath = 'intValue';
+			await setAndVerifyValue('global', matchKeyPath, 0);
+			const observePromise = odc.observeField('global', keyPath, matchValue, 'global', matchKeyPath);
+			await setAndVerifyValue('global', keyPath, utils.addRandomPostfix('firstValue'));
+			const expectedValue = utils.addRandomPostfix('secondValue');
+			await setAndVerifyValue('global', matchKeyPath, matchValue);
+			await setAndVerifyValue('global', keyPath, expectedValue);
+			const {value} = await observePromise;
+			expect(value).to.equal(expectedValue);
+		});
+	});
+
+	async function setAndVerifyValue(base: KeyPathBaseTypes, keyPath: string, value: any, startingValue?: any) {
+		if (startingValue !== undefined) {
+			expect(await odc.getValueAtKeyPath(base, keyPath)).to.equal(startingValue, `${base}.${keyPath} did not match expected value before set`);
+		}
+		const result = await odc.setValueAtKeyPath(base, keyPath, value);
+		expect(result.success).to.be.true;
+		expect(await odc.getValueAtKeyPath(base, keyPath)).to.equal(value, `${base}.${keyPath} did not match expected value after set`);
+	}
 });

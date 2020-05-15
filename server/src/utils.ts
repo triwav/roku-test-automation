@@ -61,10 +61,13 @@ export function sleep(milliseconds: number) {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export function promiseTimeout<T>(promise: Promise<T>, milliseconds: number) {
+export function promiseTimeout<T>(promise: Promise<T>, milliseconds: number, message?: string) {
 	let timeout = new Promise<T>((resolve, reject) => {
 		setTimeout(() => {
-			reject('Timed out after ' + milliseconds + 'ms.');
+			if (message === undefined) {
+				message = 'Timed out after ' + milliseconds + 'ms.';
+			}
+			reject(message);
 		}, milliseconds);
 	});
 
@@ -110,4 +113,8 @@ export async function ensureDirExistForFilePath(filePath: string) {
 export function randomStringGenerator(length: number = 7) {
 	const p = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 	return [...Array(length)].reduce((a) => a + p[~~(Math.random() * p.length)], '');
+}
+
+export function addRandomPostfix(message: string, length: number = 2) {
+	return `${message}-${randomStringGenerator(length)}`;
 }
