@@ -1,7 +1,7 @@
 import * as needle from 'needle';
-import querystring from 'needle/lib/querystring';
 import { ScreenshotFormat } from './types/ConfigOptions';
 import * as utils from './utils';
+import { stringify } from 'query-string';
 
 export class RokuDevice {
 	public ip: string;
@@ -23,7 +23,7 @@ export class RokuDevice {
 		let url = `http://${this.ip}:8060/${path}`;
 
 		if (params && Object.keys(params).length) {
-			url = url.replace(/\?.*|$/, '?' + querystring.build(params));
+			url = url.replace(/\?.*|$/, '?' + stringify(params));
 		}
 
 		if (body !== undefined) {
