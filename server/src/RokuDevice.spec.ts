@@ -1,15 +1,24 @@
 import * as assert from 'assert';
 import * as chai from 'chai';
+import * as sinonImport from 'sinon';
+import * as fsExtra from 'fs-extra';
+const sinon = sinonImport.createSandbox();
+const expect = chai.expect;
+import * as querystring from 'needle/lib/querystring';
 
 import { RokuDevice } from './RokuDevice';
-
-const expect = chai.expect;
+import { ECP } from './ECP';
+import * as utils from './utils';
 
 describe('RokuDevice', function () {
 	let device: RokuDevice;
+	let ecp: ECP;
 	beforeEach(() => {
-		device = new RokuDevice('192.168.10.134', '5536');
-		device.setDebugProxy('http://192.168.10.40:8888');
+		({device, ecp} = utils.setupFromConfigFile());
+	});
+
+	afterEach(() => {
+		sinon.restore();
 	});
 
 	this.timeout(10000);
@@ -18,11 +27,27 @@ describe('RokuDevice', function () {
 		it('should work for POST requests', async () => {
 			await device.sendECP('keypress/Home', {}, '');
 		});
+
+		it('should work if params are passed in', async () => {
+			sinon.stub((device as any), 'needle').callsFake((method, url, data, options?) => {
+				expect(url).to.contain(querystring.build(params));
+			});
+			const params = {
+				contentId: 'contentIdValue',
+				mediaType: 'special'
+			};
+			await device.sendECP('launch/dev', params, '');
+		});
 	});
 
 	describe('getScreenshot', () => {
 		it('should work', async () => {
-			await device.getScreenshot('output.png');
+			await ecp.sendLaunchChannel();
+			const screenShotPath = await device.getScreenshot('output');
+			if (!fsExtra.existsSync(screenShotPath)) {
+				assert.fail(`'${screenShotPath}' did not exist`);
+			}
+			fsExtra.removeSync(screenShotPath);
 		});
 	});
 });

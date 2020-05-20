@@ -4,7 +4,7 @@ import * as express from 'express';
 
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
-import { OnDeviceComponentRequest, RequestTypes, KeyPathBaseTypes, RequestEnum } from './types/OnDeviceComponentRequest';
+import { OnDeviceComponentRequest, KeyPathBaseTypes, OnDeviceComponentBaseResponse } from './types/OnDeviceComponentRequest';
 import * as utils from './utils';
 
 export class OnDeviceComponent {
@@ -25,7 +25,25 @@ export class OnDeviceComponent {
 		this.config = config;
 	}
 
-	public async getValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string) {
+	public async callFunc(base: KeyPathBaseTypes, keyPath: string, funcName: string, funcParams?: any[]): Promise<{
+		value: any
+	} & OnDeviceComponentBaseResponse>  {
+		const result = await this.sendRequest({
+			type: 'callFunc',
+			args: {
+				base: base,
+				keyPath: keyPath,
+				funcName: funcName,
+				funcParams: funcParams
+			}
+		});
+		return result.body;
+	}
+
+	public async getValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string): Promise<{
+		found: boolean
+		value: any
+	} & OnDeviceComponentBaseResponse> {
 		const result = await this.sendRequest({
 			type: 'getValueAtKeyPath',
 			args: {
@@ -36,7 +54,11 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async getValuesAtKeyPaths(requests: {[key: string]: {base: KeyPathBaseTypes, keyPath: string}}) {
+	public async getValuesAtKeyPaths(requests: {[key: string]: {base: KeyPathBaseTypes, keyPath: string}}): Promise<{
+		[key: string]: any
+		found: boolean
+		value: any
+	} & OnDeviceComponentBaseResponse> {
 		const result = await this.sendRequest({
 			type: 'getValuesAtKeyPaths',
 			args: {
@@ -46,7 +68,9 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async observeField(base: KeyPathBaseTypes, keyPath: string, matchValue?: any, matchBase?: KeyPathBaseTypes, matchKeyPath?: string) {
+	public async observeField(base: KeyPathBaseTypes, keyPath: string, matchValue?: any, matchBase?: KeyPathBaseTypes, matchKeyPath?: string): Promise<{
+		value: any
+	} & OnDeviceComponentBaseResponse> {
 		// More efficient to split here than on device
 		const keyPathParts = keyPath.split('.');
 		const args: any = {
@@ -63,11 +87,12 @@ export class OnDeviceComponent {
 			if (matchKeyPath === undefined) {
 				matchKeyPath = keyPath;
 			}
+
 			const match = {
 				value: matchValue,
 				base: matchBase,
 				keyPath: matchKeyPath
-			}
+			};
 			args.match = match;
 		}
 
@@ -78,7 +103,7 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async setValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string, value: any) {
+	public async setValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string, value: any): Promise<OnDeviceComponentBaseResponse> {
 		// More efficient to split here than on device
 		const keyPathParts = keyPath.split('.');
 		const args: any = {

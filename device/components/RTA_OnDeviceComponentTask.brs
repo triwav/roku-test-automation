@@ -15,6 +15,7 @@ end function
 
 sub runTaskThread()
 	m.validRequestTypes = {
+		"callFunc": true
 		"getValueAtKeyPath": true
 		"getValuesAtKeyPaths": true
 		"handshake": true

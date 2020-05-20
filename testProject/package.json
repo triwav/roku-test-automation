@@ -3,7 +3,6 @@
     "description": "Test project for roku-test-automation",
     "version": "1.0.0",
     "scripts": {
-        "build": "rimraf out && tsc",
         "test": "mocha --full-trace tests/**/*.spec.ts"
     },
     "repository": {

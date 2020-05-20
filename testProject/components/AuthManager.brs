@@ -12,3 +12,7 @@ sub init()
 		}
 	}
 end sub
+
+function loginUser(_)
+	m.top.isLoggedIn = true
+end function

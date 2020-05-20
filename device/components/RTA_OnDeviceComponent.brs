@@ -15,7 +15,9 @@ sub onRenderThreadRequestChange(event as Object)
 	else
 		logVerbose("Received request: ", formatJson(request))
 		response = Invalid
-		if requestType = "getValueAtKeyPath" then
+		if requestType = "callFunc" then
+			response = processCallFuncRequest(args)
+		else if requestType = "getValueAtKeyPath" then
 			response = processGetValueAtKeyPathRequest(args)
 		else if requestType = "getValuesAtKeyPaths" then
 			response = processGetValuesAtKeyPathsRequest(args)
@@ -30,6 +32,43 @@ sub onRenderThreadRequestChange(event as Object)
 		end if
 	end if
 end sub
+
+function processCallFuncRequest(args as Object) as Object
+	keyPath = args.keyPath
+	node = processGetValueAtKeyPathRequest(args).value
+	if NOT isNode(node) then
+		return buildErrorResponseObject("Node not found at key path'" + keyPath + "'")
+	end if
+
+	funcName = args.funcName
+	if NOT isNonEmptyString(funcName) then
+		return buildErrorResponseObject("Valid callFunc name not passed in")
+	end if
+
+	p = args.funcParams
+	if NOT isNonEmptyArray(p) then p = [Invalid]
+	paramsCount = p.count()
+
+	if paramsCount = 1 then
+		result = node.callFunc(funcName, p[0])
+	else if paramsCount = 2 then
+		result = node.callFunc(funcName, p[0], p[1])
+	else if paramsCount = 3 then
+		result = node.callFunc(funcName, p[0], p[1], p[2])
+	else if paramsCount = 4 then
+		result = node.callFunc(funcName, p[0], p[1], p[2], p[3])
+	else if paramsCount = 5 then
+		result = node.callFunc(funcName, p[0], p[1], p[2], p[3], p[4])
+	else if paramsCount = 6 then
+		result = node.callFunc(funcName, p[0], p[1], p[2], p[3], p[4], p[5])
+	else if paramsCount = 7 then
+		result = node.callFunc(funcName, p[0], p[1], p[2], p[3], p[4], p[5], p[6])
+	end if
+
+	return {
+		"value": result
+	}
+end function
 
 function processGetValueAtKeyPathRequest(args as Object) as Object
 	baseType = args.base

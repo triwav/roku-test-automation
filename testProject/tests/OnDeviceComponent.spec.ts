@@ -33,13 +33,15 @@ describe('OnDeviceComponent', function () {
 			expect(value.id).to.eq('subchild1');
 		});
 
-		it('should work with for multiple values', async () => {
-			const values = await odc.getValuesAtKeyPaths({
-				subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
-				subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
+		describe('getValuesAtKeyPaths', function () {
+			it('should work with for multiple values', async () => {
+				const {subchild1, subchild2} = await odc.getValuesAtKeyPaths({
+					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
+					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
+				});
+				expect(subchild1.id).to.eq('subchild1');
+				expect(subchild2.id).to.eq('subchild2');
 			});
-			expect(values.subchild1.id).to.eq('subchild1');
-			expect(values.subchild2.id).to.eq('subchild2');
 		});
 
 		it('should be able to get a value on a valid field', async () => {
@@ -119,12 +121,39 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	async function setAndVerifyValue(base: KeyPathBaseTypes, keyPath: string, value: any, startingValue?: any) {
-		if (startingValue !== undefined) {
-			expect(await odc.getValueAtKeyPath(base, keyPath)).to.equal(startingValue, `${base}.${keyPath} did not match expected value before set`);
+	describe('callFunc', function () {
+		it('should fail if given invalid keyPath', async () => {
+			try {
+				await odc.callFunc('global', 'does.not.exist', 'trigger');
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it(`should work with funcs that don't take any params`, async () => {
+			const keyPath = 'authManager.isLoggedIn';
+			await setAndVerifyValue('global', keyPath, false);
+			await odc.callFunc('global', 'authManager', 'loginUser');
+			const {value} = await odc.getValueAtKeyPath('global', keyPath);
+			expect(value).to.be.true;
+		});
+
+		it('should work with funcs taking params', async () => {
+			const {value} = await odc.callFunc('scene', '', 'multiplyNumbers', [3, 5]);
+			expect(value).to.be.equal(15);
+		});
+	});
+
+	async function setAndVerifyValue(base: KeyPathBaseTypes, keyPath: string, value: any, expectedStartingValue?: any) {
+		if (expectedStartingValue !== undefined) {
+			const {value: actualStartingValue} = await odc.getValueAtKeyPath(base, keyPath);
+			expect(actualStartingValue).to.equal(expectedStartingValue, `${base}.${keyPath} did not match expected value before set`);
 		}
 		const result = await odc.setValueAtKeyPath(base, keyPath, value);
 		expect(result.success).to.be.true;
-		expect(await odc.getValueAtKeyPath(base, keyPath)).to.equal(value, `${base}.${keyPath} did not match expected value after set`);
+		const {value: actualValue} = await odc.getValueAtKeyPath(base, keyPath);
+		expect(actualValue).to.equal(value, `${base}.${keyPath} did not match expected value after set`);
 	}
 });

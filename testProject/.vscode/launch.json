@@ -16,7 +16,6 @@
 		"name": "Debug testProject Tests",
 		"type": "node",
 		"request": "launch",
-		"preLaunchTask": "build",
 		"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
 		"args": ["--timeout", "60000", "-r", "ts-node/register", "-r", "source-map-support/register", "./tests/**/*.spec.ts"],
 		"cwd": "${workspaceFolder}",
