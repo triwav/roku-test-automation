@@ -1,5 +1,5 @@
 import * as needle from 'needle';
-import querystring from 'needle/lib/querystring';
+import * as querystring from 'needle/lib/querystring';
 import { ScreenshotFormat } from './types/ConfigOptions';
 import * as utils from './utils';
 
