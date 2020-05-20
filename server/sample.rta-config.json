@@ -16,7 +16,7 @@
 	},
 	"defaults": {
 		"ecp": {
-			"keyPressDelay": 1000
+			"keyPressDelay": 300
 		}
 	}
 }

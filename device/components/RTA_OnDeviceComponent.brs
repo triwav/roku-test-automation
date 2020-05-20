@@ -1,21 +1,34 @@
 sub init()
 	m.task = createNode("RTA_OnDeviceComponentTask")
-	m.task.observeField("renderThreadRequest", "onRenderThreadRequestChange")
+	m.task.observeFieldScoped("renderThreadRequest", "onRenderThreadRequestChange")
 	m.task.control = "RUN"
+
+	m.activeObserveFieldRequests = {}
 end sub
 
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
 	requestType = request.type
 	args = request.args
-	if requestType = "getValueAtKeyPath" then
-		response = processGetValueAtKeyPathRequest(args)
-	else if requestType = "getValuesAtKeyPaths" then
-		response = processGetValuesAtKeyPathsRequest(args)
-	else if requestType = "setValueAtKeyPath" then
-		response = processSetValueAtKeyPathRequest(args)
+	if requestType = "handshake" then
+		setLogLevel(getStringAtKeyPath(args, "logLevel"))
+	else
+		logVerbose("Received request: ", formatJson(request))
+		response = Invalid
+		if requestType = "getValueAtKeyPath" then
+			response = processGetValueAtKeyPathRequest(args)
+		else if requestType = "getValuesAtKeyPaths" then
+			response = processGetValuesAtKeyPathsRequest(args)
+		else if requestType = "observeField" then
+			response = processObserveFieldRequest(request)
+		else if requestType = "setValueAtKeyPath" then
+			response = processSetValueAtKeyPathRequest(args)
+		end if
+
+		if response <> Invalid then
+			sendBackResponse(request, response)
+		end if
 	end if
-	sendBackResponse(request, response)
 end sub
 
 function processGetValueAtKeyPathRequest(args as Object) as Object
@@ -64,12 +77,70 @@ function processGetValuesAtKeyPathsRequest(args as Object) as Object
 	return response
 end function
 
+function processObserveFieldRequest(request as Object) as Dynamic
+	args = request.args
+	keyPath = args.keyPath
+	result = processGetValueAtKeyPathRequest(args)
+	node = result.value
+	if NOT isNode(node) then
+		return buildErrorResponseObject("Node not found at key path'" + keyPath + "'")
+	end if
+
+	field = args.field
+	if node.observeFieldScoped(field, "observeFieldCallback") then
+		logVerbose("Now observing '" + field + "' at key path '" + keyPath + "'")
+	else
+		return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + keyPath + "'")
+	end if
+
+	request.node = node
+	m.activeObserveFieldRequests[request.id] = request
+	return Invalid
+end function
+
+sub observeFieldCallback(event as Object)
+	node = event.getRoSgNode()
+	field = event.getField()
+	data = event.getData()
+	logVerbose("Received callback for node field '" + field + "' with value ", data)
+	for each requestId in m.activeObserveFieldRequests
+		request = m.activeObserveFieldRequests[requestId]
+		args = request.args
+		if node.isSameNode(request.node) AND args.field = field then
+			match = args.match
+			if isAA(match) then
+				result = processGetValueAtKeyPathRequest(match)
+				if result.found <> true then
+					logVerbose("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
+					node.unobserveFieldScoped(field)
+					m.activeObserveFieldRequests.delete(requestId)
+					sendBackResponse(request, buildErrorResponseObject("Match was requested and key path was not valid"))
+					return
+				end if
+
+				if result.value <> match.value then
+					logVerbose("Match.value did not match requested value continuing to wait")
+					return
+				end if
+			end if
+			logVerbose("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
+			node.unobserveFieldScoped(field)
+			m.activeObserveFieldRequests.delete(requestId)
+			sendBackResponse(request, {
+				"value": data
+			})
+			return
+		end if
+	end for
+	logError("Received callback for unknown node or field ", node)
+end sub
+
 function processSetValueAtKeyPathRequest(args as Object) as Object
 	keyPath = args.keyPath
 	result = processGetValueAtKeyPathRequest(args)
 
 	if result.found <> true then
-		return buildErrorResponseObject("No value found at keyPath '" + keyPath + "'")
+		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
 	end if
 
 	resultValue = result.value

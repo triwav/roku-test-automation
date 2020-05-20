@@ -334,6 +334,21 @@ end function
 '#region *** LOGGING
 '*************************************************************************
 
+function convertLogLevelStringToInteger(logLevel as String) as Integer
+	if logLevel = "verbose" then return 5
+	if logLevel = "debug" then return 4
+	if logLevel = "info" then return 3
+	if logLevel = "warn" then return 2
+	if logLevel = "error" then return 1
+	if logLevel = "off" then return 0
+	logWarn("Invalid logLevel passed in '" + logLevel + "'")
+end function
+
+function setLogLevel(logLevel as String)
+	m.logLevel = 5
+	m.logLevel = convertLogLevelStringToInteger(logLevel)
+end function
+
 sub logVerbose(message as String, value = "nil" as Dynamic)
 	_log(5, message, value)
 end sub
@@ -365,9 +380,11 @@ sub _log(level as Integer, message as String, value = "nil" as Dynamic)
 		"DEBUG"
 		"VERBOSE"
 	]
-	print "[RTA][" + levels[level] + "] " message
-	if NOT isString(value) OR value <> "nil" then
-		print value
+	message = "[RTA][" + levels[level] + "] " + message
+	if isString(value) AND value = "nil" then
+		print message
+	else
+		print message value
 	end if
 end sub
 

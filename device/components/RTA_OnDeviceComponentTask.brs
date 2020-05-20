@@ -3,7 +3,6 @@ sub init()
 	m.top.observeFieldScoped("renderThreadResponse", m.port)
 	m.top.functionName = "runTaskThread"
 	m.top.control = "RUN"
-	m.logLevel = 0
 end sub
 
 function getVersion() as String
@@ -18,6 +17,8 @@ sub runTaskThread()
 	m.validRequestTypes = {
 		"getValueAtKeyPath": true
 		"getValuesAtKeyPaths": true
+		"handshake": true
+		"observeField": true
 		"setValueAtKeyPath": true
 	}
 
@@ -84,33 +85,27 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 			return
 		end if
 
-		m.activeRequests[request.id] = request
-		m.top.renderThreadRequest = request
-	else if requestType = "handshake" then
-		logLevel = getStringAtKeyPath(request, "args.logLevel")
-		if logLevel = "verbose" then
-			m.logLevel = 5
-		else if logLevel = "debug" then
-			m.logLevel = 4
-		else if logLevel = "info" then
-			m.logLevel = 3
-		else if logLevel = "warn" then
-			m.logLevel = 2
-		else if logLevel = "error" then
-			m.logLevel = 1
-		else if logLevel = "off" then
-			m.logLevel = 0
+		if requestType = "handshake" then
+			processHandshakeRequest(request)
 		end if
 
-		version = getVersion()
-		if getStringAtKeyPath(request, "args.version") = version then
-			sendBackResponse(request, {
-				"success": true
-				"version": version
-			})
-		end if
+		m.activeRequests[request.id] = request
+		m.top.renderThreadRequest = request
 	else
 		sendBackError(request, "request type '" + requestType + "' not currently handled")
+	end if
+end sub
+
+sub processHandshakeRequest(request as Object)
+	args = request.args
+	setLogLevel(getStringAtKeyPath(args, "logLevel"))
+
+	version = getVersion()
+	if getStringAtKeyPath(args, "version") = version then
+		sendBackResponse(request, {
+			"success": true
+			"version": version
+		})
 	end if
 end sub
 
@@ -131,5 +126,5 @@ sub sendBackResponse(request as Object, response as Dynamic)
 	http.addHeader("Content-Type", "application/json")
 
 	code = http.postFromString(formattedResponse)
-	logVerbose("Sent callback to: " + callbackUrl + " and received response code: " + code.toStr(), formattedResponse)
+	logVerbose("Sent callback to: " + callbackUrl + " and received response code: " + code.toStr() + " body: ", formattedResponse)
 end sub

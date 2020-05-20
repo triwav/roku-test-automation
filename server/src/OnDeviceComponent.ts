@@ -8,15 +8,17 @@ import { OnDeviceComponentRequest, RequestTypes, KeyPathBaseTypes, RequestEnum }
 import * as utils from './utils';
 
 export class OnDeviceComponent {
+	private debugLog = false;
 	private static readonly version = '1.0.0';
 	private callbackListenPort?: number;
 	private device: RokuDevice;
 	private config: ConfigOptions;
 	private client = udp.createSocket('udp4');
-	private handshakeComplete = false;
 	private sentRequests: { [key: string]: OnDeviceComponentRequest } = {};
 	private app = this.setupExpress();
 	private server?: http.Server;
+	private handshakeStatus?: 'running' | 'complete' | 'failed';
+	private handshakePromise?: Promise<any>;
 
 	constructor(device: RokuDevice, config: ConfigOptions) {
 		this.device = device;
@@ -44,6 +46,38 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
+	public async observeField(base: KeyPathBaseTypes, keyPath: string, matchValue?: any, matchBase?: KeyPathBaseTypes, matchKeyPath?: string) {
+		// More efficient to split here than on device
+		const keyPathParts = keyPath.split('.');
+		const args: any = {
+			base: base,
+			field: keyPathParts.pop(),
+			keyPath: keyPathParts.join('.')
+		};
+
+		if (matchValue !== undefined) {
+			if (matchBase === undefined) {
+				matchBase = base;
+			}
+
+			if (matchKeyPath === undefined) {
+				matchKeyPath = keyPath;
+			}
+			const match = {
+				value: matchValue,
+				base: matchBase,
+				keyPath: matchKeyPath
+			}
+			args.match = match;
+		}
+
+		const result = await this.sendRequest({
+			type: 'observeField',
+			args: args
+		});
+		return result.body;
+	}
+
 	public async setValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string, value: any) {
 		// More efficient to split here than on device
 		const keyPathParts = keyPath.split('.');
@@ -61,31 +95,46 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	private async sendHandShakeRequest() {
-		let retryCount = 5;
-		while (retryCount > 0) {
-			try {
-				let result = await this.sendRequest({
-					type: 'handshake',
-					args: {
-						version: OnDeviceComponent.version,
-						logLevel: this.config.device.odc?.logLevel ?? 'info'
+	private sendHandShakeRequest() {
+		if (!this.handshakePromise) {
+			this.handshakePromise = Promise.resolve().then(async () => {
+				this.handshakeStatus = 'running';
+				let retryCount = 10;
+				while (retryCount > 0) {
+					try {
+						let result = await this.sendRequestCore({
+							type: 'handshake',
+							args: {
+								version: OnDeviceComponent.version,
+								logLevel: this.config.device.odc?.logLevel ?? 'info'
+							}
+						}, 1000);
+						this.handshakeStatus = 'complete';
+						return result.body;
+					} catch (e) {
+						retryCount--;
+						if (retryCount && this.debugLog) console.log('Send handshake failed. Retrying');
 					}
-				}, 1000);
-				return result.body;
-			} catch (e) {
-				retryCount--;
-				if (retryCount) console.log('Send handshake failed. Retrying');
-			}
+				}
+				this.handshakeStatus = 'failed';
+				throw new Error('Handshake failed');
+			});
 		}
-		throw new Error('Handshake failed');
+		return this.handshakePromise;
 	}
 
 	private async sendRequest(request: OnDeviceComponentRequest, timeoutMilliseconds: number = 5000) {
-		await this.setupConnections();
-		if (request.type !== RequestEnum[RequestEnum.handshake] && !this.handshakeComplete) {
-			throw new Error(`Handshake not complete. Can't continue`);
+		if (this.handshakeStatus !== 'complete') {
+			if (this.handshakeStatus === 'failed') {
+				throw new Error('Can not continue as handshake was not successful');
+			}
+			await this.sendHandShakeRequest();
 		}
+		return await this.sendRequestCore(request, timeoutMilliseconds);
+	}
+
+	private async sendRequestCore(request: OnDeviceComponentRequest, timeoutMilliseconds: number = 5000) {
+		await this.startServer();
 
 		const requestId = utils.randomStringGenerator();
 		const formattedRequest = {
@@ -105,28 +154,32 @@ export class OnDeviceComponent {
 			};
 		});
 		this.sentRequests[requestId] = request;
-		this.client.send(JSON.stringify(formattedRequest), 9000, this.device.ip, (err) => {
+
+		const body = JSON.stringify(formattedRequest);
+		if (this.debugLog) console.log(`Sending request to ${this.device.ip} with body: ${body}`);
+		this.client.send(body, 9000, this.device.ip, (err) => {
 			if (err) {
 				throw err;
 			}
 		});
-		return await utils.promiseTimeout(promise, timeoutMilliseconds);
+		return await utils.promiseTimeout(promise, timeoutMilliseconds, `${request.type} request ${requestId} timed out after ${timeoutMilliseconds}ms`);
 	}
 
-	// Starts up express server and our connection to the OnDeviceComponent
-	public async setupConnections() {
-		// If we already have everything we need then don't want to rerun
-		if (this.server) return;
+	// Starts up express server
+	private async startServer() {
+		if (this.server) {
+			return;
+		}
 
 		const callbackListenPort = this.config.server?.callbackListenPort;
 		if (!callbackListenPort) throw new Error('Config did not have a callback listen port');
 
-		this.server = this.app.listen(callbackListenPort, function() {
-			console.log(`Listening for callbacks on ${callbackListenPort}`);
+		if (this.debugLog) console.log(`Starting callback server`);
+		this.server = this.app.listen(callbackListenPort, () => {
+			if (this.debugLog) console.log(`Listening for callbacks on ${callbackListenPort}`);
+
 		});
 		this.callbackListenPort = callbackListenPort;
-		await this.sendHandShakeRequest();
-		this.handshakeComplete = true;
 	}
 
 	public shutdown() {
@@ -145,6 +198,7 @@ export class OnDeviceComponent {
 			const id = req.params.id;
 			const request = this.sentRequests[id];
 			if (request) {
+				if (this.debugLog) console.log(`Server received response`, req.body);
 				request.callback?.(req);
 				res.send('OK');
 				delete this.sentRequests[id];
