@@ -2,6 +2,9 @@
 <component name="MainScene" extends="Scene">
 	<script type="text/brightscript" uri="MainScene.brs" />
 	<script type="text/brightscript" uri="RTA_common.brs" />
+	<interface>
+		<function name="multiplyNumbers" />
+	</interface>
 	<children>
 		<Group id="testTarget">
 			<Group id="child1" />

@@ -4,5 +4,7 @@
 	<interface>
 		<field id="isLoggedIn" type="boolean" />
 		<field id="profiles" type="assocarray" />
+
+		<function name="loginUser" />
 	</interface>
 </component>

@@ -1,5 +1,5 @@
 import * as needle from 'needle';
-import querystring from 'needle/lib/querystring';
+import * as querystring from 'needle/lib/querystring';
 import { ScreenshotFormat } from './types/ConfigOptions';
 import * as utils from './utils';
 
@@ -8,6 +8,7 @@ export class RokuDevice {
 	public password: string;
 	private debugProxy = '';
 	private screenshotFormat: ScreenshotFormat;
+	private needle = needle;
 
 	constructor(ip: string, password: string, screenshotFormat: ScreenshotFormat = 'jpg') {
 		this.ip = ip;
@@ -27,9 +28,9 @@ export class RokuDevice {
 		}
 
 		if (body !== undefined) {
-			return await needle('post', url, body, this.getOptions());
+			return await this.needle('post', url, body, this.getOptions());
 		} else {
-			return await needle('get', url, this.getOptions());
+			return await this.needle('get', url, this.getOptions());
 		}
 	}
 
@@ -38,7 +39,7 @@ export class RokuDevice {
 	 */
 	public async getScreenshot(outputFilePath: string) {
 		await this.generateScreenshot();
-		await this.saveScreenshot(outputFilePath);
+		return await this.saveScreenshot(outputFilePath);
 	}
 
 	public async getTestScreenshot(contextOrSuite: Mocha.Context | Mocha.Suite) {
@@ -53,7 +54,7 @@ export class RokuDevice {
 		};
 		const options = this.getOptions(true);
 		options.multipart = true;
-		return await needle('post', url, data, options);
+		return await this.needle('post', url, data, options);
 	}
 
 	private async saveScreenshot(outputFilePath: string) {
@@ -62,10 +63,11 @@ export class RokuDevice {
 		const ext = `.${this.screenshotFormat}`;
 		options.output = outputFilePath + ext;
 		const url = `http://${this.ip}/pkgs/dev${ext}`;
-		let result = await needle('get', url, options);
+		let result = await this.needle('get', url, options);
 		if (result.statusCode !== 200) {
-			throw new Error(`Could not download screenshot at ${url}`);
+			throw new Error(`Could not download screenshot at ${url}. Make sure you have the correct screenshot format in your config`);
 		}
+		return options.output;
 	}
 
 	private getOptions(requiresAuth: boolean = false) {

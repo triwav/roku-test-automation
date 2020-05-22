@@ -24,7 +24,9 @@ export type KeyPathBaseTypes = keyof typeof KeyPathBaseEnum;
 export interface OnDeviceComponentRequest {
 	type: RequestTypes;
 	args: object;
-	callback?: OnDeviceComponentRequestCallback;
+	callback?: (req: express.Request) => void;
 }
 
-type OnDeviceComponentRequestCallback = (req: express.Request) => void;
+export interface OnDeviceComponentBaseResponse {
+	success: boolean;
+}

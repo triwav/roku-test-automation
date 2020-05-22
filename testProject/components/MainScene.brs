@@ -7,3 +7,7 @@ sub init()
 		"intValue": 1
 	})
 end sub
+
+function multiplyNumbers(a as Dynamic, b as Dynamic) as Dynamic
+	return a * b
+end function
