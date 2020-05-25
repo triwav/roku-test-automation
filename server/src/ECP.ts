@@ -41,7 +41,7 @@ export class ECP {
 		}
 	}
 
-	public async sendLaunchChannel(channelId = '', params = {}, verifyLaunch = true) {
+	public async sendLaunchChannel(params = {}, verifyLaunch = true, channelId = '') {
 		if (!channelId) {
 			const configChannelId = this.config?.channel?.id;
 			if (!configChannelId) {

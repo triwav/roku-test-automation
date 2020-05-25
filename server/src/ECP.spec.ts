@@ -170,7 +170,7 @@ describe('ECP', function () {
 	describe('sendLaunchChannel', function () {
 		it('should_not_throw_if_successful_and_verification_is_enabled', async () => {
 			ecpResponse = await utils.getNeedleMockResponse(this);
-			await ecp.sendLaunchChannel('dev', {}, true);
+			await ecp.sendLaunchChannel({}, true, 'dev');
 		});
 
 		it('should_throw_if_channelId_not_supplied_and_no_config', async () => {
@@ -188,7 +188,7 @@ describe('ECP', function () {
 				config.channel = {
 					id: 'dev'
 				};
-				await ecp.sendLaunchChannel('', {}, false);
+				await ecp.sendLaunchChannel({}, false, '');
 			} catch (e) {
 				assert.fail('Exception should not have been thrown: ' + e.message);
 			}
@@ -196,7 +196,7 @@ describe('ECP', function () {
 
 		it('should_throw_if_launch_not_successful_and_verification_is_enabled', async () => {
 			try {
-				await ecp.sendLaunchChannel('dev', {}, true);
+				await ecp.sendLaunchChannel({}, true, 'dev');
 			} catch (e) {
 				expect(e.name).to.equal('sendLaunchChannelVerifyLaunch');
 				return;
@@ -205,7 +205,7 @@ describe('ECP', function () {
 		});
 
 		it('should_not_throw_if_launch_not_successful_and_verification_not_enabled', async () => {
-			await ecp.sendLaunchChannel('dev', {}, false);
+			await ecp.sendLaunchChannel({}, false, 'dev');
 		});
 	});
 });
