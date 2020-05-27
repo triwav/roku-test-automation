@@ -1,3 +1,5 @@
+import { ODCLogLevels } from './OnDeviceComponentRequest';
+
 export interface ConfigOptions {
 	device: DeviceConfigOptions;
 	channel?: ChannelConfigOptions;
@@ -10,7 +12,7 @@ export interface DeviceConfigOptions {
 	password: string;
 	debugProxy?: string;
 	odc?: {
-		logLevel?: 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
+		logLevel?: ODCLogLevels;
 	};
 	screenshotFormat?: ScreenshotFormat;
 }
