@@ -51,6 +51,8 @@ export class OnDeviceComponent {
 	}
 
 	public async observeField(args: ODCObserveFieldArgs, options?: ODCRequestOptions): Promise<{
+		/** Whether the observer was actually fired or a match value was provided and already equaled the requested value  */
+		observerFired: boolean
 		value: any
 	} & ODCBaseResponse> {
 		const match = args.match;

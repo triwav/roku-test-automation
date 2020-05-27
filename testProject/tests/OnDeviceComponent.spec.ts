@@ -81,8 +81,9 @@ describe('OnDeviceComponent', function () {
 			await setAndVerifyValue({...args, value: false});
 			const observePromise = odc.observeField(args);
 			await setAndVerifyValue({...args, value: true});
-			const {value} = await observePromise;
+			const {value, observerFired} = await observePromise;
 			expect(value).to.be.true;
+			expect(observerFired).to.be.true;
 		});
 
 		it('should wait for value to match if requested', async () => {
@@ -91,8 +92,9 @@ describe('OnDeviceComponent', function () {
 			const observePromise = odc.observeField({...args, match: {value: expectedValue}});
 			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
 			await setAndVerifyValue({...args, value: expectedValue});
-			const {value} = await observePromise;
+			const {value, observerFired} = await observePromise;
 			expect(value).to.equal(expectedValue);
+			expect(observerFired).to.be.true;
 		});
 
 		it('if the match key path does not exist it should throw an error', async () => {
@@ -121,8 +123,23 @@ describe('OnDeviceComponent', function () {
 			const expectedValue = utils.addRandomPostfix('secondValue');
 			await setAndVerifyValue(args.match);
 			await setAndVerifyValue({...args, value: expectedValue});
-			const {value} = await observePromise;
+			const {value, observerFired} = await observePromise;
 			expect(value).to.equal(expectedValue);
+			expect(observerFired).to.be.true;
+		});
+
+
+		it('if a match value is provided and the value already equals what we are looking for, it should return right away', async () => {
+			const args = {
+				keyPath: 'stringValue',
+				match: {
+					keyPath: 'intValue',
+					value: 42
+				}
+			};
+			await setAndVerifyValue(args.match);
+			const {observerFired} = await odc.observeField(args);
+			expect(observerFired).to.be.false;
 		});
 	});
 

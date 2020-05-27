@@ -125,6 +125,22 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	end if
 
 	field = args.field
+
+	' If match was provided, check to see if it already matches the expected value
+	match = args.match
+	if isAA(match) then
+		result = processGetValueAtKeyPathRequest(match)
+		if result.found <> true then
+			return buildErrorResponseObject("Match was requested and key path was not valid")
+		end if
+		if result.value = args.match.value then
+			return {
+				"value": node[field]
+				"observerFired": false
+			}
+		end if
+	end if
+
 	if node.observeFieldScoped(field, "observeFieldCallback") then
 		logVerbose("Now observing '" + field + "' at key path '" + keyPath + "'")
 	else
@@ -166,6 +182,7 @@ sub observeFieldCallback(event as Object)
 			m.activeObserveFieldRequests.delete(requestId)
 			sendBackResponse(request, {
 				"value": data
+				"observerFired": true
 			})
 			return
 		end if
