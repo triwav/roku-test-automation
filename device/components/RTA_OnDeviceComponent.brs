@@ -71,14 +71,13 @@ function processCallFuncRequest(args as Object) as Object
 end function
 
 function processGetValueAtKeyPathRequest(args as Object) as Object
-	baseType = args.base
-	if NOT isString(baseType) then
-		return buildErrorResponseObject("Had invalid base")
+	if NOT isNonEmptyString(args.base) then
+		args.base = "global"
 	end if
 
 	base = getBaseObject(args)
 	if base = Invalid then
-		return buildErrorResponseObject("Could not handle base type of '" + baseType + "'")
+		return buildErrorResponseObject("Could not handle base type of '" + args.base + "'")
 	end if
 
 	keyPath = args.keyPath

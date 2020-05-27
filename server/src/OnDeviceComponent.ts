@@ -4,17 +4,18 @@ import * as express from 'express';
 
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
-import { OnDeviceComponentRequest, KeyPathBaseTypes, OnDeviceComponentBaseResponse } from './types/OnDeviceComponentRequest';
 import * as utils from './utils';
+import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCBaseResponse, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs } from '.';
 
 export class OnDeviceComponent {
+	public defaultTimeout = 5000;
 	private debugLog = false;
 	private static readonly version = '1.0.0';
 	private callbackListenPort?: number;
 	private device: RokuDevice;
 	private config: ConfigOptions;
 	private client = udp.createSocket('udp4');
-	private sentRequests: { [key: string]: OnDeviceComponentRequest } = {};
+	private sentRequests: { [key: string]: ODCRequest } = {};
 	private app = this.setupExpress();
 	private server?: http.Server;
 	private handshakeStatus?: 'running' | 'complete' | 'failed';
@@ -25,98 +26,50 @@ export class OnDeviceComponent {
 		this.config = config;
 	}
 
-	public async callFunc(base: KeyPathBaseTypes, keyPath: string, funcName: string, funcParams?: any[]): Promise<{
+	public async callFunc(args: ODCCallFuncArgs, options?: ODCRequestOptions): Promise<{
 		value: any
-	} & OnDeviceComponentBaseResponse>  {
-		const result = await this.sendRequest({
-			type: 'callFunc',
-			args: {
-				base: base,
-				keyPath: keyPath,
-				funcName: funcName,
-				funcParams: funcParams
-			}
-		});
+	} & ODCBaseResponse> {
+		const result = await this.sendRequest('callFunc', args, options);
 		return result.body;
 	}
 
-	public async getValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string): Promise<{
+	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
 		found: boolean
 		value: any
-	} & OnDeviceComponentBaseResponse> {
-		const result = await this.sendRequest({
-			type: 'getValueAtKeyPath',
-			args: {
-				base: base,
-				keyPath: keyPath
-			}
-		});
+	} & ODCBaseResponse> {
+		const result = await this.sendRequest('getValueAtKeyPath', args, options);
 		return result.body;
 	}
 
-	public async getValuesAtKeyPaths(requests: {[key: string]: {base: KeyPathBaseTypes, keyPath: string}}): Promise<{
+	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options?: ODCRequestOptions): Promise<{
 		[key: string]: any
 		found: boolean
 		value: any
-	} & OnDeviceComponentBaseResponse> {
-		const result = await this.sendRequest({
-			type: 'getValuesAtKeyPaths',
-			args: {
-				requests: requests
-			}
-		});
+	} & ODCBaseResponse> {
+		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
 		return result.body;
 	}
 
-	public async observeField(base: KeyPathBaseTypes, keyPath: string, matchValue?: any, matchBase?: KeyPathBaseTypes, matchKeyPath?: string): Promise<{
+	public async observeField(args: ODCObserveFieldArgs, options?: ODCRequestOptions): Promise<{
 		value: any
-	} & OnDeviceComponentBaseResponse> {
-		// More efficient to split here than on device
-		const keyPathParts = keyPath.split('.');
-		const args: any = {
-			base: base,
-			field: keyPathParts.pop(),
-			keyPath: keyPathParts.join('.')
-		};
-
-		if (matchValue !== undefined) {
-			if (matchBase === undefined) {
-				matchBase = base;
+	} & ODCBaseResponse> {
+		const match = args.match;
+		if (match) {
+			if (!('keyPath' in match)) {
+				args.match = {
+					base: args.base,
+					keyPath: args.keyPath,
+					value: match.value
+				};
 			}
-
-			if (matchKeyPath === undefined) {
-				matchKeyPath = keyPath;
-			}
-
-			const match = {
-				value: matchValue,
-				base: matchBase,
-				keyPath: matchKeyPath
-			};
-			args.match = match;
 		}
 
-		const result = await this.sendRequest({
-			type: 'observeField',
-			args: args
-		});
+		const result = await this.sendRequest('observeField', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
 
-	public async setValueAtKeyPath(base: KeyPathBaseTypes, keyPath: string, value: any): Promise<OnDeviceComponentBaseResponse> {
-		// More efficient to split here than on device
-		const keyPathParts = keyPath.split('.');
-		const args: any = {
-			base: base,
-			field: keyPathParts.pop(),
-			keyPath: keyPathParts.join('.'),
-			value: value
-		};
-
-		const result = await this.sendRequest({
-			type: 'setValueAtKeyPath',
-			args: args
-		});
+	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<ODCBaseResponse> {
+		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
 
@@ -127,13 +80,13 @@ export class OnDeviceComponent {
 				let retryCount = 10;
 				while (retryCount > 0) {
 					try {
-						let result = await this.sendRequestCore({
-							type: 'handshake',
-							args: {
-								version: OnDeviceComponent.version,
-								logLevel: this.config.device.odc?.logLevel ?? 'info'
-							}
-						}, 1000);
+						const args = {
+							version: OnDeviceComponent.version,
+							logLevel: this.config.device.odc?.logLevel ?? 'info'
+						};
+						let result = await this.sendRequestCore('handshake', args, {
+							timeout: 1000
+						});
 						this.handshakeStatus = 'complete';
 						return result.body;
 					} catch (e) {
@@ -148,26 +101,34 @@ export class OnDeviceComponent {
 		return this.handshakePromise;
 	}
 
-	private async sendRequest(request: OnDeviceComponentRequest, timeoutMilliseconds: number = 5000) {
+	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
+	private breakOutFieldFromKeyPath(args: ODCCallFuncArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs) {
+		const keyPathParts = args.keyPath.split('.');
+		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
+	}
+
+	private async sendRequest(type: ODCRequestTypes, args: ODCRequestArgs, options?: ODCRequestOptions) {
 		if (this.handshakeStatus !== 'complete') {
 			if (this.handshakeStatus === 'failed') {
 				throw new Error('Can not continue as handshake was not successful');
 			}
 			await this.sendHandShakeRequest();
 		}
-		return await this.sendRequestCore(request, timeoutMilliseconds);
+		return await this.sendRequestCore(type, args, options);
 	}
 
-	private async sendRequestCore(request: OnDeviceComponentRequest, timeoutMilliseconds: number = 5000) {
+	private async sendRequestCore(type: ODCRequestTypes, args: ODCRequestArgs, options?: ODCRequestOptions) {
 		await this.startServer();
 
 		const requestId = utils.randomStringGenerator();
-		const formattedRequest = {
+		const request: ODCRequest = {
 			id: requestId,
-			callbackPort: this.callbackListenPort,
-			type: request.type,
-			args: request.args
+			callbackPort: this.callbackListenPort!,
+			type: type,
+			args: args
 		};
+		const body = JSON.stringify(request);
+
 		const promise = new Promise<express.Request>((resolve, reject) => {
 			request.callback = (req) => {
 				const json = req.body;
@@ -180,14 +141,14 @@ export class OnDeviceComponent {
 		});
 		this.sentRequests[requestId] = request;
 
-		const body = JSON.stringify(formattedRequest);
 		if (this.debugLog) console.log(`Sending request to ${this.device.ip} with body: ${body}`);
 		this.client.send(body, 9000, this.device.ip, (err) => {
 			if (err) {
 				throw err;
 			}
 		});
-		return await utils.promiseTimeout(promise, timeoutMilliseconds, `${request.type} request ${requestId} timed out after ${timeoutMilliseconds}ms`);
+		const timeout = options?.timeout ?? this.defaultTimeout;
+		return await utils.promiseTimeout(promise, timeout, `${request.type} request ${requestId} timed out after ${timeout}ms`);
 	}
 
 	// Starts up express server

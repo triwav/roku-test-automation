@@ -6,7 +6,7 @@ import * as utils from './utils';
 export class RokuDevice {
 	public ip: string;
 	public password: string;
-	private debugProxy = '';
+	private debugProxy?: string;
 	private screenshotFormat: ScreenshotFormat;
 	private needle = needle;
 
@@ -78,7 +78,7 @@ export class RokuDevice {
 			options.auth = 'digest';
 		}
 
-		if (this.debugProxy.length > 0) {
+		if (this.debugProxy) {
 			options.proxy = this.debugProxy;
 		}
 		return options;

@@ -3,41 +3,42 @@ const expect = chai.expect;
 import * as assert from 'assert';
 
 import * as utils from '../../server/src/utils';
-import { KeyPathBaseTypes } from '../../server/src/types/OnDeviceComponentRequest';
-const {device, odc, ecp} = utils.setupFromConfigFile();
+import { ODCKeyPathBaseTypes, ODCGetValueAtKeyPathArgs, ODCSetValueAtKeyPathArgs } from '../../server/src/types/OnDeviceComponentRequest';
+const {odc} = utils.setupFromConfigFile();
 
 describe('OnDeviceComponent', function () {
 	describe('getValueAtKeyPath', function () {
 		it('should work with findnode', async () => {
-			const {value} = await odc.getValueAtKeyPath('scene', 'subchild3');
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
 			expect(value.id).to.eq('subchild3');
 		});
 
 		it('should not find a child if it is not beneath the parent node', async () => {
-			const {value} = await odc.getValueAtKeyPath('scene', 'subchild3.testTarget');
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3.testTarget'});
 			expect(value.id).to.be.undefined;
 		});
 
 		it('should work with findNode.getChild', async () => {
-			const {value} = await odc.getValueAtKeyPath('scene', 'testTarget.0');
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.0'});
 			expect(value.id).to.eq('child1');
 		});
 
 		it('should work with findNode.getChild.getChild', async () => {
-			const {value} = await odc.getValueAtKeyPath('scene', 'testTarget.1.1');
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.1'});
 			expect(value.id).to.eq('subchild2');
 		});
 
 		it('should work with findNode.getChild.findNode', async () => {
-			const {value} = await odc.getValueAtKeyPath('scene', 'testTarget.1.subchild1');
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.subchild1'});
 			expect(value.id).to.eq('subchild1');
 		});
 
 		describe('getValuesAtKeyPaths', function () {
 			it('should work with for multiple values', async () => {
-				const {subchild1, subchild2} = await odc.getValuesAtKeyPaths({
-					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
-					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
+				const {subchild1, subchild2} = await odc.getValuesAtKeyPaths({requests: {
+						subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
+						subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
+					}
 				});
 				expect(subchild1.id).to.eq('subchild1');
 				expect(subchild2.id).to.eq('subchild2');
@@ -45,29 +46,29 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should be able to get a value on a valid field', async () => {
-			const {value} = await odc.getValueAtKeyPath('global', 'authManager.isLoggedIn');
+			const {value} = await odc.getValueAtKeyPath({keyPath: 'authManager.isLoggedIn'});
 			expect(value).to.be.false;
 		});
 	});
 
 	describe('setValueAtKeyPath', function () {
 		it('should be able to set a key on global', async () => {
-			await setAndVerifyValue('global', 'booleanValue', false, true);
+			await setAndVerifyValue({keyPath: 'booleanValue', value: false, expectedStartingValue: true});
 		});
 
 		it('should be able set a value on a node and succeed', async () => {
-			await setAndVerifyValue('global', 'authManager.isLoggedIn', true, false);
+			await setAndVerifyValue({keyPath: 'authManager.isLoggedIn', value: true, expectedStartingValue: false});
 		});
 
 		it('should be able to set a key on an AA stored on a node', async () => {
-			await setAndVerifyValue('global', 'authManager.profiles.profile1.settings.personalization.showContinueWatching', false, true);
+			await setAndVerifyValue({keyPath: 'authManager.profiles.profile1.settings.personalization.showContinueWatching', value: false, expectedStartingValue: true});
 		});
 	});
 
 	describe('observeField', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
-				await odc.observeField('global', 'does.not.exist');
+				await odc.observeField({keyPath: 'does.not.exist'});
 			} catch (e) {
 				// failed as expected
 				return;
@@ -76,28 +77,28 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should succeed if given a valid node for its parent keyPath', async () => {
-			const keyPath = 'AuthManager.isLoggedIn';
-			await setAndVerifyValue('global', keyPath, false);
-			const observePromise = odc.observeField('global', keyPath);
-			await setAndVerifyValue('global', keyPath, true);
+			const args = {keyPath: 'AuthManager.isLoggedIn'};
+			await setAndVerifyValue({...args, value: false});
+			const observePromise = odc.observeField(args);
+			await setAndVerifyValue({...args, value: true});
 			const {value} = await observePromise;
 			expect(value).to.be.true;
 		});
 
 		it('should wait for value to match if requested', async () => {
-			const keyPath = 'stringValue';
+			const args = {keyPath: 'stringValue'};
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			const observePromise = odc.observeField('global', keyPath, expectedValue);
-			await setAndVerifyValue('global', keyPath, utils.addRandomPostfix('firstValue'));
-			await setAndVerifyValue('global', keyPath, expectedValue);
+			const observePromise = odc.observeField({...args, match: {value: expectedValue}});
+			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
+			await setAndVerifyValue({...args, value: expectedValue});
 			const {value} = await observePromise;
 			expect(value).to.equal(expectedValue);
 		});
 
 		it('if the match key path does not exist it should throw an error', async () => {
-			const keyPath = 'stringValue';
-			const observePromise = odc.observeField('global', keyPath, 'willNeverMatch', 'global', 'invalid.key.path');
-			const setValuePromise = setAndVerifyValue('global', keyPath, utils.addRandomPostfix('trigger'));
+			const args = {keyPath: 'stringValue'};
+			const observePromise = odc.observeField({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}});
+			const setValuePromise = setAndVerifyValue({...args, value: utils.addRandomPostfix('trigger')});
 			try {
 				await Promise.all([observePromise, setValuePromise]);
 			} catch (e) {
@@ -107,15 +108,19 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('it should allow match on other key paths and wait until that value matches', async () => {
-			const keyPath = 'stringValue';
-			const matchValue = 42;
-			const matchKeyPath = 'intValue';
-			await setAndVerifyValue('global', matchKeyPath, 0);
-			const observePromise = odc.observeField('global', keyPath, matchValue, 'global', matchKeyPath);
-			await setAndVerifyValue('global', keyPath, utils.addRandomPostfix('firstValue'));
+			const args = {
+				keyPath: 'stringValue',
+				match: {
+					keyPath: 'intValue',
+					value: 42
+				}
+			};
+			await setAndVerifyValue({...args.match, value: 0});
+			const observePromise = odc.observeField(args);
+			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			await setAndVerifyValue('global', matchKeyPath, matchValue);
-			await setAndVerifyValue('global', keyPath, expectedValue);
+			await setAndVerifyValue(args.match);
+			await setAndVerifyValue({...args, value: expectedValue});
 			const {value} = await observePromise;
 			expect(value).to.equal(expectedValue);
 		});
@@ -124,7 +129,7 @@ describe('OnDeviceComponent', function () {
 	describe('callFunc', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
-				await odc.callFunc('global', 'does.not.exist', 'trigger');
+				await odc.callFunc({keyPath: 'does.not.exist',  funcName: 'trigger'});
 			} catch (e) {
 				// failed as expected
 				return;
@@ -133,27 +138,28 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it(`should work with funcs that don't take any params`, async () => {
-			const keyPath = 'authManager.isLoggedIn';
-			await setAndVerifyValue('global', keyPath, false);
-			await odc.callFunc('global', 'authManager', 'loginUser');
-			const {value} = await odc.getValueAtKeyPath('global', keyPath);
+			const args = {keyPath: 'authManager.isLoggedIn'};
+			await setAndVerifyValue({...args, value: false});
+			await odc.callFunc({keyPath: 'authManager', funcName: 'loginUser'});
+			const {value} = await odc.getValueAtKeyPath(args);
 			expect(value).to.be.true;
 		});
 
 		it('should work with funcs taking params', async () => {
-			const {value} = await odc.callFunc('scene', '', 'multiplyNumbers', [3, 5]);
+			const {value} = await odc.callFunc({base: 'scene', keyPath: '', funcName: 'multiplyNumbers', funcParams: [3, 5]});
 			expect(value).to.be.equal(15);
 		});
 	});
 
-	async function setAndVerifyValue(base: KeyPathBaseTypes, keyPath: string, value: any, expectedStartingValue?: any) {
-		if (expectedStartingValue !== undefined) {
-			const {value: actualStartingValue} = await odc.getValueAtKeyPath(base, keyPath);
-			expect(actualStartingValue).to.equal(expectedStartingValue, `${base}.${keyPath} did not match expected value before set`);
+	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODCSetValueAtKeyPathArgs) {
+		if (args.expectedStartingValue !== undefined) {
+			const {value: actualStartingValue} = await odc.getValueAtKeyPath(args);
+			expect(actualStartingValue).to.equal(args.expectedStartingValue, `${args.base}.${args.keyPath} did not match expected value before set`);
 		}
-		const result = await odc.setValueAtKeyPath(base, keyPath, value);
+		const result = await odc.setValueAtKeyPath(args);
 		expect(result.success).to.be.true;
-		const {value: actualValue} = await odc.getValueAtKeyPath(base, keyPath);
-		expect(actualValue).to.equal(value, `${base}.${keyPath} did not match expected value after set`);
-	}
+		const {value: actualValue} = await odc.getValueAtKeyPath(args);
+		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
+	};
+
 });
