@@ -41,7 +41,7 @@ export class ECP {
 		}
 	}
 
-	public async sendLaunchChannel(channelId = '', params = {}, verifyLaunch = true) {
+	public async sendLaunchChannel({channelId = '', launchParameters = {}, verifyLaunch = true} = {}) {
 		if (!channelId) {
 			const configChannelId = this.config?.channel?.id;
 			if (!configChannelId) {
@@ -49,8 +49,7 @@ export class ECP {
 			}
 			channelId = configChannelId;
 		}
-
-		await this.device.sendECP(`launch/${channelId}`, params, '');
+		await this.device.sendECP(`launch/${channelId}`, launchParameters, '');
 		if (verifyLaunch) {
 			let success = true;
 			try {
