@@ -5,6 +5,6 @@ sub main()
 	screen.show()
 
 	while(true)
-		sleep(6000000)
+		sleep(1000)
 	end while
 end sub

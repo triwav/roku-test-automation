@@ -2,11 +2,15 @@ import * as chai from 'chai';
 const expect = chai.expect;
 import * as assert from 'assert';
 
-import * as utils from '../../server/src/utils';
-import { ODCKeyPathBaseTypes, ODCGetValueAtKeyPathArgs, ODCSetValueAtKeyPathArgs } from '../../server/src/types/OnDeviceComponentRequest';
-const {odc} = utils.setupFromConfigFile();
+import * as utils from './utils';
+import { ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
+const {ecp, odc} = utils.setupFromConfigFile();
 
 describe('OnDeviceComponent', function () {
+	before(async () => {
+		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
+	});
+
 	describe('getValueAtKeyPath', function () {
 		it('should work with findnode', async () => {
 			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
@@ -177,6 +181,5 @@ describe('OnDeviceComponent', function () {
 		expect(result.success).to.be.true;
 		const {value: actualValue} = await odc.getValueAtKeyPath(args);
 		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
-	};
-
+	}
 });

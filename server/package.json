@@ -7,10 +7,10 @@
     "scripts": {
         "build": "rimraf out && tsc",
         "prepublishOnly": "npm run build && npm run tslint && rm -rf ./dist/device && cp -R ../device ./dist/device",
-        "test": "nyc --exclude src/RokuDevice.ts mocha --full-trace --exclude src/RokuDevice.spec.ts src/**/*.spec.ts",
+        "test": "nyc --exclude src/RokuDevice.ts mocha --full-trace --exclude src/RokuDevice.spec.ts --exclude src/OnDeviceComponent.spec.ts src/**/*.spec.ts",
         "tslint": "tslint \"./src/**/*.ts\" --outputAbsolutePaths --project tsconfig.json",
-        "test:device": "nyc mocha --full-trace src/RokuDevice.spec.ts",
-        "test:all": "nyc mocha --full-trace src/**/*.spec.ts",
+        "test:device": "nyc mocha --full-trace --exit src/RokuDevice.spec.ts src/OnDeviceComponent.spec.ts",
+        "test:all": "nyc mocha --full-trace --exit src/**/*.spec.ts",
         "buildTypeCheckFiles": "ts-interface-builder src/types/ConfigOptions.ts"
     },
     "repository": {
@@ -54,6 +54,9 @@
     "nyc": {
         "include": [
             "src/**/!(*.spec).ts"
+        ],
+        "exclude": [
+            "src/test/**/*"
         ],
         "extension": [
             ".ts"
