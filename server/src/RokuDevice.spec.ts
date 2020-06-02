@@ -5,16 +5,13 @@ import * as fsExtra from 'fs-extra';
 const sinon = sinonImport.createSandbox();
 const expect = chai.expect;
 import * as querystring from 'needle/lib/querystring';
-
-import { RokuDevice } from './RokuDevice';
-import { ECP } from './ECP';
 import * as utils from './utils';
 
+const {ecp, device} = utils.setupFromConfigFile();
+
 describe('RokuDevice', function () {
-	let device: RokuDevice;
-	let ecp: ECP;
-	beforeEach(() => {
-		({device, ecp} = utils.setupFromConfigFile());
+	before(async () => {
+		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});
 
 	afterEach(() => {
@@ -25,7 +22,7 @@ describe('RokuDevice', function () {
 
 	describe('sendECP', () => {
 		it('should work for POST requests', async () => {
-			await device.sendECP('keypress/Home', {}, '');
+			await device.sendECP('keypress/Right', {}, '');
 		});
 
 		it('should work if params are passed in', async () => {
@@ -42,7 +39,6 @@ describe('RokuDevice', function () {
 
 	describe('getScreenshot', () => {
 		it('should work', async () => {
-			await ecp.sendLaunchChannel();
 			const screenShotPath = await device.getScreenshot('output');
 			if (!fsExtra.existsSync(screenShotPath)) {
 				assert.fail(`'${screenShotPath}' did not exist`);

@@ -41,13 +41,22 @@ export class ECP {
 		}
 	}
 
-	public async sendLaunchChannel({channelId = '', launchParameters = {}, verifyLaunch = true} = {}) {
+	public async sendLaunchChannel({
+		channelId = '',
+		launchParameters = {},
+		verifyLaunch = true,
+		skipIfAlreadyRunning = false
+	} = {}) {
 		if (!channelId) {
 			const configChannelId = this.config?.channel?.id;
 			if (!configChannelId) {
 				throw utils.makeError('sendLaunchChannelChannelIdMissing', 'Channel id required and not supplied');
 			}
 			channelId = configChannelId;
+		}
+		if (skipIfAlreadyRunning) {
+			const result = await this.getActiveApp();
+			if (result.app?.id === channelId) return;
 		}
 		await this.device.sendECP(`launch/${channelId}`, launchParameters, '');
 		if (verifyLaunch) {

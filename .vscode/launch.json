@@ -1,0 +1,54 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"compounds": [{
+		"name": "Deploy testProject & Run Device Tests",
+		"configurations": ["Debug Device Tests", "Deploy testProject", ]
+	}],
+	"configurations": [
+		{
+			"type": "brightscript",
+			"request": "launch",
+			"name": "Deploy testProject",
+			"retainStagingFolder": true,
+			"envFile": "${workspaceFolder}/testProject/.env",
+			"host": "${env:LAUNCH_HOST_OVERRIDE}",
+			"password": "${env:ROKU_PASSWORD}",
+			"presentation": {
+				"hidden": true
+			},
+			"internalConsoleOptions": "neverOpen",
+		}, {
+			"name": "Debug Non-Device Tests",
+			"type": "node",
+			"request": "launch",
+			"preLaunchTask": "build",
+			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
+			"args": ["-r", "ts-node/register", "-r", "source-map-support/register", "--exclude", "./src/RokuDevice.spec.ts", "--exclude", "./src/OnDeviceComponent.spec.ts", "./src/**/*.spec.ts"],
+			"cwd": "${workspaceFolder}/server",
+			"protocol": "inspector",
+			"internalConsoleOptions": "openOnSessionStart",
+			"skipFiles": [
+				"${workspaceFolder}/server/node_modules/**",
+			]
+		}, {
+			"name": "Debug Device Tests",
+			"type": "node",
+			"request": "launch",
+			"preLaunchTask": "build",
+			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
+			"args": ["-r", "ts-node/register", "-r", "source-map-support/register", "--exit", "./src/OnDeviceComponent.spec.ts", "./src/RokuDevice.spec.ts"],
+			"cwd": "${workspaceFolder}/server",
+			"protocol": "inspector",
+			"presentation": {
+				"hidden": true
+			},
+			"internalConsoleOptions": "openOnSessionStart",
+			"skipFiles": [
+				"${workspaceFolder}/server/node_modules/**",
+			]
+		}
+	]
+}
