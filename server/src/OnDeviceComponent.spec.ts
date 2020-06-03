@@ -132,7 +132,6 @@ describe('OnDeviceComponent', function () {
 			expect(observerFired).to.be.true;
 		});
 
-
 		it('if a match value is provided and the value already equals what we are looking for, it should return right away', async () => {
 			const args = {
 				keyPath: 'stringValue',

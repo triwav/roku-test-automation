@@ -80,7 +80,3 @@ export interface ODCRequest {
 	options?: ODCRequestOptions;
 	callback?: (req: express.Request) => void;
 }
-
-export interface ODCBaseResponse {
-	success: boolean;
-}

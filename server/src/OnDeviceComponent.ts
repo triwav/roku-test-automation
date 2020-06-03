@@ -27,16 +27,18 @@ export class OnDeviceComponent {
 	}
 
 	public async callFunc(args: ODCCallFuncArgs, options?: ODCRequestOptions): Promise<{
+		success: boolean;
 		value: any
-	} & ODCBaseResponse> {
+	}> {
 		const result = await this.sendRequest('callFunc', args, options);
 		return result.body;
 	}
 
 	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
 		found: boolean
+		success: boolean;
 		value: any
-	} & ODCBaseResponse> {
+	}> {
 		const result = await this.sendRequest('getValueAtKeyPath', args, options);
 		return result.body;
 	}
@@ -44,8 +46,9 @@ export class OnDeviceComponent {
 	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options?: ODCRequestOptions): Promise<{
 		[key: string]: any
 		found: boolean
+		success: boolean;
 		value: any
-	} & ODCBaseResponse> {
+	}> {
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
 		return result.body;
 	}
@@ -54,7 +57,7 @@ export class OnDeviceComponent {
 		/** Whether the observer was actually fired or a match value was provided and already equaled the requested value  */
 		observerFired: boolean
 		value: any
-	} & ODCBaseResponse> {
+	}> {
 		const match = args.match;
 		if (match) {
 			if (!('keyPath' in match)) {
@@ -70,7 +73,9 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<ODCBaseResponse> {
+	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
+		success: boolean;
+	}> {
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
