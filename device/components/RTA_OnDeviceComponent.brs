@@ -265,10 +265,15 @@ function recursivelyConvertValueToJsonCompatible(value as Object) as Object
 		end for
 	else if isNode(value) then
 		subtype = value.subtype()
+		children = value.getChildren(-1, 0)
 		value = value.getFields()
 		value.subtype = subtype
 		value.delete("focusedChild")
 		value = recursivelyConvertValueToJsonCompatible(value)
+		for i = 0 to getLastIndex(children)
+			children[i] = recursivelyConvertValueToJsonCompatible(children[i])
+		end for
+		value.children = children
 	end if
 	return value
 end function
