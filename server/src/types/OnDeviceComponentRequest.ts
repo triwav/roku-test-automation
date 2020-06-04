@@ -2,12 +2,13 @@ import * as express from 'express';
 
 export enum ODCRequestEnum {
 	callFunc,
-	hasFocus,
-	isInFocusChain,
+	getFocusedNode,
 	getRoots,
 	getValueAtKeyPath,
 	getValuesAtKeyPaths,
 	handshake,
+	hasFocus,
+	isInFocusChain,
 	observeField,
 	observeFocus,
 	setFocus,
@@ -28,6 +29,9 @@ export interface ODCCallFuncArgs {
 	funcParams?: any[];
 }
 
+// tslint:disable-next-line: no-empty-interface
+export interface ODCGetFocusedNodeArgs {}
+
 export interface ODCGetValueAtKeyPathArgs {
 	base?: ODCKeyPathBaseTypes;
 	keyPath: string;
@@ -42,6 +46,16 @@ export interface ODCGetValuesAtKeyPathsArgs {
 export interface ODCHandshakeArgs {
 	version: string;
 	logLevel: ODCLogLevels;
+}
+
+export interface ODCHasFocusArgs {
+	base?: ODCKeyPathBaseTypes;
+	keyPath: string;
+}
+
+export interface ODCIsInFocusChainArgs {
+	base?: ODCKeyPathBaseTypes;
+	keyPath: string;
 }
 
 export declare type ODCLogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
@@ -65,7 +79,7 @@ export interface ODCSetValueAtKeyPathArgs {
 	value: any;
 }
 
-export type ODCRequestArgs = ODCCallFuncArgs | ODCGetValueAtKeyPathArgs | ODCGetValuesAtKeyPathsArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs | ODCHandshakeArgs;
+export type ODCRequestArgs = ODCCallFuncArgs | ODCGetFocusedNodeArgs | ODCGetValueAtKeyPathArgs | ODCGetValuesAtKeyPathsArgs | ODCHasFocusArgs | ODCIsInFocusChainArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs | ODCHandshakeArgs;
 
 export interface ODCRequestOptions {
 	/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
@@ -81,6 +95,29 @@ export interface ODCRequest {
 	callback?: (req: express.Request) => void;
 }
 
-export interface ODCBaseResponse {
-	success: boolean;
+export interface ODCNodeFields {
+	id: string;
+	focusedChild: ODCNodeFields;
+	focusable: boolean;
+	change: {
+		Index1: number
+		Index2: number
+		Operation: string
+	};
+
+	// Group fields
+	visible?: boolean;
+	opacity?: number;
+	translation?: [number, number];
+	rotation?: number;
+	scale?: [number, number];
+	scaleRotateCenter?: [number, number];
+	childRenderOrder?: 'renderFirst' | 'renderLast';
+	inheritParentTransform?: boolean;
+	inheritParentOpacity?: boolean;
+	clippingRect?: [number, number, number, number];
+	renderPass?: number;
+	muteAudioGuide?: boolean;
+	enableRenderTracking?: boolean;
+	renderTracking?: 'none' | 'partial' | 'full';
 }

@@ -1,6 +1,7 @@
 {
 	"typescript.preferences.quoteStyle": "single",
 	"cSpell.words": [
+		"ODCIs",
 		"findnode",
 		"subchild"
 	]

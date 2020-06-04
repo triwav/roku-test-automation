@@ -17,14 +17,22 @@ sub onRenderThreadRequestChange(event as Object)
 		response = Invalid
 		if requestType = "callFunc" then
 			response = processCallFuncRequest(args)
+		else if requestType = "getFocusedNode" then
+			response = processGetFocusedNodeRequest(args)
 		else if requestType = "getValueAtKeyPath" then
 			response = processGetValueAtKeyPathRequest(args)
 		else if requestType = "getValuesAtKeyPaths" then
 			response = processGetValuesAtKeyPathsRequest(args)
+		else if requestType = "hasFocus" then
+			response = processHasFocusRequest(args)
+		else if requestType = "isInFocusChain" then
+			response = processIsInFocusChainRequest(args)
 		else if requestType = "observeField" then
 			response = processObserveFieldRequest(request)
 		else if requestType = "setValueAtKeyPath" then
 			response = processSetValueAtKeyPathRequest(args)
+		else
+			response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
 		end if
 
 		if response <> Invalid then
@@ -67,6 +75,22 @@ function processCallFuncRequest(args as Object) as Object
 
 	return {
 		"value": result
+	}
+end function
+
+function processGetFocusedNodeRequest(args as Object) as Object
+	node = m.top.getScene()
+	while true
+		child = node.focusedChild
+		if child <> Invalid AND NOT node.isSameNode(child) then
+			node = child
+		else
+			exit while
+		end if
+	end while
+
+	return {
+		"node": node
 	}
 end function
 
@@ -114,6 +138,43 @@ function processGetValuesAtKeyPathsRequest(args as Object) as Object
 	end for
 	return response
 end function
+
+function processHasFocusRequest(args as Object) as Object
+	keyPath = args.keyPath
+	result = processGetValueAtKeyPathRequest(args)
+
+	if result.found <> true then
+		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+	end if
+
+	node = result.value
+	if NOT isNode(node) then
+		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	end if
+
+	return {
+		"hasFocus": node.hasFocus()
+	}
+end function
+
+function processIsInFocusChainRequest(args as Object) as Object
+	keyPath = args.keyPath
+	result = processGetValueAtKeyPathRequest(args)
+
+	if result.found <> true then
+		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+	end if
+
+	node = result.value
+	if NOT isNode(node) then
+		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	end if
+
+	return {
+		"isInFocusChain": node.isInFocusChain()
+	}
+end function
+
 
 function processObserveFieldRequest(request as Object) as Dynamic
 	args = request.args
@@ -265,10 +326,15 @@ function recursivelyConvertValueToJsonCompatible(value as Object) as Object
 		end for
 	else if isNode(value) then
 		subtype = value.subtype()
+		children = value.getChildren(-1, 0)
 		value = value.getFields()
 		value.subtype = subtype
 		value.delete("focusedChild")
 		value = recursivelyConvertValueToJsonCompatible(value)
+		for i = 0 to getLastIndex(children)
+			children[i] = recursivelyConvertValueToJsonCompatible(children[i])
+		end for
+		value.children = children
 	end if
 	return value
 end function

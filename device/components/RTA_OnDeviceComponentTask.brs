@@ -16,9 +16,12 @@ end function
 sub runTaskThread()
 	m.validRequestTypes = {
 		"callFunc": true
+		"getFocusedNode": true
 		"getValueAtKeyPath": true
 		"getValuesAtKeyPaths": true
 		"handshake": true
+		"hasFocus": true
+		"isInFocusChain": true
 		"observeField": true
 		"setValueAtKeyPath": true
 	}
@@ -81,7 +84,7 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 	requestType = getStringAtKeyPath(request, "type")
 
 	if m.validRequestTypes[requestType] = true then
-		if NOT isNonEmptyAA(request.args) then
+		if NOT isAA(request.args) then
 			sendBackError(request, "No args supplied for request type '" + requestType + "'")
 			return
 		end if

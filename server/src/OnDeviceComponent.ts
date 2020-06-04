@@ -5,7 +5,7 @@ import * as express from 'express';
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import * as utils from './utils';
-import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCBaseResponse, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs } from '.';
+import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeFields, ODCGetFocusedNodeArgs } from '.';
 
 export class OnDeviceComponent {
 	public defaultTimeout = 5000;
@@ -27,34 +27,52 @@ export class OnDeviceComponent {
 	}
 
 	public async callFunc(args: ODCCallFuncArgs, options?: ODCRequestOptions): Promise<{
-		value: any
-	} & ODCBaseResponse> {
+		success: boolean;
+		value: any;
+	}> {
 		const result = await this.sendRequest('callFunc', args, options);
 		return result.body;
 	}
 
+	public async getFocusedNode(args?: ODCGetFocusedNodeArgs, options?: ODCRequestOptions): Promise<ODCNodeFields> {
+		const result = await this.sendRequest('getFocusedNode', args ?? {}, options);
+		return result.body.node;
+	}
+
 	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
-		found: boolean
-		value: any
-	} & ODCBaseResponse> {
+		found: boolean;
+		success: boolean;
+		value: any;
+	}> {
 		const result = await this.sendRequest('getValueAtKeyPath', args, options);
 		return result.body;
 	}
 
 	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options?: ODCRequestOptions): Promise<{
-		[key: string]: any
-		found: boolean
-		value: any
-	} & ODCBaseResponse> {
+		[key: string]: any;
+		found: boolean;
+		success: boolean;
+		value: any;
+	}> {
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
 		return result.body;
+	}
+
+	public async hasFocus(args: ODCHasFocusArgs, options?: ODCRequestOptions): Promise<boolean> {
+		const result = await this.sendRequest('hasFocus', args, options);
+		return result.body.hasFocus;
+	}
+
+	public async isInFocusChain(args: ODCIsInFocusChainArgs, options?: ODCRequestOptions): Promise<boolean> {
+		const result = await this.sendRequest('isInFocusChain', args, options);
+		return result.body.isInFocusChain;
 	}
 
 	public async observeField(args: ODCObserveFieldArgs, options?: ODCRequestOptions): Promise<{
 		/** Whether the observer was actually fired or a match value was provided and already equaled the requested value  */
 		observerFired: boolean
 		value: any
-	} & ODCBaseResponse> {
+	}> {
 		const match = args.match;
 		if (match) {
 			if (!('keyPath' in match)) {
@@ -70,7 +88,9 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<ODCBaseResponse> {
+	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
+		success: boolean;
+	}> {
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}

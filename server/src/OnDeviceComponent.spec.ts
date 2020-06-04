@@ -12,6 +12,75 @@ describe('OnDeviceComponent', function () {
 	});
 
 	describe('getValueAtKeyPath', function () {
+		it('found should be true for if key path was found', async () => {
+			const {found} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
+			expect(found).to.be.true;
+		});
+
+		it('found should be false if key path was not found', async () => {
+			const {found} = await odc.getValueAtKeyPath({keyPath: 'invalid'});
+			expect(found).to.be.false;
+		});
+
+		it('should work with findnode', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
+			expect(value.id).to.eq('subchild3');
+		});
+
+		it('should not find a child if it is not beneath the parent node', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3.testTarget'});
+			expect(value.id).to.be.undefined;
+		});
+
+		it('should work with findNode.getChild', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.0'});
+			expect(value.id).to.eq('child1');
+		});
+
+		it('should work with findNode.getChild.getChild', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.1'});
+			expect(value.id).to.eq('subchild2');
+		});
+
+		it('should work with findNode.getChild.findNode', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.subchild1'});
+			expect(value.id).to.eq('subchild1');
+		});
+
+		it('should be able to get a value on a valid field', async () => {
+			const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.isLoggedIn'});
+			expect(value).to.be.false;
+		});
+	});
+
+	describe('getFocusedNode', function () {
+		it('should return currently focused node', async () => {
+			const {id} = await odc.getFocusedNode();
+			expect(id).to.equal('subchild2');
+		});
+	});
+
+	describe('hasFocus', function () {
+		it('should return true when current node has focus', async () => {
+			expect(await odc.hasFocus({base: 'scene', keyPath: 'subchild2'})).to.be.true;
+		});
+
+		it('should return false when current node does not have focus', async () => {
+			expect(await odc.hasFocus({base: 'scene', keyPath: 'child1'})).to.be.false;
+		});
+	});
+
+	describe('isInFocusChain', function () {
+		it('should return true when current node is in focus chain', async () => {
+			expect(await odc.isInFocusChain({base: 'scene', keyPath: 'child2'})).to.be.true;
+		});
+
+		it('should return false when current node is not in focus chain', async () => {
+			expect(await odc.isInFocusChain({base: 'scene', keyPath: 'child1'})).to.be.false;
+		});
+	});
+
+	describe('getValueAtKeyPath', function () {
 		it('should work with findnode', async () => {
 			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
 			expect(value.id).to.eq('subchild3');
@@ -50,7 +119,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should be able to get a value on a valid field', async () => {
-			const {value} = await odc.getValueAtKeyPath({keyPath: 'authManager.isLoggedIn'});
+			const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.isLoggedIn'});
 			expect(value).to.be.false;
 		});
 	});
@@ -61,11 +130,11 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should be able set a value on a node and succeed', async () => {
-			await setAndVerifyValue({keyPath: 'authManager.isLoggedIn', value: true, expectedStartingValue: false});
+			await setAndVerifyValue({keyPath: 'AuthManager.isLoggedIn', value: true, expectedStartingValue: false});
 		});
 
 		it('should be able to set a key on an AA stored on a node', async () => {
-			await setAndVerifyValue({keyPath: 'authManager.profiles.profile1.settings.personalization.showContinueWatching', value: false, expectedStartingValue: true});
+			await setAndVerifyValue({keyPath: 'AuthManager.profiles.profile1.settings.personalization.showContinueWatching', value: false, expectedStartingValue: true});
 		});
 	});
 
@@ -132,7 +201,6 @@ describe('OnDeviceComponent', function () {
 			expect(observerFired).to.be.true;
 		});
 
-
 		it('if a match value is provided and the value already equals what we are looking for, it should return right away', async () => {
 			const args = {
 				keyPath: 'stringValue',
@@ -159,9 +227,9 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it(`should work with funcs that don't take any params`, async () => {
-			const args = {keyPath: 'authManager.isLoggedIn'};
+			const args = {keyPath: 'AuthManager.isLoggedIn'};
 			await setAndVerifyValue({...args, value: false});
-			await odc.callFunc({keyPath: 'authManager', funcName: 'loginUser'});
+			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUser'});
 			const {value} = await odc.getValueAtKeyPath(args);
 			expect(value).to.be.true;
 		});
