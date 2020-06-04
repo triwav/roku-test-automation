@@ -28,9 +28,9 @@ export class RokuDevice {
 		}
 
 		if (body !== undefined) {
-			return await this.needle('post', url, body, this.getOptions());
+			return this.needle('post', url, body, this.getOptions());
 		} else {
-			return await this.needle('get', url, this.getOptions());
+			return this.needle('get', url, this.getOptions());
 		}
 	}
 

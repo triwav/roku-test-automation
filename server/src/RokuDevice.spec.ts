@@ -18,8 +18,6 @@ describe('RokuDevice', function () {
 		sinon.restore();
 	});
 
-	this.timeout(10000);
-
 	describe('sendECP', () => {
 		it('should work for POST requests', async () => {
 			await device.sendECP('keypress/Right', {}, '');

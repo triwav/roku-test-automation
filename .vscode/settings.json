@@ -4,5 +4,6 @@
 		"ODCIs",
 		"findnode",
 		"subchild"
-	]
+	],
+	"brightscript.output.focusOnLaunch": false
 }

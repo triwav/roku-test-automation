@@ -9,8 +9,8 @@
         "prepublishOnly": "npm run build && npm run tslint && rm -rf ./dist/device && cp -R ../device ./dist/device",
         "test": "nyc --exclude src/RokuDevice.ts mocha --full-trace --exclude src/RokuDevice.spec.ts --exclude src/OnDeviceComponent.spec.ts src/**/*.spec.ts",
         "tslint": "tslint \"./src/**/*.ts\" --outputAbsolutePaths --project tsconfig.json",
-        "test:device": "nyc mocha --full-trace --exit src/RokuDevice.spec.ts src/OnDeviceComponent.spec.ts",
-        "test:all": "nyc mocha --full-trace --exit src/**/*.spec.ts",
+        "test:device": "nyc mocha --full-trace src/RokuDevice.spec.ts src/OnDeviceComponent.spec.ts",
+        "test:all": "nyc mocha --full-trace src/**/*.spec.ts",
         "buildTypeCheckFiles": "ts-interface-builder src/types/ConfigOptions.ts"
     },
     "repository": {
@@ -41,7 +41,7 @@
         "@types/sinon": "^7.5.2",
         "@types/xmljs": "^0.3.0",
         "chai": "^4.2.0",
-        "mocha": "^5.2.0",
+        "mocha": "^7.2.0",
         "nyc": "^14.1.1",
         "rimraf": "^2.7.1",
         "sinon": "^7.2.3",
@@ -76,5 +76,18 @@
         "statements": 100,
         "functions": 100,
         "branches": 100
+    },
+    "mocha": {
+        "spec": [
+            "./src/**/*.spec.ts"
+        ],
+        "timeout": 5000,
+        "file": [
+            "./src/test/include.ts"
+        ],
+        "require": [
+            "ts-node/register",
+            "source-map-support/register"
+        ]
     }
 }

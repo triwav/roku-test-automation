@@ -57,6 +57,14 @@ export function setupFromConfigFile(configFilePath: string = 'rta-config.json') 
 	return setupFromConfig(config);
 }
 
+export async function shutdownAll() {
+	for (const key in deviceClasses) {
+		const {odc, ecp} = deviceClasses[key];
+		await ecp.sendKeyPress(ecp.Key.HOME);
+		odc.shutdown();
+	}
+}
+
 export function sleep(milliseconds: number) {
 	return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
