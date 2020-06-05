@@ -20,35 +20,30 @@
 				"hidden": true
 			},
 			"internalConsoleOptions": "neverOpen",
+			"stopDebuggerOnAppExit": true
 		}, {
 			"name": "Debug Non-Device Tests",
 			"type": "node",
 			"request": "launch",
-			"preLaunchTask": "build",
-			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
-			"args": ["-r", "ts-node/register", "-r", "source-map-support/register", "--exclude", "./src/RokuDevice.spec.ts", "--exclude", "./src/OnDeviceComponent.spec.ts", "./src/**/*.spec.ts"],
 			"cwd": "${workspaceFolder}/server",
+			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
+			"args": ["--exclude", "./src/RokuDevice.spec.ts", "--exclude", "./src/OnDeviceComponent.spec.ts"],
+			"console": "integratedTerminal",
 			"protocol": "inspector",
-			"internalConsoleOptions": "openOnSessionStart",
-			"skipFiles": [
-				"${workspaceFolder}/server/node_modules/**",
-			]
+			"internalConsoleOptions": "neverOpen"
 		}, {
 			"name": "Debug Device Tests",
 			"type": "node",
 			"request": "launch",
-			"preLaunchTask": "build",
-			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
-			"args": ["-r", "ts-node/register", "-r", "source-map-support/register", "--exit", "./src/OnDeviceComponent.spec.ts", "./src/RokuDevice.spec.ts"],
 			"cwd": "${workspaceFolder}/server",
+			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
+			"args": ["./src/OnDeviceComponent.spec.ts", "./src/RokuDevice.spec.ts"],
+			"console": "integratedTerminal",
 			"protocol": "inspector",
 			"presentation": {
 				"hidden": true
 			},
-			"internalConsoleOptions": "openOnSessionStart",
-			"skipFiles": [
-				"${workspaceFolder}/server/node_modules/**",
-			]
+			"internalConsoleOptions": "neverOpen"
 		}
 	]
 }

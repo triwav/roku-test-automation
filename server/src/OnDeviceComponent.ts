@@ -170,7 +170,7 @@ export class OnDeviceComponent {
 			}
 		});
 		const timeout = options?.timeout ?? this.defaultTimeout;
-		return await utils.promiseTimeout(promise, timeout, `${request.type} request ${requestId} timed out after ${timeout}ms`);
+		return utils.promiseTimeout(promise, timeout, `${request.type} request ${requestId} timed out after ${timeout}ms`);
 	}
 
 	// Starts up express server
@@ -195,6 +195,8 @@ export class OnDeviceComponent {
 			this.server.close();
 			this.server = undefined;
 		}
+		this.client.close();
+		if (this.debugLog) console.log(`Shutting down ODC`);
 	}
 
 	private setupExpress() {
