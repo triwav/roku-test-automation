@@ -95,9 +95,9 @@ export interface ODCRequest {
 	callback?: (req: express.Request) => void;
 }
 
-export interface ODCNodeFields {
+export interface ODCNodeRepresentation {
 	id: string;
-	focusedChild: ODCNodeFields;
+	focusedChild: ODCNodeRepresentation;
 	focusable: boolean;
 	change: {
 		Index1: number

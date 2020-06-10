@@ -2,66 +2,58 @@ import * as fsExtra from 'fs-extra';
 import * as path from 'path';
 import * as Mocha from 'mocha';
 
-import { RokuDevice } from './RokuDevice';
-import { ECP } from './ECP';
-import { OnDeviceComponent } from './OnDeviceComponent';
+import { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
 
-import { ConfigOptions } from './types/ConfigOptions';
-import ConfigOptionsTi from './types/ConfigOptions-ti';
-import { createCheckers } from 'ts-interface-checker';
-
-export function readConfigFile(configFilePath: string = 'rta-config.json'): ConfigOptions {
+// TODO switch to class
+export function readConfigFile(configFilePath: string = 'rta-config.json') {
 	const config: ConfigOptions = JSON.parse(fsExtra.readFileSync(configFilePath, 'utf-8'));
-	try {
-		createCheckers(ConfigOptionsTi).ConfigOptions.check(config);
-	} catch (e) {
-		throw new Error(`Config '${configFilePath}' failed validation: ${e.message}`);
-	}
 	return config;
 }
 
-const deviceClasses: {[key: string]: {
-	device: RokuDevice;
-	ecp: ECP;
-	odc: OnDeviceComponent;
-	}} = {};
+export function getMatchingDevices(config: ConfigOptions, deviceSelector: {}): { [key: string]: DeviceConfigOptions}  {
+	const matchingDevices = {};
+	config.devices.forEach((device, index) => {
+		for (const key in deviceSelector) {
+			const requestedValue = deviceSelector[key];
+			if (device.properties[key] !== requestedValue) continue;
+		}
+		matchingDevices[index] = device;
+	});
 
-export function setupFromConfig(config: ConfigOptions) {
-	try {
-		createCheckers(ConfigOptionsTi).ConfigOptions.check(config);
-	} catch (e) {
-		throw new Error(`Config failed validation: ${e.message}`);
-	}
-
-	const deviceConfig = config.device;
-	if (deviceClasses[deviceConfig.ip]) return deviceClasses[deviceConfig.ip];
-	const device = new RokuDevice(deviceConfig.ip, deviceConfig.password, deviceConfig.screenshotFormat);
-	if (deviceConfig.debugProxy) {
-		device.setDebugProxy(deviceConfig.debugProxy);
-	}
-	const ecp = new ECP(device, config);
-
-	const odc = new OnDeviceComponent(device, config);
-
-	const classes = {
-		device: device,
-		ecp: ecp,
-		odc: odc
-	};
-	deviceClasses[deviceConfig.ip] = classes;
-	return classes;
+	return matchingDevices;
 }
 
-export function setupFromConfigFile(configFilePath: string = 'rta-config.json') {
+/** Helper for setting up process.env from a config */
+export function setupEnvironmentFromConfigFile(configFilePath: string = 'rta-config.json', deviceSelector: {} | number = 0) {
+	console.log('setupEnvironmentFromConfigFile');
+
 	const config = readConfigFile(configFilePath);
-	return setupFromConfig(config);
+	if (typeof deviceSelector === 'number') {
+		config.deviceIndex = deviceSelector;
+	} else {
+		const matchingDevices = getMatchingDevices(config, deviceSelector);
+		const keys = Object.keys(matchingDevices);
+		if (keys.length === 0) {
+			throw new Error('No devices matched the device selection criteria');
+		}
+		config.deviceIndex = parseInt(keys[0]);
+	}
+	process.env.rtaConfig = JSON.stringify(config);
 }
 
-export async function shutdownAll() {
-	for (const key in deviceClasses) {
-		const {odc, ecp} = deviceClasses[key];
-		await ecp.sendKeyPress(ecp.Key.HOME);
-		odc.shutdown();
+export function getConfigFromEnvironment() {
+	if (process.env.rtaConfig) {
+		const config: ConfigOptions = JSON.parse(process.env.rtaConfig);
+		return config;
+	}
+	throw new Error('Did not contain config at "process.env.rtaConfig"');
+}
+
+export function getOptionalConfigFromEnvironment() {
+	try {
+		return getConfigFromEnvironment();
+	} catch (e) {
+		return undefined;
 	}
 }
 

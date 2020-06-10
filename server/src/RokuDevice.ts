@@ -1,27 +1,26 @@
 import * as needle from 'needle';
 import * as querystring from 'needle/lib/querystring';
-import { ScreenshotFormat } from './types/ConfigOptions';
+import { ConfigOptions } from './types/ConfigOptions';
 import * as utils from './utils';
 
 export class RokuDevice {
-	public ip: string;
-	public password: string;
-	private debugProxy?: string;
-	private screenshotFormat: ScreenshotFormat;
+	public config?: ConfigOptions;
 	private needle = needle;
 
-	constructor(ip: string, password: string, screenshotFormat: ScreenshotFormat = 'jpg') {
-		this.ip = ip;
-		this.password = password;
-		this.screenshotFormat = screenshotFormat;
+	constructor(config?: ConfigOptions) {
+		this.config = config;
 	}
 
-	public setDebugProxy(debugProxy: string) {
-		this.debugProxy = debugProxy;
+	public getConfig() {
+		if (!this.config) {
+			this.config = utils.getConfigFromEnvironment();
+			// TODO verify value
+		}
+		return this.config.devices[this.config.deviceIndex ?? 0];
 	}
 
 	public async sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {
-		let url = `http://${this.ip}:8060/${path}`;
+		let url = `http://${this.getConfig().host}:8060/${path}`;
 
 		if (params && Object.keys(params).length) {
 			url = url.replace(/\?.*|$/, '?' + querystring.build(params));
@@ -47,7 +46,7 @@ export class RokuDevice {
 	}
 
 	private async generateScreenshot() {
-		const url = `http://${this.ip}/plugin_inspect`;
+		const url = `http://${this.getConfig().host}/plugin_inspect`;
 		const data = {
 			archive: '',
 			mysubmit: 'Screenshot'
@@ -58,11 +57,12 @@ export class RokuDevice {
 	}
 
 	private async saveScreenshot(outputFilePath: string) {
+		const config = this.getConfig();
 		await utils.ensureDirExistForFilePath(outputFilePath);
 		const options = this.getOptions(true);
-		const ext = `.${this.screenshotFormat}`;
+		const ext = `.${config.screenshotFormat}`;
 		options.output = outputFilePath + ext;
-		const url = `http://${this.ip}/pkgs/dev${ext}`;
+		const url = `http://${config.host}/pkgs/dev${ext}`;
 		let result = await this.needle('get', url, options);
 		if (result.statusCode !== 200) {
 			throw new Error(`Could not download screenshot at ${url}. Make sure you have the correct screenshot format in your config`);
@@ -74,13 +74,12 @@ export class RokuDevice {
 		const options: needle.NeedleOptions = {};
 		if (requiresAuth) {
 			options.username = 'rokudev';
-			options.password = this.password;
+			options.password = this.getConfig().password;
 			options.auth = 'digest';
 		}
 
-		if (this.debugProxy) {
-			options.proxy = this.debugProxy;
-		}
+		/** Useful for debugging port 80 and ECP communication between Roku and server */
+		options.proxy = '';
 		return options;
 	}
 }

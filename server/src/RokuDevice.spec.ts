@@ -5,9 +5,7 @@ import * as fsExtra from 'fs-extra';
 const sinon = sinonImport.createSandbox();
 const expect = chai.expect;
 import * as querystring from 'needle/lib/querystring';
-import * as utils from './utils';
-
-const {ecp, device} = utils.setupFromConfigFile();
+import { ecp, device } from './';
 
 describe('RokuDevice', function () {
 	before(async () => {
