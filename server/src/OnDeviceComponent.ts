@@ -3,7 +3,7 @@ import * as udp from 'dgram';
 import * as express from 'express';
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
-import * as utils from './utils';
+import { utils } from './utils';
 import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs } from '.';
 
 export class OnDeviceComponent {

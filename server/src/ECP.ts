@@ -2,7 +2,7 @@ import { RokuDevice } from './RokuDevice';
 import { ActiveAppResponse } from './types/ActiveAppResponse';
 import { ConfigOptions } from './types/ConfigOptions';
 import { ECPKeys } from './types/ECPKeys';
-import * as utils from './utils';
+import { utils } from './utils';
 
 export class ECP {
 	//store the import on the class to make testing easier

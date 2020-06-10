@@ -2,7 +2,7 @@ import * as chai from 'chai';
 const expect = chai.expect;
 import * as assert from 'assert';
 
-import * as utils from './utils';
+import { utils } from './utils';
 import { ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
 import { ecp, odc } from '.';
 

@@ -1,4 +1,4 @@
-import * as utils from './utils';
+import { utils } from './utils';
 export { utils };
 
 import { ECP } from './ECP';

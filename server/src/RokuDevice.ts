@@ -1,7 +1,7 @@
 import * as needle from 'needle';
 import * as querystring from 'needle/lib/querystring';
 import { ConfigOptions } from './types/ConfigOptions';
-import * as utils from './utils';
+import { utils } from './utils';
 
 export class RokuDevice {
 	public config?: ConfigOptions;
