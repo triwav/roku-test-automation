@@ -7,8 +7,8 @@
 			],
 			"dest": "/"
 		},
-		"**/*.xml",
-		"**/*.brs",
+		"components/**/*.+(xml|brs)",
+		"source/**/*.+(brs)",
 		"manifest"
 	]
 }

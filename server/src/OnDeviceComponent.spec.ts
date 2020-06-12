@@ -12,9 +12,6 @@ describe('OnDeviceComponent', function () {
 	});
 
 	describe('getValueAtKeyPath', function () {
-
-		//  TODO add array access
-
 		it('found should be true for if key path was found', async () => {
 			const {found} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
 			expect(found).to.be.true;
@@ -54,6 +51,18 @@ describe('OnDeviceComponent', function () {
 			const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.isLoggedIn'});
 			expect(value).to.be.false;
 		});
+
+		it('should work with array values', async () => {
+			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.0.name'});
+			expect(value).to.equal('firstItem');
+		});
+
+		it('should work with negative array values', async () => {
+			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.-1.name'});
+			expect(value).to.equal('lastItem');
+		});
+
+
 	});
 
 	describe('getValuesAtKeyPaths', function () {
