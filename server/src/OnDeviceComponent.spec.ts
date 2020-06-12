@@ -61,8 +61,6 @@ describe('OnDeviceComponent', function () {
 			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.-1.name'});
 			expect(value).to.equal('lastItem');
 		});
-
-
 	});
 
 	describe('getValuesAtKeyPaths', function () {
@@ -106,18 +104,63 @@ describe('OnDeviceComponent', function () {
 
 	describe('setValueAtKeyPath', function () {
 		it('should be able to set a key on global', async () => {
-			await setAndVerifyValue({keyPath: 'booleanValue', value: false, expectedStartingValue: true});
+			await setAndVerifyValue({
+				keyPath: 'booleanValue',
+				value: false,
+				expectedStartingValue: true
+			});
 		});
 
 		it('should be able set a value on a node and succeed', async () => {
-			await setAndVerifyValue({keyPath: 'AuthManager.isLoggedIn', value: true, expectedStartingValue: false});
+			await setAndVerifyValue({
+				keyPath: 'AuthManager.isLoggedIn',
+				value: true,
+				expectedStartingValue: false
+			});
 		});
 
 		it('should be able to set a key on an AA stored on a node', async () => {
-			await setAndVerifyValue({keyPath: 'AuthManager.profiles.profile1.settings.personalization.showContinueWatching', value: false, expectedStartingValue: true});
+			await setAndVerifyValue({
+				keyPath: 'AuthManager.profiles.profile1.settings.personalization.showContinueWatching',
+				value: false,
+				expectedStartingValue: true
+			});
 		});
 
-		// TODO test that update functionality works correct
+		it('should be able to create a node structure', async () => {
+			const nodeKey = utils.addRandomPostfix('node');
+
+			const firstChild = {
+				id: 'one'
+			};
+
+			const secondChild = {
+				id: 'two'
+			};
+
+			const children = [firstChild, secondChild];
+
+			const updateValue = {
+				subtype: 'Group',
+				children: children
+			};
+
+			await odc.setValueAtKeyPath({
+				keyPath: nodeKey,
+				value: updateValue
+			});
+
+			const {found, value} = await odc.getValueAtKeyPath({keyPath: nodeKey});
+			expect(found).to.be.true;
+			const childrenResult = value.children;
+			expect(childrenResult.length).to.equal(children.length);
+
+			const firstChildResult = childrenResult[0];
+			expect(firstChildResult.id).to.equal(firstChild.id);
+
+			// Check a value that wasn't in the initial to make sure it actually created a node vs an AA of the structure
+			expect(firstChildResult.opacity).to.equal(1);
+		});
 	});
 
 	describe('observeField', function () {
