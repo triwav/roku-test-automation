@@ -6,7 +6,7 @@ import * as portfinder from 'portfinder';
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs } from '.';
+import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs, ODCObserveFieldMatchValueTypes } from '.';
 
 export class OnDeviceComponent {
 	public defaultTimeout = 5000;
@@ -80,13 +80,14 @@ export class OnDeviceComponent {
 		observerFired: boolean
 		value: any
 	}> {
-		const match = args.match;
-		if (match) {
-			if (!('keyPath' in match)) {
+		let match = args.match;
+		if (match !== undefined) {
+			// Check if it's an object. Also have to check constructor as array is also an instanceof Object, make sure it has the keyPath key
+			if (!((match instanceof Object) && (match.constructor.name === 'Object') && ('keyPath' in match))) {
 				args.match = {
 					base: args.base,
 					keyPath: args.keyPath,
-					value: match.value
+					value: (match as any)
 				};
 			}
 		}
@@ -189,7 +190,6 @@ export class OnDeviceComponent {
 		if (this.debugLog) console.log(`Starting callback server`);
 		this.server = this.app.listen(callbackListenPort, () => {
 			if (this.debugLog) console.log(`Listening for callbacks on ${callbackListenPort}`);
-
 		});
 		this.callbackListenPort = callbackListenPort;
 	}

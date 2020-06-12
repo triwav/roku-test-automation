@@ -132,10 +132,10 @@ describe('OnDeviceComponent', function () {
 			expect(observerFired).to.be.true;
 		});
 
-		it('should wait for value to match if requested', async () => {
+		it('should wait for value to match if requested and should work with simple match property', async () => {
 			const args = {keyPath: 'stringValue'};
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			const observePromise = odc.observeField({...args, match: {value: expectedValue}});
+			const observePromise = odc.observeField({...args, match: expectedValue});
 			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
 			await setAndVerifyValue({...args, value: expectedValue});
 			const {value, observerFired} = await observePromise;
@@ -186,8 +186,6 @@ describe('OnDeviceComponent', function () {
 			const {observerFired} = await odc.observeField(args);
 			expect(observerFired).to.be.false;
 		});
-
-		// TODO add test for simple syntax for match
 	});
 
 	describe('callFunc', function () {
