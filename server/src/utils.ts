@@ -33,7 +33,7 @@ class Utils {
 			const matchingDevices = this.getMatchingDevices(config, deviceSelector);
 			const keys = Object.keys(matchingDevices);
 			if (keys.length === 0) {
-				throw new Error('No devices matched the device selection criteria');
+				throw utils.makeError('NoMatchingDevicesFound', 'No devices matched the device selection criteria');
 			}
 			config.deviceIndex = parseInt(keys[0]);
 		}
