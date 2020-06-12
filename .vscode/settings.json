@@ -5,6 +5,7 @@
 		"deeplinking",
 		"findnode",
 		"keypresses",
+		"portfinder",
 		"subchild"
 	],
 	"brightscript.output.focusOnLaunch": false

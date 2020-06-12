@@ -1,6 +1,8 @@
 import * as http from 'http';
 import * as udp from 'dgram';
 import * as express from 'express';
+import * as portfinder from 'portfinder';
+
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
@@ -182,10 +184,7 @@ export class OnDeviceComponent {
 		if (this.server) {
 			return;
 		}
-
-		// TODO make this pick automatically
-		const callbackListenPort = 20000;
-		if (!callbackListenPort) throw new Error('Config did not have a callback listen port');
+		const callbackListenPort = await portfinder.getPortPromise();
 
 		if (this.debugLog) console.log(`Starting callback server`);
 		this.server = this.app.listen(callbackListenPort, () => {
