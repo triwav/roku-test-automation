@@ -26,11 +26,13 @@ export class OnDeviceComponent {
 	}
 
 	public getConfig() {
+		const section = 'OnDeviceComponent';
 		if (!this.config) {
-			this.config = utils.getOptionalConfigFromEnvironment();
-			// TODO verify value
+			const config = utils.getOptionalConfigFromEnvironment();
+			utils.validateRTAConfigSchema(config, [section]);
+			this.config = config;
 		}
-		return this.config?.odc;
+		return this.config?.[section];
 	}
 
 	public async callFunc(args: ODCCallFuncArgs, options?: ODCRequestOptions): Promise<{

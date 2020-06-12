@@ -11,7 +11,7 @@
         "tslint": "tslint \"./src/**/*.ts\" --outputAbsolutePaths --project tsconfig.json",
         "test:device": "nyc mocha --full-trace src/RokuDevice.spec.ts src/OnDeviceComponent.spec.ts",
         "test:all": "nyc mocha --full-trace src/**/*.spec.ts",
-        "buildTypeCheckFiles": "ts-interface-builder src/types/ConfigOptions.ts && typescript-json-schema  src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps"
+        "buildConfigSchema": "typescript-json-schema  src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps --refs false"
     },
     "repository": {
         "type": "git",
@@ -24,12 +24,12 @@
     },
     "homepage": "https://github.com/triwav/roku-test-automation#readme",
     "dependencies": {
+        "ajv": "^6.12.2",
         "express": "^4.17.1",
         "fs-extra": "^7.0.1",
+        "http-proxy-middleware": "^1.0.3",
         "needle": "^2.3.2",
-        "path": "^0.12.7",
-        "ts-interface-checker": "^0.1.10",
-        "http-proxy-middleware": "^1.0.3"
+        "path": "^0.12.7"
     },
     "devDependencies": {
         "@types/chai": "^4.1.2",

@@ -91,7 +91,7 @@ describe('ECP', function () {
 
 		it('uses_config_value_if_override_not_provided', async () => {
 			const wait = 1000;
-			config.ecp = {
+			config.ECP = {
 				default: {
 					keyPressDelay: wait
 				}
@@ -109,7 +109,7 @@ describe('ECP', function () {
 
 		it('does_not_use_config_value_if_override_provided', async () => {
 			const wait = 1000;
-			config.ecp = {
+			config.ECP = {
 				default: {
 					keyPressDelay: 2000
 				}
@@ -192,7 +192,7 @@ describe('ECP', function () {
 
 		it('should_not_throw_if_channelId_not_supplied_but_in_config', async () => {
 			try {
-				config.ecp = {
+				config.ECP = {
 					default: {
 						launchChannelId: 'dev'
 					}

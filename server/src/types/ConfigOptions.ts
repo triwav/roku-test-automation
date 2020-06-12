@@ -1,12 +1,23 @@
 import { ODCLogLevels } from './OnDeviceComponentRequest';
 
+export enum ConfigBaseKeyEnum {
+	RokuDevice,
+	ECP,
+	OnDeviceComponent
+}
+export type ConfigBaseKeyTypes = keyof typeof ConfigBaseKeyEnum;
+
 export interface ConfigOptions {
 	/** strictly for schema validation not used internally */
 	$schema?: string;
+	RokuDevice: RokuDeviceConfigOptions;
+	ECP?: ECPConfigOptions;
+	OnDeviceComponent?: OnDeviceComponentConfigOptions;
+}
+
+export interface RokuDeviceConfigOptions {
 	devices: DeviceConfigOptions[];
 	deviceIndex?: number;
-	ecp?: ECPConfigOptions;
-	odc?: ODCConfigOptions;
 }
 
 export interface DeviceConfigOptions {
@@ -33,6 +44,6 @@ export interface ECPConfigOptions {
 	};
 }
 
-export interface ODCConfigOptions {
+export interface OnDeviceComponentConfigOptions {
 	logLevel?: ODCLogLevels;
 }

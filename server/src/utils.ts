@@ -1,18 +1,19 @@
 import * as fsExtra from 'fs-extra';
 import * as path from 'path';
 import * as Mocha from 'mocha';
+import * as Ajv from 'ajv';
+const ajv = new Ajv();
 
-import { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
+import { ConfigOptions, DeviceConfigOptions, ConfigBaseKeyTypes } from './types/ConfigOptions';
 
 class Utils {
-	public readConfigFile(configFilePath: string = 'rta-config.json') {
-		const config: ConfigOptions = JSON.parse(fsExtra.readFileSync(configFilePath, 'utf-8'));
-		return config;
+	public parseJsonFile(filePath: string) {
+		return JSON.parse(fsExtra.readFileSync(filePath, 'utf-8'));
 	}
 
 	public getMatchingDevices(config: ConfigOptions, deviceSelector: {}): { [key: string]: DeviceConfigOptions}  {
 		const matchingDevices = {};
-		config.devices.forEach((device, index) => {
+		config.RokuDevice.devices.forEach((device, index) => {
 			for (const key in deviceSelector) {
 				const requestedValue = deviceSelector[key];
 				if (device.properties[key] !== requestedValue) continue;
@@ -25,9 +26,7 @@ class Utils {
 
 	/** Helper for setting up process.env from a config */
 	public setupEnvironmentFromConfigFile(configFilePath: string = 'rta-config.json', deviceSelector: {} | number = 0) {
-		console.log('setupEnvironmentFromConfigFile');
-
-		const config = this.readConfigFile(configFilePath);
+		const config = this.parseJsonFile(configFilePath);
 		if (typeof deviceSelector === 'number') {
 			config.deviceIndex = deviceSelector;
 		} else {
@@ -41,20 +40,38 @@ class Utils {
 		process.env.rtaConfig = JSON.stringify(config);
 	}
 
-	public getConfigFromEnvironment() {
-		if (process.env.rtaConfig) {
-			const config: ConfigOptions = JSON.parse(process.env.rtaConfig);
-			return config;
+	/** Validates the ConfigOptions schema the current class is using
+	 * @param sectionsToValidate - if non empty array will only validate the sections provided instead of the whole schema
+	 */
+	public validateRTAConfigSchema(config: any, propertiesToValidate: ConfigBaseKeyTypes[] = []) {
+		const schema = utils.parseJsonFile('rta-config.schema.json');
+		if (propertiesToValidate.length > 0) {
+			for (const key of propertiesToValidate) {
+				if (!ajv.validate(schema.properties[key], config[key])) {
+					const error = ajv.errors?.[0];
+					throw utils.makeError('ConfigValidationError', `${key}${error?.dataPath} ${error?.message}`);
+				}
+			}
+		} else {
+			if (!ajv.validate(schema, config)) {
+				const error = ajv.errors?.[0];
+				throw utils.makeError('ConfigValidationError', `${error?.dataPath} ${error?.message}`);
+			}
 		}
-		throw new Error('Did not contain config at "process.env.rtaConfig"');
+	}
+
+	public getConfigFromEnvironment() {
+		const config = this.getOptionalConfigFromEnvironment();
+		if (!config) {
+			throw this.makeError('MissingEnvironmentError', 'Did not contain config at "process.env.rtaConfig"');
+		}
+		return config;
 	}
 
 	public getOptionalConfigFromEnvironment() {
-		try {
-			return this.getConfigFromEnvironment();
-		} catch (e) {
-			return undefined;
-		}
+		if (!process.env.rtaConfig) return undefined;
+		const config: ConfigOptions = JSON.parse(process.env.rtaConfig);
+		return config;
 	}
 
 	public sleep(milliseconds: number) {

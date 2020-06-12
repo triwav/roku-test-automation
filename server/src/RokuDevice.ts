@@ -12,11 +12,14 @@ export class RokuDevice {
 	}
 
 	public getConfig() {
+		const section = 'RokuDevice';
 		if (!this.config) {
-			this.config = utils.getConfigFromEnvironment();
-			// TODO verify value
+			const config = utils.getConfigFromEnvironment();
+			utils.validateRTAConfigSchema(config, [section]);
+			this.config = config;
 		}
-		return this.config.devices[this.config.deviceIndex ?? 0];
+		const configSection = this.config?.[section];
+		return configSection.devices[configSection.deviceIndex ?? 0];
 	}
 
 	public async sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {

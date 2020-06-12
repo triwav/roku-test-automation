@@ -20,11 +20,13 @@ export class ECP {
 	}
 
 	public getConfig() {
+		const section = 'ECP';
 		if (!this.config) {
-			this.config = utils.getOptionalConfigFromEnvironment();
-			// TODO verify value
+			const config = utils.getOptionalConfigFromEnvironment();
+			utils.validateRTAConfigSchema(config, [section]);
+			this.config = config;
 		}
-		return this.config?.ecp;
+		return this.config?.[section];
 	}
 
 	public async sendText(text: string, wait?: number) {
