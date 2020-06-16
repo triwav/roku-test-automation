@@ -1,7 +1,7 @@
 import * as fsExtra from 'fs-extra';
 import * as needle from 'needle';
 
-import * as utils from '../utils';
+import { utils } from '../utils';
 
 export async function getMock(mockFilePath: string) {
 	return await fsExtra.readFile(mockFilePath, 'utf8');

@@ -1,11 +1,12 @@
 import * as http from 'http';
 import * as udp from 'dgram';
 import * as express from 'express';
+import * as portfinder from 'portfinder';
 
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
-import * as utils from './utils';
-import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeFields, ODCGetFocusedNodeArgs } from '.';
+import { utils } from './utils';
+import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs, ODCObserveFieldMatchValueTypes } from '.';
 
 export class OnDeviceComponent {
 	public defaultTimeout = 5000;
@@ -13,7 +14,7 @@ export class OnDeviceComponent {
 	private static readonly version = '1.0.0';
 	private callbackListenPort?: number;
 	private device: RokuDevice;
-	private config: ConfigOptions;
+	private config?: ConfigOptions;
 	private client = udp.createSocket('udp4');
 	private sentRequests: { [key: string]: ODCRequest } = {};
 	private app = this.setupExpress();
@@ -21,27 +22,35 @@ export class OnDeviceComponent {
 	private handshakeStatus?: 'running' | 'complete' | 'failed';
 	private handshakePromise?: Promise<any>;
 
-	constructor(device: RokuDevice, config: ConfigOptions) {
-		this.device = device;
+	constructor(config?: ConfigOptions) {
 		this.config = config;
+		this.device = new RokuDevice(config);
+	}
+
+	public getConfig() {
+		const section = 'OnDeviceComponent';
+		if (!this.config) {
+			const config = utils.getOptionalConfigFromEnvironment();
+			utils.validateRTAConfigSchema(config, [section]);
+			this.config = config;
+		}
+		return this.config?.[section];
 	}
 
 	public async callFunc(args: ODCCallFuncArgs, options?: ODCRequestOptions): Promise<{
-		success: boolean;
 		value: any;
 	}> {
 		const result = await this.sendRequest('callFunc', args, options);
 		return result.body;
 	}
 
-	public async getFocusedNode(args?: ODCGetFocusedNodeArgs, options?: ODCRequestOptions): Promise<ODCNodeFields> {
+	public async getFocusedNode(args?: ODCGetFocusedNodeArgs, options?: ODCRequestOptions): Promise<ODCNodeRepresentation> {
 		const result = await this.sendRequest('getFocusedNode', args ?? {}, options);
 		return result.body.node;
 	}
 
 	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
 		found: boolean;
-		success: boolean;
 		value: any;
 	}> {
 		const result = await this.sendRequest('getValueAtKeyPath', args, options);
@@ -51,8 +60,6 @@ export class OnDeviceComponent {
 	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options?: ODCRequestOptions): Promise<{
 		[key: string]: any;
 		found: boolean;
-		success: boolean;
-		value: any;
 	}> {
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
 		return result.body;
@@ -69,17 +76,18 @@ export class OnDeviceComponent {
 	}
 
 	public async observeField(args: ODCObserveFieldArgs, options?: ODCRequestOptions): Promise<{
-		/** Whether the observer was actually fired or a match value was provided and already equaled the requested value  */
+		/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not  */
 		observerFired: boolean
 		value: any
 	}> {
-		const match = args.match;
-		if (match) {
-			if (!('keyPath' in match)) {
+		let match = args.match;
+		if (match !== undefined) {
+			// Check if it's an object. Also have to check constructor as array is also an instanceof Object, make sure it has the keyPath key
+			if (!((match instanceof Object) && (match.constructor.name === 'Object') && ('keyPath' in match))) {
 				args.match = {
 					base: args.base,
 					keyPath: args.keyPath,
-					value: match.value
+					value: (match as any)
 				};
 			}
 		}
@@ -88,9 +96,7 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
-		success: boolean;
-	}> {
+	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{}> {
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
@@ -104,7 +110,7 @@ export class OnDeviceComponent {
 					try {
 						const args = {
 							version: OnDeviceComponent.version,
-							logLevel: this.config.device.odc?.logLevel ?? 'info'
+							logLevel: this.getConfig()?.logLevel ?? 'info'
 						};
 						let result = await this.sendRequestCore('handshake', args, {
 							timeout: 1000
@@ -163,8 +169,9 @@ export class OnDeviceComponent {
 		});
 		this.sentRequests[requestId] = request;
 
-		if (this.debugLog) console.log(`Sending request to ${this.device.ip} with body: ${body}`);
-		this.client.send(body, 9000, this.device.ip, (err) => {
+		const host = this.device.getConfig().host;
+		if (this.debugLog) console.log(`Sending request to ${host} with body: ${body}`);
+		this.client.send(body, 9000, host, (err) => {
 			if (err) {
 				throw err;
 			}
@@ -178,14 +185,11 @@ export class OnDeviceComponent {
 		if (this.server) {
 			return;
 		}
-
-		const callbackListenPort = this.config.server?.callbackListenPort;
-		if (!callbackListenPort) throw new Error('Config did not have a callback listen port');
+		const callbackListenPort = await portfinder.getPortPromise();
 
 		if (this.debugLog) console.log(`Starting callback server`);
 		this.server = this.app.listen(callbackListenPort, () => {
 			if (this.debugLog) console.log(`Listening for callbacks on ${callbackListenPort}`);
-
 		});
 		this.callbackListenPort = callbackListenPort;
 	}

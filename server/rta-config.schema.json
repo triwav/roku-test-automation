@@ -1,0 +1,89 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+        "$schema": {
+            "description": "strictly for schema validation not used internally",
+            "type": "string"
+        },
+        "ECP": {
+            "additionalProperties": false,
+            "properties": {
+                "default": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "keyPressDelay": {
+                            "description": "The default keyPressDelay to use if not provided at the call site",
+                            "type": "number"
+                        },
+                        "launchChannelId": {
+                            "description": "The default channel id to launch if one isn't passed in",
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
+        "OnDeviceComponent": {
+            "additionalProperties": false,
+            "properties": {
+                "logLevel": {
+                    "enum": [
+                        "debug",
+                        "error",
+                        "info",
+                        "off",
+                        "verbose",
+                        "warn"
+                    ],
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "RokuDevice": {
+            "additionalProperties": false,
+            "properties": {
+                "deviceIndex": {
+                    "type": "number"
+                },
+                "devices": {
+                    "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "host": {
+                                "description": "The IP address or hostname of the target Roku device.",
+                                "type": "string"
+                            },
+                            "password": {
+                                "description": "The password for logging in to the developer portal on the target Roku device",
+                                "type": "string"
+                            },
+                            "properties": {
+                                "description": "User defined list of properties for this device (name, isLowEnd, etc)",
+                                "properties": {
+                                },
+                                "type": "object"
+                            },
+                            "screenshotFormat": {
+                                "description": "Devices default to jpg but if you've changed to png you'll need so supply this",
+                                "enum": [
+                                    "jpg",
+                                    "png"
+                                ],
+                                "type": "string"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "type": "array"
+                }
+            },
+            "type": "object"
+        }
+    },
+    "type": "object"
+}
+

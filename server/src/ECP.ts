@@ -2,7 +2,7 @@ import { RokuDevice } from './RokuDevice';
 import { ActiveAppResponse } from './types/ActiveAppResponse';
 import { ConfigOptions } from './types/ConfigOptions';
 import { ECPKeys } from './types/ECPKeys';
-import * as utils from './utils';
+import { utils } from './utils';
 
 export class ECP {
 	//store the import on the class to make testing easier
@@ -14,12 +14,22 @@ export class ECP {
 	public static readonly Key = ECPKeys;
 	public readonly Key = ECP.Key;
 
-	constructor(device: RokuDevice, config?: ConfigOptions) {
-		this.device = device;
+	constructor(config?: ConfigOptions) {
 		this.config = config;
+		this.device = new RokuDevice(config);
 	}
 
-	public async sendText(text: string, wait = 0) {
+	public getConfig() {
+		const section = 'ECP';
+		if (!this.config) {
+			const config = utils.getOptionalConfigFromEnvironment();
+			utils.validateRTAConfigSchema(config, [section]);
+			this.config = config;
+		}
+		return this.config?.[section];
+	}
+
+	public async sendText(text: string, wait?: number) {
 		for (const char of text) {
 			const value: any = `LIT_${char}`;
 			await this.sendKeyPress(value, wait);
@@ -28,14 +38,16 @@ export class ECP {
 
 	public async sendKeyPress(key: ECPKeys, wait = 0) {
 		await this.device.sendECP(`keypress/${encodeURIComponent(key)}`, {}, '');
-		if (!wait) {
-			wait = this.config?.defaults?.ecp.keyPressDelay ?? wait;
+
+		const keyPressDelay = this.getConfig()?.default?.keyPressDelay;
+		if (!wait && keyPressDelay) {
+			wait = keyPressDelay;
 		}
 
 		if (wait) await this.utils.sleep(wait);
 	}
 
-	public async sendKeyPressSequence(keys: ECPKeys[], wait = 0) {
+	public async sendKeyPressSequence(keys: ECPKeys[], wait?: number) {
 		for (const key of keys) {
 			await this.sendKeyPress(key, wait);
 		}
@@ -48,7 +60,7 @@ export class ECP {
 		skipIfAlreadyRunning = false
 	} = {}) {
 		if (!channelId) {
-			const configChannelId = this.config?.channel?.id;
+			const configChannelId = this.getConfig()?.default?.launchChannelId;
 			if (!configChannelId) {
 				throw utils.makeError('sendLaunchChannelChannelIdMissing', 'Channel id required and not supplied');
 			}
@@ -75,7 +87,7 @@ export class ECP {
 	}
 
 	public async getActiveApp() {
-		let result = await this.device.sendECP(`query/active-app`);
+		const result = await this.device.sendECP(`query/active-app`);
 		const children = result.body?.children;
 		if (!children) throw utils.makeError('getActiveAppInvalidResponse', 'Received invalid active-app response from device');
 

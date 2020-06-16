@@ -2,9 +2,9 @@ import * as chai from 'chai';
 const expect = chai.expect;
 import * as assert from 'assert';
 
-import * as utils from './utils';
+import { utils } from './utils';
 import { ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
-const {ecp, odc} = utils.setupFromConfigFile();
+import { ecp, odc } from '.';
 
 describe('OnDeviceComponent', function () {
 	before(async () => {
@@ -51,6 +51,28 @@ describe('OnDeviceComponent', function () {
 			const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.isLoggedIn'});
 			expect(value).to.be.false;
 		});
+
+		it('should work with array values', async () => {
+			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.0.name'});
+			expect(value).to.equal('firstItem');
+		});
+
+		it('should work with negative array values', async () => {
+			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.-1.name'});
+			expect(value).to.equal('lastItem');
+		});
+	});
+
+	describe('getValuesAtKeyPaths', function () {
+		it('should work with multiple values', async () => {
+			const {subchild1, subchild2} = await odc.getValuesAtKeyPaths({requests: {
+					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
+					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
+				}
+			});
+			expect(subchild1.id).to.eq('subchild1');
+			expect(subchild2.id).to.eq('subchild2');
+		});
 	});
 
 	describe('getFocusedNode', function () {
@@ -80,61 +102,64 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe('getValueAtKeyPath', function () {
-		it('should work with findnode', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
-			expect(value.id).to.eq('subchild3');
-		});
-
-		it('should not find a child if it is not beneath the parent node', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3.testTarget'});
-			expect(value.id).to.be.undefined;
-		});
-
-		it('should work with findNode.getChild', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.0'});
-			expect(value.id).to.eq('child1');
-		});
-
-		it('should work with findNode.getChild.getChild', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.1'});
-			expect(value.id).to.eq('subchild2');
-		});
-
-		it('should work with findNode.getChild.findNode', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.subchild1'});
-			expect(value.id).to.eq('subchild1');
-		});
-
-		describe('getValuesAtKeyPaths', function () {
-			it('should work with for multiple values', async () => {
-				const {subchild1, subchild2} = await odc.getValuesAtKeyPaths({requests: {
-						subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
-						subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
-					}
-				});
-				expect(subchild1.id).to.eq('subchild1');
-				expect(subchild2.id).to.eq('subchild2');
+	describe('setValueAtKeyPath', function () {
+		it('should be able to set a key on global', async () => {
+			await setAndVerifyValue({
+				keyPath: 'booleanValue',
+				value: false,
+				expectedStartingValue: true
 			});
 		});
 
-		it('should be able to get a value on a valid field', async () => {
-			const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.isLoggedIn'});
-			expect(value).to.be.false;
-		});
-	});
-
-	describe('setValueAtKeyPath', function () {
-		it('should be able to set a key on global', async () => {
-			await setAndVerifyValue({keyPath: 'booleanValue', value: false, expectedStartingValue: true});
-		});
-
 		it('should be able set a value on a node and succeed', async () => {
-			await setAndVerifyValue({keyPath: 'AuthManager.isLoggedIn', value: true, expectedStartingValue: false});
+			await setAndVerifyValue({
+				keyPath: 'AuthManager.isLoggedIn',
+				value: true,
+				expectedStartingValue: false
+			});
 		});
 
 		it('should be able to set a key on an AA stored on a node', async () => {
-			await setAndVerifyValue({keyPath: 'AuthManager.profiles.profile1.settings.personalization.showContinueWatching', value: false, expectedStartingValue: true});
+			await setAndVerifyValue({
+				keyPath: 'AuthManager.profiles.profile1.settings.personalization.showContinueWatching',
+				value: false,
+				expectedStartingValue: true
+			});
+		});
+
+		it('should be able to create a node structure', async () => {
+			const nodeKey = utils.addRandomPostfix('node');
+
+			const firstChild = {
+				id: 'one'
+			};
+
+			const secondChild = {
+				id: 'two'
+			};
+
+			const children = [firstChild, secondChild];
+
+			const updateValue = {
+				subtype: 'Group',
+				children: children
+			};
+
+			await odc.setValueAtKeyPath({
+				keyPath: nodeKey,
+				value: updateValue
+			});
+
+			const {found, value} = await odc.getValueAtKeyPath({keyPath: nodeKey});
+			expect(found).to.be.true;
+			const childrenResult = value.children;
+			expect(childrenResult.length).to.equal(children.length);
+
+			const firstChildResult = childrenResult[0];
+			expect(firstChildResult.id).to.equal(firstChild.id);
+
+			// Check a value that wasn't in the initial to make sure it actually created a node vs an AA of the structure
+			expect(firstChildResult.opacity).to.equal(1);
 		});
 	});
 
@@ -159,10 +184,10 @@ describe('OnDeviceComponent', function () {
 			expect(observerFired).to.be.true;
 		});
 
-		it('should wait for value to match if requested', async () => {
+		it('should wait for value to match if requested and should work with simple match property', async () => {
 			const args = {keyPath: 'stringValue'};
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			const observePromise = odc.observeField({...args, match: {value: expectedValue}});
+			const observePromise = odc.observeField({...args, match: expectedValue});
 			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
 			await setAndVerifyValue({...args, value: expectedValue});
 			const {value, observerFired} = await observePromise;
@@ -245,8 +270,7 @@ describe('OnDeviceComponent', function () {
 			const {value: actualStartingValue} = await odc.getValueAtKeyPath(args);
 			expect(actualStartingValue).to.equal(args.expectedStartingValue, `${args.base}.${args.keyPath} did not match expected value before set`);
 		}
-		const result = await odc.setValueAtKeyPath(args);
-		expect(result.success).to.be.true;
+		await odc.setValueAtKeyPath(args);
 		const {value: actualValue} = await odc.getValueAtKeyPath(args);
 		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
 	}

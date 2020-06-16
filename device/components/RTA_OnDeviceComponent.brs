@@ -194,6 +194,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 		if result.found <> true then
 			return buildErrorResponseObject("Match was requested and key path was not valid")
 		end if
+		' TODO build out to support more complicated types
 		if result.value = match.value then
 			return {
 				"value": node[field]

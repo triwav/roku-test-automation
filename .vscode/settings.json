@@ -2,7 +2,9 @@
 	"typescript.preferences.quoteStyle": "single",
 	"cSpell.words": [
 		"ODCIs",
+		"deeplinking",
 		"findnode",
+		"portfinder",
 		"subchild"
 	],
 	"brightscript.output.focusOnLaunch": false

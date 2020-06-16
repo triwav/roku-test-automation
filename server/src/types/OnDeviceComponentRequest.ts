@@ -67,11 +67,12 @@ export interface ODCObserveFieldArgs {
 		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified  */
 		base?: ODCKeyPathBaseTypes;
 		keyPath: string;
-		value: any;
-	} | {
-		value: any;
-	};
+		value: ODCObserveFieldMatchValueTypes;
+	} | ODCObserveFieldMatchValueTypes;
 }
+
+// TODO build out to support more complicated types
+export type ODCObserveFieldMatchValueTypes = string | number | boolean;
 
 export interface ODCSetValueAtKeyPathArgs {
 	base?: ODCKeyPathBaseTypes;
@@ -95,9 +96,9 @@ export interface ODCRequest {
 	callback?: (req: express.Request) => void;
 }
 
-export interface ODCNodeFields {
+export interface ODCNodeRepresentation {
 	id: string;
-	focusedChild: ODCNodeFields;
+	focusedChild: ODCNodeRepresentation;
 	focusable: boolean;
 	change: {
 		Index1: number

@@ -7,6 +7,7 @@ sub init()
 		"booleanValue": true
 		"stringValue": "stringValue"
 		"intValue": 1
+		"arrayValue": [{ "name": "firstItem" }, { "name": "secondItem" }, { "name": "lastItem" }]
 	})
 end sub
 

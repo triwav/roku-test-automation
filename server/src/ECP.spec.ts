@@ -23,7 +23,8 @@ describe('ECP', function () {
 			}
 		};
 		config = ({} as any);
-		ecp = new ECP(device, config);
+		ecp = new ECP(config);
+		(ecp as any).device = device;
 		ecpUtils = (ecp as any).utils;
 		ecpResponse = '';
 	});
@@ -90,11 +91,12 @@ describe('ECP', function () {
 
 		it('uses_config_value_if_override_not_provided', async () => {
 			const wait = 1000;
-			config.defaults = {
-				ecp: {
+			config.ECP = {
+				default: {
 					keyPressDelay: wait
 				}
 			};
+
 			ecpUtils.sleep = sinon.spy((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
 			});
@@ -107,11 +109,12 @@ describe('ECP', function () {
 
 		it('does_not_use_config_value_if_override_provided', async () => {
 			const wait = 1000;
-			config.defaults = {
-				ecp: {
+			config.ECP = {
+				default: {
 					keyPressDelay: 2000
 				}
 			};
+
 			ecpUtils.sleep = sinon.spy((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
 			});
@@ -189,9 +192,12 @@ describe('ECP', function () {
 
 		it('should_not_throw_if_channelId_not_supplied_but_in_config', async () => {
 			try {
-				config.channel = {
-					id: 'dev'
+				config.ECP = {
+					default: {
+						launchChannelId: 'dev'
+					}
 				};
+
 				await ecp.sendLaunchChannel({
 					channelId: '',
 					launchParameters: {},

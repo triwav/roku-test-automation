@@ -27,7 +27,7 @@
 			"request": "launch",
 			"cwd": "${workspaceFolder}/server",
 			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
-			"args": ["--exclude", "./src/RokuDevice.spec.ts", "--exclude", "./src/OnDeviceComponent.spec.ts"],
+			"args": ["--exclude", "./src/RokuDevice.spec.ts", "--exclude", "./src/OnDeviceComponent.spec.ts", "./src/**/*.spec.ts"],
 			"console": "integratedTerminal",
 			"protocol": "inspector",
 			"internalConsoleOptions": "neverOpen"

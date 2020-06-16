@@ -248,7 +248,7 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 		else if isNonEmptyArray(level) then
 			key = key.toInt()
 			if key < 0 then
-				key = level.count() - key
+				key = level.count() + key ' It's a negative number so we add it to subtract
 			end if
 			level = level[key]
 		else
