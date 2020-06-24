@@ -44,7 +44,7 @@ class Utils {
 	 * @param sectionsToValidate - if non empty array will only validate the sections provided instead of the whole schema
 	 */
 	public validateRTAConfigSchema(config: any, propertiesToValidate: ConfigBaseKeyTypes[] = []) {
-		const schema = utils.parseJsonFile('rta-config.schema.json');
+		const schema = utils.parseJsonFile(__dirname + '/../rta-config.schema.json');
 		if (propertiesToValidate.length > 0) {
 			for (const key of propertiesToValidate) {
 				if (!ajv.validate(schema.properties[key], config[key])) {
