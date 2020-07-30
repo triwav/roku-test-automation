@@ -4,10 +4,11 @@ import * as assert from 'assert';
 
 import { utils } from './utils';
 import { ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
-import { ecp, odc } from '.';
+import { ecp, odc, device } from '.';
 
 describe('OnDeviceComponent', function () {
 	before(async () => {
+		await device.deploy({rootDir: '../testProject'});
 		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});
 

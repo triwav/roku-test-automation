@@ -1,10 +1,13 @@
 import * as needle from 'needle';
+import * as rokuDeploy from 'roku-deploy';
+import * as fsExtra from 'fs-extra';
 import * as querystring from 'needle/lib/querystring';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 
 export class RokuDevice {
 	public config?: ConfigOptions;
+	public deployed = false;
 	private needle = needle;
 
 	constructor(config?: ConfigOptions) {
@@ -20,6 +23,34 @@ export class RokuDevice {
 		}
 		const configSection = this.config?.[section];
 		return configSection.devices[configSection.deviceIndex ?? 0];
+	}
+
+	public async deploy(options?: rokuDeploy.RokuDeployOptions, args?: {
+		injectTestingFiles?: boolean,
+		preventMultipleDeployments: boolean
+	}) {
+		if (args?.preventMultipleDeployments !== false) {
+			if (this.deployed) return;
+		}
+
+		options = rokuDeploy.getOptions(options);
+		options.host = this.getConfig().host;
+		options.password = this.getConfig().password;
+
+		if (args?.injectTestingFiles !== false) {
+			const files = options.files ?? [];
+			files.push({
+				src: __dirname + '/../../device/**/*',
+				dest: '/'
+			});
+			options.files = files;
+		}
+
+		await rokuDeploy.deploy(options, (info) => {
+			const manifestPath = `${info.stagingFolderPath}/manifest`;
+			const manifestContents = fsExtra.readFileSync(manifestPath, 'utf-8').replace('ENABLE_RTA=false', 'ENABLE_RTA=true');
+			fsExtra.writeFileSync(manifestPath, manifestContents);
+		});
 	}
 
 	public async sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {

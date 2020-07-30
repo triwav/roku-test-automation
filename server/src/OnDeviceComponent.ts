@@ -3,13 +3,15 @@ import * as udp from 'dgram';
 import * as express from 'express';
 import * as portfinder from 'portfinder';
 
+import { getStackTrace } from 'get-stack-trace';
+
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs, ODCObserveFieldMatchValueTypes } from '.';
 
 export class OnDeviceComponent {
-	public defaultTimeout = 5000;
+	public defaultTimeout = 1000;
 	private debugLog = false;
 	private static readonly version = '1.0.0';
 	private callbackListenPort?: number;
@@ -91,7 +93,6 @@ export class OnDeviceComponent {
 				};
 			}
 		}
-
 		const result = await this.sendRequest('observeField', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
@@ -136,16 +137,17 @@ export class OnDeviceComponent {
 	}
 
 	private async sendRequest(type: ODCRequestTypes, args: ODCRequestArgs, options?: ODCRequestOptions) {
+		const stackTrace = await getStackTrace();
 		if (this.handshakeStatus !== 'complete') {
 			if (this.handshakeStatus === 'failed') {
 				throw new Error('Can not continue as handshake was not successful');
 			}
 			await this.sendHandShakeRequest();
 		}
-		return await this.sendRequestCore(type, args, options);
+		return await this.sendRequestCore(type, args, options, stackTrace);
 	}
 
-	private async sendRequestCore(type: ODCRequestTypes, args: ODCRequestArgs, options?: ODCRequestOptions) {
+	private async sendRequestCore(type: ODCRequestTypes, args: ODCRequestArgs, options?: ODCRequestOptions, stackTrace?: any[]) {
 		await this.startServer();
 
 		const requestId = utils.randomStringGenerator();
@@ -177,7 +179,7 @@ export class OnDeviceComponent {
 			}
 		});
 		const timeout = options?.timeout ?? this.defaultTimeout;
-		return utils.promiseTimeout(promise, timeout, `${request.type} request ${requestId} timed out after ${timeout}ms`);
+		return utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`);
 	}
 
 	// Starts up express server
@@ -222,5 +224,20 @@ export class OnDeviceComponent {
 			}
 		});
 		return app;
+	}
+
+	private getCaller(stackTrace?: any[]) {
+		if (stackTrace) {
+			let previousFrame;
+			for (const frame of stackTrace.reverse()) {
+				if (frame.typeName === 'OnDeviceComponent') {
+					if (previousFrame) {
+						return `(${previousFrame.fileName}:${previousFrame.lineNumber}:${previousFrame.columnNumber})`;
+					}
+				}
+				previousFrame = frame;
+			}
+		}
+		return '';
 	}
 }
