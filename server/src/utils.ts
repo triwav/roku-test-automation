@@ -84,7 +84,7 @@ class Utils {
 				if (message === undefined) {
 					message = 'Timed out after ' + milliseconds + 'ms.';
 				}
-				reject(message);
+				reject(new Error(message));
 			}, milliseconds);
 		});
 

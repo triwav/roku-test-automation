@@ -45,7 +45,7 @@ function processCallFuncRequest(args as Object) as Object
 	keyPath = args.keyPath
 	node = processGetValueAtKeyPathRequest(args).value
 	if NOT isNode(node) then
-		return buildErrorResponseObject("Node not found at key path'" + keyPath + "'")
+		return buildErrorResponseObject("Node not found at key path' " + keyPath + "'")
 	end if
 
 	funcName = args.funcName
@@ -178,14 +178,60 @@ end function
 
 function processObserveFieldRequest(request as Object) as Dynamic
 	args = request.args
+	requestId = request.id
 	keyPath = args.keyPath
 	result = processGetValueAtKeyPathRequest(args)
 	node = result.value
-	if NOT isNode(node) then
-		return buildErrorResponseObject("Node not found at key path'" + keyPath + "'")
-	end if
-
 	field = args.field
+
+	parentIsNode = isNode(node)
+	fieldExists = parentIsNode AND node.doesExist(field)
+	timePassed = 0
+	if NOT parentIsNode OR NOT fieldExists then
+		retryTimeout = args.retryTimeout
+
+		if retryTimeout > 0 then
+			request.id = request.id
+			requestContext = request.context
+			if requestContext = Invalid then
+				timer = createObject("roSGNode", "Timer")
+				timer.duration = args.retryInterval / 1000
+				timer.id = requestId
+				timer.observeFieldScoped("fire", "onProcessObserveFieldRequestRetryFired")
+
+				requestContext = {
+					"timer": timer
+					"timespan": createObject("roTimespan")
+				}
+				request.context = requestContext
+				m.activeObserveFieldRequests[requestId] = request
+				timer.control = "start"
+				return Invalid
+			else
+				timePassed = requestContext.timespan.totalMilliseconds()
+				if timePassed < retryTimeout then
+					requestContext.timer.control = "start"
+					return Invalid
+				end if
+			end if
+		end if
+
+		if NOT parentIsNode then
+			errorMessage = "Node not found at key path '" + keyPath + "'"
+		else
+			errorMessage = "Node did not have field named '" + field + "' at key path '" + keyPath + "'"
+		end if
+		if timePassed > 0 then
+			errorMessage += " timed out after " + timePassed.toStr() + "ms"
+		end if
+		logWarn(errorMessage)
+
+		m.activeObserveFieldRequests.delete(requestId)
+		sendBackResponse(request, buildErrorResponseObject(errorMessage))
+
+		' Might be called asyncronous and we already handled so returning Invalid
+		return Invalid
+	end if
 
 	' If match was provided, check to see if it already matches the expected value
 	match = args.match
@@ -210,9 +256,15 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	end if
 
 	request.node = node
-	m.activeObserveFieldRequests[request.id] = request
+	m.activeObserveFieldRequests[requestId] = request
 	return Invalid
 end function
+
+sub onProcessObserveFieldRequestRetryFired(event as Object)
+	requestId = event.getNode()
+	request = m.activeObserveFieldRequests[requestId]
+	processObserveFieldRequest(request)
+end sub
 
 sub observeFieldCallback(event as Object)
 	node = event.getRoSgNode()

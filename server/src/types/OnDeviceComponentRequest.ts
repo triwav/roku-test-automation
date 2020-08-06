@@ -35,6 +35,7 @@ export interface ODCGetFocusedNodeArgs {}
 export interface ODCGetValueAtKeyPathArgs {
 	base?: ODCKeyPathBaseTypes;
 	keyPath: string;
+	timeout?: number;
 }
 
 export interface ODCGetValuesAtKeyPathsArgs {
@@ -63,6 +64,8 @@ export declare type ODCLogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' |
 export interface ODCObserveFieldArgs {
 	base?: ODCKeyPathBaseTypes;
 	keyPath: string;
+	retryInterval?: number; /** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
+	retryTimeout?: number; /** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
 	match?: {
 		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified  */
 		base?: ODCKeyPathBaseTypes;
