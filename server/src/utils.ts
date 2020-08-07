@@ -79,12 +79,12 @@ class Utils {
 	}
 
 	public promiseTimeout<T>(promise: Promise<T>, milliseconds: number, message?: string) {
-		let timeout = new Promise<T>((resolve, reject) => {
+		const timeout = new Promise<T>((resolve, reject) => {
 			setTimeout(() => {
 				if (message === undefined) {
 					message = 'Timed out after ' + milliseconds + 'ms.';
 				}
-				reject(message);
+				reject(new Error(message));
 			}, milliseconds);
 		});
 

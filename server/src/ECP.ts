@@ -56,8 +56,9 @@ export class ECP {
 	public async sendLaunchChannel({
 		channelId = '',
 		launchParameters = {},
+		skipIfAlreadyRunning = false,
 		verifyLaunch = true,
-		skipIfAlreadyRunning = false
+		verifyLaunchTimeOut = 3000
 	} = {}) {
 		if (!channelId) {
 			const configChannelId = this.getConfig()?.default?.launchChannelId;
@@ -68,21 +69,24 @@ export class ECP {
 		}
 		if (skipIfAlreadyRunning) {
 			const result = await this.getActiveApp();
-			if (result.app?.id === channelId) return;
+			if (result.app?.id === channelId) {
+				console.log('already running skipping launch');
+				return;
+			}
 		}
 		await this.device.sendECP(`launch/${channelId}`, launchParameters, '');
 		if (verifyLaunch) {
-			let success = true;
-			try {
-				const result = await this.getActiveApp();
-				if (result.app?.id !== channelId) {
-					success = false;
-				}
-			} catch (e) {
-				success = false;
+			const startTime = new Date();
+			while (new Date().valueOf() - startTime.valueOf() < verifyLaunchTimeOut) {
+				try {
+					const result = await this.getActiveApp();
+					if (result.app?.id === channelId) {
+						return;
+					}
+				} catch (e) {}
+				await utils.sleep(100);
 			}
-
-			if (!success) throw utils.makeError('sendLaunchChannelVerifyLaunch', `Could not launch channel with id of '${channelId}`);
+			throw utils.makeError('sendLaunchChannelVerifyLaunch', `Could not launch channel with id of '${channelId}`);
 		}
 	}
 

@@ -2,6 +2,17 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"type": "typescript",
+			"tsconfig": "server/tsconfig.json",
+			"problemMatcher": [
+				"$tsc-watch"
+			],
+			"option": "watch",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		}, {
 			"type": "npm",
 			"group": {
 				"kind": "test",
@@ -9,27 +20,6 @@
 			},
 			"script": "test",
 			"problemMatcher": []
-		},
-		{
-			"type": "npm",
-			"label": "build",
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
-			"presentation": {
-				"echo": false,
-				"reveal": "silent",
-				"focus": false,
-				"panel": "shared",
-				"showReuseMessage": true,
-				"clear": false
-			},
-			"script": "build",
-			"problemMatcher": [
-				"$tslint5",
-				"$tsc"
-			]
 		}
 	]
 }

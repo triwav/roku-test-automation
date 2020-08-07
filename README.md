@@ -24,6 +24,7 @@ Currently the only necessary part of the config is at least one device host and 
 
 ```json
 {
+	"$schema": "https://raw.githubusercontent.com/triwav/roku-test-automation/master/server/rta-config.schema.json",
 	"RokuDevice": {
 		"devices": [{
 			"host": "",

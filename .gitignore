@@ -5,3 +5,5 @@ coverage
 rta-config.json
 out
 .env
+tsconfig.tsbuildinfo
+release

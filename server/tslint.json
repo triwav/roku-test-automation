@@ -32,6 +32,7 @@
         "interface-name": false,
         "ordered-imports": false,
         "member-ordering": false,
+        "no-var-requires": false,
         "whitespace": {
             "options": [
                 "check-branch",

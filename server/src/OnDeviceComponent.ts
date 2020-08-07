@@ -3,6 +3,8 @@ import * as udp from 'dgram';
 import * as express from 'express';
 import * as portfinder from 'portfinder';
 
+import { getStackTrace } from 'get-stack-trace';
+
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
@@ -37,19 +39,19 @@ export class OnDeviceComponent {
 		return this.config?.[section];
 	}
 
-	public async callFunc(args: ODCCallFuncArgs, options?: ODCRequestOptions): Promise<{
+	public async callFunc(args: ODCCallFuncArgs, options: ODCRequestOptions = {}): Promise<{
 		value: any;
 	}> {
 		const result = await this.sendRequest('callFunc', args, options);
 		return result.body;
 	}
 
-	public async getFocusedNode(args?: ODCGetFocusedNodeArgs, options?: ODCRequestOptions): Promise<ODCNodeRepresentation> {
+	public async getFocusedNode(args?: ODCGetFocusedNodeArgs, options: ODCRequestOptions = {}): Promise<ODCNodeRepresentation> {
 		const result = await this.sendRequest('getFocusedNode', args ?? {}, options);
 		return result.body.node;
 	}
 
-	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{
+	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options: ODCRequestOptions = {}): Promise<{
 		found: boolean;
 		value: any;
 	}> {
@@ -57,7 +59,7 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options?: ODCRequestOptions): Promise<{
+	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options: ODCRequestOptions = {}): Promise<{
 		[key: string]: any;
 		found: boolean;
 	}> {
@@ -65,17 +67,17 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async hasFocus(args: ODCHasFocusArgs, options?: ODCRequestOptions): Promise<boolean> {
+	public async hasFocus(args: ODCHasFocusArgs, options: ODCRequestOptions = {}): Promise<boolean> {
 		const result = await this.sendRequest('hasFocus', args, options);
 		return result.body.hasFocus;
 	}
 
-	public async isInFocusChain(args: ODCIsInFocusChainArgs, options?: ODCRequestOptions): Promise<boolean> {
+	public async isInFocusChain(args: ODCIsInFocusChainArgs, options: ODCRequestOptions = {}): Promise<boolean> {
 		const result = await this.sendRequest('isInFocusChain', args, options);
 		return result.body.isInFocusChain;
 	}
 
-	public async observeField(args: ODCObserveFieldArgs, options?: ODCRequestOptions): Promise<{
+	public async observeField(args: ODCObserveFieldArgs, options: ODCRequestOptions = {}): Promise<{
 		/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not  */
 		observerFired: boolean
 		value: any
@@ -92,11 +94,25 @@ export class OnDeviceComponent {
 			}
 		}
 
+		if (!args.retryInterval) args.retryInterval = 100;
+
+		let retryTimeout: number;
+
+		if (args.retryTimeout !== undefined) {
+			retryTimeout = args.retryTimeout;
+			// Adding a reasonable amount of time so that we get a more specific error message instead of the generic timeout
+			options.timeout = retryTimeout + 200;
+		} else {
+			retryTimeout = options.timeout ?? this.defaultTimeout;
+			retryTimeout -= 200;
+		}
+		args.retryTimeout = retryTimeout;
+
 		const result = await this.sendRequest('observeField', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
 
-	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options?: ODCRequestOptions): Promise<{}> {
+	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options: ODCRequestOptions = {}): Promise<{}> {
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
@@ -135,17 +151,18 @@ export class OnDeviceComponent {
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}
 
-	private async sendRequest(type: ODCRequestTypes, args: ODCRequestArgs, options?: ODCRequestOptions) {
+	private async sendRequest(type: ODCRequestTypes, args: ODCRequestArgs, options: ODCRequestOptions = {}) {
+		const stackTrace = await getStackTrace();
 		if (this.handshakeStatus !== 'complete') {
 			if (this.handshakeStatus === 'failed') {
 				throw new Error('Can not continue as handshake was not successful');
 			}
 			await this.sendHandShakeRequest();
 		}
-		return await this.sendRequestCore(type, args, options);
+		return await this.sendRequestCore(type, args, options, stackTrace);
 	}
 
-	private async sendRequestCore(type: ODCRequestTypes, args: ODCRequestArgs, options?: ODCRequestOptions) {
+	private async sendRequestCore(type: ODCRequestTypes, args: ODCRequestArgs, options: ODCRequestOptions = {}, stackTrace?: any[]) {
 		await this.startServer();
 
 		const requestId = utils.randomStringGenerator();
@@ -156,14 +173,14 @@ export class OnDeviceComponent {
 			args: args
 		};
 		const body = JSON.stringify(request);
-
 		const promise = new Promise<express.Request>((resolve, reject) => {
 			request.callback = (req) => {
 				const json = req.body;
 				if (json?.success) {
 					resolve(req);
 				} else {
-					reject(json?.error?.message);
+					const errorMessage = `${json?.error?.message} ${this.getCaller(stackTrace)}`;
+					reject(new Error(errorMessage));
 				}
 			};
 		});
@@ -177,7 +194,7 @@ export class OnDeviceComponent {
 			}
 		});
 		const timeout = options?.timeout ?? this.defaultTimeout;
-		return utils.promiseTimeout(promise, timeout, `${request.type} request ${requestId} timed out after ${timeout}ms`);
+		return utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`);
 	}
 
 	// Starts up express server
@@ -222,5 +239,20 @@ export class OnDeviceComponent {
 			}
 		});
 		return app;
+	}
+
+	private getCaller(stackTrace?: any[]) {
+		if (stackTrace) {
+			let previousFrame;
+			for (const frame of stackTrace.reverse()) {
+				if (frame.typeName === 'OnDeviceComponent') {
+					if (previousFrame) {
+						return `(${previousFrame.fileName}:${previousFrame.lineNumber}:${previousFrame.columnNumber})`;
+					}
+				}
+				previousFrame = frame;
+			}
+		}
+		return '';
 	}
 }
