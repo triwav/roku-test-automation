@@ -24,7 +24,6 @@
     },
     "homepage": "https://github.com/triwav/roku-test-automation#readme",
     "dependencies": {
-        "@types/mocha": "^5.2.5",
         "ajv": "^6.12.2",
         "express": "^4.17.1",
         "fs-extra": "^7.0.1",

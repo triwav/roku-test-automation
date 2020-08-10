@@ -2,6 +2,8 @@ import * as needle from 'needle';
 import * as rokuDeploy from 'roku-deploy';
 import * as fsExtra from 'fs-extra';
 import * as querystring from 'needle/lib/querystring';
+import * as mocha from 'mocha';
+
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 
@@ -75,7 +77,7 @@ export class RokuDevice {
 		return await this.saveScreenshot(outputFilePath);
 	}
 
-	public async getTestScreenshot(contextOrSuite: Mocha.Context | Mocha.Suite) {
+	public async getTestScreenshot(contextOrSuite: mocha.Context | mocha.Suite) {
 		await this.getScreenshot(utils.getTestTitlePath(contextOrSuite).join('/'));
 	}
 
