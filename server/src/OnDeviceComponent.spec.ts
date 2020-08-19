@@ -167,7 +167,7 @@ describe('OnDeviceComponent', function () {
 	describe('observeField', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
-				await odc.observeField({keyPath: 'does.not.exist'});
+				await odc.observeField({keyPath: 'does.not.exist', retryTimeout: 200});
 			} catch (e) {
 				// failed as expected
 				return;
@@ -238,6 +238,14 @@ describe('OnDeviceComponent', function () {
 			await setAndVerifyValue(args.match);
 			const {observerFired} = await odc.observeField(args);
 			expect(observerFired).to.be.false;
+		});
+
+		it('should still work after a restart of the application', async () => {
+			await ecp.sendLaunchChannel({skipIfAlreadyRunning: false, launchParameters: {contentId: 'deeplink'}});
+			const {observerFired} = await odc.observeField({
+				keyPath: 'launchComplete'
+			});
+			expect(observerFired).to.be.true;
 		});
 	});
 

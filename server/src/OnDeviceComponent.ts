@@ -8,7 +8,7 @@ import { getStackTrace } from 'get-stack-trace';
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs, ODCObserveFieldMatchValueTypes } from '.';
+import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs } from '.';
 
 export class OnDeviceComponent {
 	public defaultTimeout = 5000;
@@ -21,8 +21,6 @@ export class OnDeviceComponent {
 	private sentRequests: { [key: string]: ODCRequest } = {};
 	private app = this.setupExpress();
 	private server?: http.Server;
-	private handshakeStatus?: 'running' | 'complete' | 'failed';
-	private handshakePromise?: Promise<any>;
 
 	constructor(config?: ConfigOptions) {
 		this.config = config;
@@ -117,34 +115,6 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	private sendHandShakeRequest() {
-		if (!this.handshakePromise) {
-			this.handshakePromise = Promise.resolve().then(async () => {
-				this.handshakeStatus = 'running';
-				let retryCount = 10;
-				while (retryCount > 0) {
-					try {
-						const args = {
-							version: OnDeviceComponent.version,
-							logLevel: this.getConfig()?.logLevel ?? 'info'
-						};
-						let result = await this.sendRequestCore('handshake', args, {
-							timeout: 1000
-						});
-						this.handshakeStatus = 'complete';
-						return result.body;
-					} catch (e) {
-						retryCount--;
-						if (retryCount && this.debugLog) console.log('Send handshake failed. Retrying');
-					}
-				}
-				this.handshakeStatus = 'failed';
-				throw new Error('Handshake failed');
-			});
-		}
-		return this.handshakePromise;
-	}
-
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
 	private breakOutFieldFromKeyPath(args: ODCCallFuncArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs) {
 		const keyPathParts = args.keyPath.split('.');
@@ -153,16 +123,6 @@ export class OnDeviceComponent {
 
 	private async sendRequest(type: ODCRequestTypes, args: ODCRequestArgs, options: ODCRequestOptions = {}) {
 		const stackTrace = await getStackTrace();
-		if (this.handshakeStatus !== 'complete') {
-			if (this.handshakeStatus === 'failed') {
-				throw new Error('Can not continue as handshake was not successful');
-			}
-			await this.sendHandShakeRequest();
-		}
-		return await this.sendRequestCore(type, args, options, stackTrace);
-	}
-
-	private async sendRequestCore(type: ODCRequestTypes, args: ODCRequestArgs, options: ODCRequestOptions = {}, stackTrace?: any[]) {
 		await this.startServer();
 
 		const requestId = utils.randomStringGenerator();
@@ -170,11 +130,16 @@ export class OnDeviceComponent {
 			id: requestId,
 			callbackPort: this.callbackListenPort!,
 			type: type,
-			args: args
+			args: args,
+			settings: { logLevel: this.getConfig()?.logLevel ?? 'info' },
+			version: OnDeviceComponent.version
 		};
 		const body = JSON.stringify(request);
+
 		const promise = new Promise<express.Request>((resolve, reject) => {
 			request.callback = (req) => {
+				if (request.timer) clearInterval(request.timer);
+
 				const json = req.body;
 				if (json?.success) {
 					resolve(req);
@@ -184,17 +149,29 @@ export class OnDeviceComponent {
 				}
 			};
 		});
-		this.sentRequests[requestId] = request;
 
 		const host = this.device.getConfig().host;
 		if (this.debugLog) console.log(`Sending request to ${host} with body: ${body}`);
-		this.client.send(body, 9000, host, (err) => {
-			if (err) {
-				throw err;
-			}
-		});
+
+		request.timer = setInterval(async () => {
+			await this.sendRequestCore(host, body);
+		}, 1000);
+		await this.sendRequestCore(host, body);
+
+		this.sentRequests[requestId] = request;
+
 		const timeout = options?.timeout ?? this.defaultTimeout;
-		return utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`);
+		return utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`, request);
+	}
+
+	private async sendRequestCore(host: string, body: string) {
+		return new Promise((resolve, reject) => {
+			const client = udp.createSocket('udp4');
+			this.client.send(body, 9000, host, (err) => {
+				if (err) reject(err);
+				resolve();
+			});
+		});
 	}
 
 	// Starts up express server

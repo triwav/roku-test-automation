@@ -19,7 +19,6 @@ sub runTaskThread()
 		"getFocusedNode": true
 		"getValueAtKeyPath": true
 		"getValuesAtKeyPaths": true
-		"handshake": true
 		"hasFocus": true
 		"isInFocusChain": true
 		"observeField": true
@@ -81,16 +80,27 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 
 	request["callbackHost"] = socket.getReceivedFromAddress().getHostName()
 
+	componentVersion = getVersion()
+	requestVersion = getStringAtKeyPath(request, "version")
+
+	if requestVersion <> componentVersion then
+		sendBackError(request, "Request version " + requestVersion + " did not match component version " + componentVersion)
+		return
+	end if
+
+	setLogLevel(getStringAtKeyPath(request, "settings.logLevel"))
+
+	if NOT isAA(request.args) then
+		sendBackError(request, "No args supplied for request type '" + requestType + "'")
+		return
+	end if
+
 	requestType = getStringAtKeyPath(request, "type")
-
 	if m.validRequestTypes[requestType] = true then
-		if NOT isAA(request.args) then
-			sendBackError(request, "No args supplied for request type '" + requestType + "'")
-			return
-		end if
+		requestId = request.id
 
-		if requestType = "handshake" then
-			processHandshakeRequest(request)
+		if m.activeRequests[requestId] <> Invalid then
+			logVerbose("Ignoring request id " + requestId + ". Already received and running")
 		end if
 
 		m.activeRequests[request.id] = request
@@ -100,20 +110,8 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 	end if
 end sub
 
-sub processHandshakeRequest(request as Object)
-	args = request.args
-	setLogLevel(getStringAtKeyPath(args, "logLevel"))
-
-	version = getVersion()
-	if getStringAtKeyPath(args, "version") = version then
-		sendBackResponse(request, {
-			"success": true
-			"version": version
-		})
-	end if
-end sub
-
 sub sendBackError(request as Object, message as String)
+	logError(message)
 	sendBackResponse(request, buildErrorResponseObject(message))
 end sub
 

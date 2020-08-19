@@ -345,7 +345,6 @@ function convertLogLevelStringToInteger(logLevel as String) as Integer
 end function
 
 function setLogLevel(logLevel as String)
-	m.logLevel = 5
 	m.logLevel = convertLogLevelStringToInteger(logLevel)
 end function
 
@@ -370,7 +369,7 @@ sub logError(message as String, value = "nil" as Dynamic)
 end sub
 
 sub _log(level as Integer, message as String, value = "nil" as Dynamic)
-	if m.logLevel < level then return
+	if isNumber(m.logLevel) AND m.logLevel < level then return
 
 	levels = [
 		"OFF"
