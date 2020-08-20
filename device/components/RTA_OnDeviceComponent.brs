@@ -8,12 +8,11 @@ end sub
 
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
+	setLogLevel(getStringAtKeyPath(request, "settings.logLevel"))
 	logDebug("Received request: ", formatJson(request))
 
 	requestType = request.type
 	args = request.args
-
-	setLogLevel(getStringAtKeyPath(request, "settings.logLevel"))
 
 	response = Invalid
 	if requestType = "callFunc" then

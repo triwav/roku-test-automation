@@ -94,7 +94,6 @@ export interface ODCRequest {
 	id: string;
 	callbackPort: number;
 	args: ODCRequestArgs;
-	timer?: NodeJS.Timeout;
 	type: ODCRequestTypes;
 	settings: {
 		logLevel: ODCLogLevels

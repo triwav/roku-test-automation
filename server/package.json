@@ -82,6 +82,9 @@
     },
     "mocha": {
         "timeout": 72000,
+        "require": [
+			"source-map-support/register"
+		],
         "file": [
             "./dist/test/include.js"
         ]

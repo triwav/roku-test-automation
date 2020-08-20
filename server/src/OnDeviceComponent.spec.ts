@@ -13,7 +13,7 @@ describe('OnDeviceComponent', function () {
 	});
 
 	describe('getValueAtKeyPath', function () {
-		it('found should be true for if key path was found', async () => {
+		it('found should be true if key path was found', async () => {
 			const {found} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
 			expect(found).to.be.true;
 		});

@@ -17,7 +17,6 @@ export class OnDeviceComponent {
 	private callbackListenPort?: number;
 	private device: RokuDevice;
 	private config?: ConfigOptions;
-	private client = udp.createSocket('udp4');
 	private sentRequests: { [key: string]: ODCRequest } = {};
 	private app = this.setupExpress();
 	private server?: http.Server;
@@ -136,10 +135,9 @@ export class OnDeviceComponent {
 		};
 		const body = JSON.stringify(request);
 
+		let retryInterval;
 		const promise = new Promise<express.Request>((resolve, reject) => {
 			request.callback = (req) => {
-				if (request.timer) clearInterval(request.timer);
-
 				const json = req.body;
 				if (json?.success) {
 					resolve(req);
@@ -148,30 +146,37 @@ export class OnDeviceComponent {
 					reject(new Error(errorMessage));
 				}
 			};
+
+			const client = udp.createSocket('udp4');
+			const host = this.device.getConfig().host;
+			if (this.debugLog) console.log(`Sending request to ${host} with body: ${body}`);
+
+			client.on('message', function (message, remote) {
+				const json = JSON.parse(message.toString());
+				let receivedId = json.id;
+				if (receivedId !== requestId) {
+					reject(`Received id '${receivedId}' did not match request id '${requestId}'`);
+				}
+				clearInterval(retryInterval);
+				client.close();
+			});
+
+			this.sentRequests[requestId] = request;
+			const sendRequest = () => {
+				client.send(body, 9000, host, async (err) => {
+					if (err) reject(err);
+				});
+			};
+			retryInterval = setInterval(sendRequest, 300);
+			sendRequest();
 		});
-
-		const host = this.device.getConfig().host;
-		if (this.debugLog) console.log(`Sending request to ${host} with body: ${body}`);
-
-		request.timer = setInterval(async () => {
-			await this.sendRequestCore(host, body);
-		}, 1000);
-		await this.sendRequestCore(host, body);
-
-		this.sentRequests[requestId] = request;
 
 		const timeout = options?.timeout ?? this.defaultTimeout;
-		return utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`, request);
-	}
-
-	private async sendRequestCore(host: string, body: string) {
-		return new Promise((resolve, reject) => {
-			const client = udp.createSocket('udp4');
-			this.client.send(body, 9000, host, (err) => {
-				if (err) reject(err);
-				resolve();
-			});
-		});
+		try {
+			return await utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`);
+		} finally {
+			clearInterval(retryInterval);
+		}
 	}
 
 	// Starts up express server
@@ -193,7 +198,6 @@ export class OnDeviceComponent {
 			this.server.close();
 			this.server = undefined;
 		}
-		this.client.close();
 		if (this.debugLog) console.log(`Shutting down ODC`);
 	}
 
