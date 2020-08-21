@@ -18,9 +18,11 @@ Once installed, the standard way for using RTA is via the singletons `ecp`, like
 import { ecp, odc, device, utils } from 'roku-test-automation';
 ```
 
-if you tried to actually use these in your code you would likely get an exception thrown as no config is currently setup.
+If you tried to actually use these in your code you would likely get an exception thrown as no config is currently setup.
 
-Currently the only necessary part of the config is at least one device host and password. Here's a sample config you could use as a start:
+Currently the only necessary part of the config is at least one device host and password.
+
+Here's a sample config you could use as a start:
 
 ```json
 {
@@ -50,37 +52,62 @@ To keep a single config file and aid in running multiple tests at once, RTA read
 utils.setupEnvironmentFromConfigFile('<PATH-TO-CONFIG-FILE>')
 ```
 
- to setup the environment for you. To avoid having to do this in each test file you can setup a global include in your mocha package.json setup like:
+ to setup the environment for you. 
+ 
+ To avoid having to do this in each test file you can setup a global include in your mocha package.json setup like:
 
  ```json
 "mocha": {
-	"timeout": 5000,
-	"file": [
-		"./src/test/include.ts"
-	],
-	"require": [
-		"ts-node/register",
-		"source-map-support/register"
-	]
-}
+    "timeout": 5000,
+    "file": [
+      "./dist/tests/include.js"
+    ],
+    "require": [
+      "source-map-support/register"
+    ]
+  }
 ```
 
-be sure to change the include.ts path to match where you put your include file.
+>> Note: Change the include.ts path to match where you put your include file.
 
-If you're going to use the OnDeviceComponent then there are a number of files that need to be copied over into your app. If you're not using the [BrightScript Extension for VSCode](https://marketplace.visualstudio.com/items?itemName=celsoaf.brightscript) yet then now is a great time to try it out. If you are all you need to is add:
+If you're going to use the OnDeviceComponent then there are a number of files that need to be copied over into your app. If you're not using the [BrightScript Extension for VSCode](https://marketplace.visualstudio.com/items?itemName=celsoaf.brightscript) yet then now is a great time to try it out. 
+If you are all you need is to add the following to your bsconfig.json:
 
+### bsconfig.json
+```json
+//...
+"files": [
+	{
+	  "src": [
+	     "node_modules/roku-test-automation/device/**/*"
+	  ],
+	  "dest": "/"
+	}
+]
+//...
+```
+
+If you don't have a bsconfig, you may also use a `.vscode/launch.json` configuration files array.
+No need to keep the files in sync in the future when you upgrade this module.
+
+### .vscode/launch.json
 ```json
 {
-"src": [
-		"${workspaceFolder}/node_modules/roku-test-automation/dist/device/**/*"
-	],
-	"dest": "/"
-}
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "files": [
+        {
+	  "src": [
+	     "${workspaceFolder}/node_modules/roku-test-automation/device/**/*"
+	  ],
+	  "dest": "/"
+	},
+	// ...
+      ],
 ```
 
-to your bsconfig.json or launch.json configuration files array. No need to keep the files in sync in the future when you upgrade this module.
-
-If you did this all the steps above correct you should be ready to start making use of RTA's components.
+If you performed the above correctly, you should be ready to start making use of RTA's components in your tests.
 
 ## Components
 
