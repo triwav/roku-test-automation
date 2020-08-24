@@ -20,7 +20,7 @@
 			"request": "launch",
 			"cwd": "${workspaceFolder}/server",
 			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
-			"args": ["--exclude", "./dist/RokuDevice.spec.js", "--exclude", "./dist/OnDeviceComponent.spec.js", "./dist/**/*.spec.js"],
+			"args": ["--bail", "./dist/ECP.spec.js"],
 			"console": "integratedTerminal",
 			"protocol": "inspector",
 			"internalConsoleOptions": "neverOpen"
@@ -30,7 +30,7 @@
 			"request": "launch",
 			"cwd": "${workspaceFolder}/server",
 			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
-			"args": [ "./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js"],
+			"args": [ "--bail", "./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js" ],
 			"console": "integratedTerminal",
 			"protocol": "inspector",
 			"internalConsoleOptions": "neverOpen"

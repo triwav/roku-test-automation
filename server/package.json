@@ -6,10 +6,10 @@
     "typings": "server/dist/index.d.ts",
     "scripts": {
         "build": "rm -f tsconfig.tsbuildinfo && rimraf dist && tsc",
-        "test": "nyc --exclude src/RokuDevice.ts mocha --full-trace --exclude dist/RokuDevice.spec.js --exclude dist/OnDeviceComponent.spec.js dist/**/*.spec.js",
+        "test": "npm run build && nyc mocha ./dist/ECP.spec.js",
         "tslint": "tslint \"./src/**/*.ts\" --outputAbsolutePaths --project tsconfig.json",
-        "test:device": "nyc mocha --full-trace dist/RokuDevice.spec.js dist/OnDeviceComponent.spec.js",
-        "test:all": "nyc mocha --full-trace dist/**/*.spec.js",
+        "test:device": "npm run build && nyc mocha dist/RokuDevice.spec.js dist/OnDeviceComponent.spec.js",
+        "test:all": "npm run build && nyc mocha dist/**/*.spec.js",
         "buildConfigSchema": "typescript-json-schema  src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps --refs false",
         "buildRelease": "npx ts-node scripts/buildRelease.ts"
     },
@@ -57,10 +57,10 @@
     },
     "nyc": {
         "include": [
-            "build/**/!(*.spec).js"
+            "dist/**/!(*.spec).js"
         ],
         "exclude": [
-            "build/test/**/*"
+            "dist/test/**/*"
         ],
         "extension": [
             ".js"
@@ -82,6 +82,9 @@
     },
     "mocha": {
         "timeout": 72000,
+        "require": [
+			"source-map-support/register"
+		],
         "file": [
             "./dist/test/include.js"
         ]

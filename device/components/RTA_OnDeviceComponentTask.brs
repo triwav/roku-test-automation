@@ -10,16 +10,17 @@ function getVersion() as String
 end function
 
 function getCallbackUrl(request as Object) as String
-	return "http://" + request.callbackHost + ":" + request.callbackPort.toStr() + "/callback/" + request.id
+	url = "http://" + request.callbackHost + ":" + request.callbackPort.toStr() + "/callback/" + request.id
+	return url
 end function
 
 sub runTaskThread()
+	m.activeTransfers = {}
 	m.validRequestTypes = {
 		"callFunc": true
 		"getFocusedNode": true
 		"getValueAtKeyPath": true
 		"getValuesAtKeyPaths": true
-		"handshake": true
 		"hasFocus": true
 		"isInFocusChain": true
 		"observeField": true
@@ -37,7 +38,8 @@ sub runTaskThread()
 	m.activeRequests = {}
 
 	while true
-		message = wait(0, m.port)
+		' If you want to waste three days debugging set this back to 0 :|
+		message = wait(1, m.port)
 		if message <> Invalid then
 			messageType = type(message)
 			if messageType = "roSocketEvent" then
@@ -60,6 +62,11 @@ sub runTaskThread()
 				else
 					logWarn(fieldName + " not handled")
 				end if
+			else if messageType = "roUrlEvent" then
+				id = message.getSourceIdentity().toStr()
+				http = m.activeTransfers[id]
+				m.activeTransfers.delete(id)
+				logDebug("Sent callback to: " + http.getUrl() + " and received response code: " + message.getResponseCode().toStr())
 			else
 				logWarn(messageType + " type not handled")
 			end if
@@ -74,23 +81,50 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 		return
 	end if
 
+	setLogLevel(getStringAtKeyPath(request, "settings.logLevel"))
+
 	if (NOT isInteger(request.callbackPort)) then
 		logError("Received message did not have callbackPort " + receivedString)
 		return
 	end if
 
-	request["callbackHost"] = socket.getReceivedFromAddress().getHostName()
+	requestId = request.id
+	if (NOT isNonEmptyString(requestId)) then
+		logError("Received message did not have id " + receivedString)
+		return
+	end if
+
+	receiveAddress = socket.getReceivedFromAddress()
+	request["callbackHost"] = receiveAddress.getHostName()
+
+	socket.SetSendToAddress(receiveAddress)
+	bytesSent = socket.sendStr(formatJson({
+		"id": requestId
+	}))
+	if bytesSent = -1 then
+		logError("Could not send ack back")
+		return
+	end if
+
+	componentVersion = getVersion()
+	requestVersion = getStringAtKeyPath(request, "version")
+
+	if requestVersion <> componentVersion then
+		sendBackError(request, "Request version " + requestVersion + " did not match component version " + componentVersion)
+		return
+	end if
+
+	if NOT isAA(request.args) then
+		sendBackError(request, "No args supplied for request type '" + requestType + "'")
+		return
+	end if
 
 	requestType = getStringAtKeyPath(request, "type")
-
 	if m.validRequestTypes[requestType] = true then
-		if NOT isAA(request.args) then
-			sendBackError(request, "No args supplied for request type '" + requestType + "'")
-			return
-		end if
+		requestId = request.id
 
-		if requestType = "handshake" then
-			processHandshakeRequest(request)
+		if m.activeRequests[requestId] <> Invalid then
+			logVerbose("Ignoring request id " + requestId + ". Already received and running")
 		end if
 
 		m.activeRequests[request.id] = request
@@ -100,20 +134,8 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 	end if
 end sub
 
-sub processHandshakeRequest(request as Object)
-	args = request.args
-	setLogLevel(getStringAtKeyPath(args, "logLevel"))
-
-	version = getVersion()
-	if getStringAtKeyPath(args, "version") = version then
-		sendBackResponse(request, {
-			"success": true
-			"version": version
-		})
-	end if
-end sub
-
 sub sendBackError(request as Object, message as String)
+	logError(message)
 	sendBackResponse(request, buildErrorResponseObject(message))
 end sub
 
@@ -127,8 +149,11 @@ sub sendBackResponse(request as Object, response as Dynamic)
 	callbackUrl = getCallbackUrl(request)
 	http = createObject("roUrlTransfer")
 	http.setUrl(callbackUrl)
+	http.setPort(m.port)
 	http.addHeader("Content-Type", "application/json")
-
-	code = http.postFromString(formattedResponse)
-	logVerbose("Sent callback to: " + callbackUrl + " and received response code: " + code.toStr() + " body: ", formattedResponse)
+	logDebug("Sending callback to: " + callbackUrl + " with body: ", formattedResponse)
+	if NOT http.asyncPostFromString(formattedResponse) then
+		logError("Could not send callback")
+	end if
+	m.activeTransfers[http.GetIdentity().toStr()] = http
 end sub

@@ -8,36 +8,35 @@ end sub
 
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
+	setLogLevel(getStringAtKeyPath(request, "settings.logLevel"))
+	logDebug("Received request: ", formatJson(request))
+
 	requestType = request.type
 	args = request.args
-	if requestType = "handshake" then
-		setLogLevel(getStringAtKeyPath(args, "logLevel"))
-	else
-		logVerbose("Received request: ", formatJson(request))
-		response = Invalid
-		if requestType = "callFunc" then
-			response = processCallFuncRequest(args)
-		else if requestType = "getFocusedNode" then
-			response = processGetFocusedNodeRequest(args)
-		else if requestType = "getValueAtKeyPath" then
-			response = processGetValueAtKeyPathRequest(args)
-		else if requestType = "getValuesAtKeyPaths" then
-			response = processGetValuesAtKeyPathsRequest(args)
-		else if requestType = "hasFocus" then
-			response = processHasFocusRequest(args)
-		else if requestType = "isInFocusChain" then
-			response = processIsInFocusChainRequest(args)
-		else if requestType = "observeField" then
-			response = processObserveFieldRequest(request)
-		else if requestType = "setValueAtKeyPath" then
-			response = processSetValueAtKeyPathRequest(args)
-		else
-			response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
-		end if
 
-		if response <> Invalid then
-			sendBackResponse(request, response)
-		end if
+	response = Invalid
+	if requestType = "callFunc" then
+		response = processCallFuncRequest(args)
+	else if requestType = "getFocusedNode" then
+		response = processGetFocusedNodeRequest(args)
+	else if requestType = "getValueAtKeyPath" then
+		response = processGetValueAtKeyPathRequest(args)
+	else if requestType = "getValuesAtKeyPaths" then
+		response = processGetValuesAtKeyPathsRequest(args)
+	else if requestType = "hasFocus" then
+		response = processHasFocusRequest(args)
+	else if requestType = "isInFocusChain" then
+		response = processIsInFocusChainRequest(args)
+	else if requestType = "observeField" then
+		response = processObserveFieldRequest(request)
+	else if requestType = "setValueAtKeyPath" then
+		response = processSetValueAtKeyPathRequest(args)
+	else
+		response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
+	end if
+
+	if response <> Invalid then
+		sendBackResponse(request, response)
 	end if
 end sub
 
@@ -250,7 +249,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	end if
 
 	if node.observeFieldScoped(field, "observeFieldCallback") then
-		logVerbose("Now observing '" + field + "' at key path '" + keyPath + "'")
+		logDebug("Now observing '" + field + "' at key path '" + keyPath + "'")
 	else
 		return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + keyPath + "'")
 	end if
@@ -270,7 +269,7 @@ sub observeFieldCallback(event as Object)
 	node = event.getRoSgNode()
 	field = event.getField()
 	data = event.getData()
-	logVerbose("Received callback for node field '" + field + "' with value ", data)
+	logDebug("Received callback for node field '" + field + "' with value ", data)
 	for each requestId in m.activeObserveFieldRequests
 		request = m.activeObserveFieldRequests[requestId]
 		args = request.args
@@ -279,7 +278,7 @@ sub observeFieldCallback(event as Object)
 			if isAA(match) then
 				result = processGetValueAtKeyPathRequest(match)
 				if result.found <> true then
-					logVerbose("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
+					logDebug("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
 					node.unobserveFieldScoped(field)
 					m.activeObserveFieldRequests.delete(requestId)
 					sendBackResponse(request, buildErrorResponseObject("Match was requested and key path was not valid"))
@@ -291,7 +290,7 @@ sub observeFieldCallback(event as Object)
 					return
 				end if
 			end if
-			logVerbose("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
+			logDebug("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
 			node.unobserveFieldScoped(field)
 			m.activeObserveFieldRequests.delete(requestId)
 			sendBackResponse(request, {

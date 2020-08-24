@@ -29,62 +29,62 @@ describe('ECP', function () {
 		ecpResponse = '';
 	});
 
+	afterEach(() => {
+		sinon.restore();
+	});
+
 	describe('sendText', function () {
 		it('calls_device_sendECP_for_each_character', async () => {
-			device.sendECP = sinon.spy((path: string, params?: object, body?: needle.BodyData) => {
+			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
 
-			});
 			const text = 'love my life';
 			await ecp.sendText(text);
-			expect(device.sendECP.callCount).to.equal(text.length);
+			expect(stub.callCount).to.equal(text.length);
 		});
 	});
 
 	describe('sendKeyPressSequence', function () {
 		it('calls_device_sendECP_for_each_key', async () => {
-			device.sendECP = sinon.spy((path: string, params?: object, body?: needle.BodyData) => {
-
-			});
+			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
 
 			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
 			await ecp.sendKeyPressSequence(keys);
-
-			expect(device.sendECP.callCount).to.equal(keys.length);
+			expect(stub.callCount).to.equal(keys.length);
 		});
 	});
 
 	describe('sendKeyPress', function () {
 		it('calls_device_sendECP', async () => {
-			device.sendECP = sinon.spy((path: string, params?: object, body?: needle.BodyData) => {
+			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(ECP.Key.HOME);
 			});
 
 			await ecp.sendKeyPress(ECP.Key.HOME, 0);
 
-			if (device.sendECP.notCalled) {
+			if (stub.notCalled) {
 				assert.fail('device.sendECP not called');
 			}
 		});
 
 		it('does_not_sleep_if_not_requested', async () => {
-			ecpUtils.sleep = sinon.spy((milliseconds: number) => {
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
 
-			});
 			await ecp.sendKeyPress(ECP.Key.HOME, 0);
 
-			if (ecpUtils.sleep.called) {
+			if (stub.called) {
 				assert.fail('sleep was called');
 			}
 		});
 
 		it('sleeps_if_requested', async () => {
 			const wait = 1000;
-			ecpUtils.sleep = sinon.spy((milliseconds: number) => {
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
 			});
+
 			await ecp.sendKeyPress(ECP.Key.HOME, wait);
 
-			if (ecpUtils.sleep.notCalled) {
+			if (stub.notCalled) {
 				assert.fail('sleep was not called');
 			}
 		});
@@ -97,12 +97,13 @@ describe('ECP', function () {
 				}
 			};
 
-			ecpUtils.sleep = sinon.spy((milliseconds: number) => {
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
 			});
+
 			await ecp.sendKeyPress(ECP.Key.HOME);
 
-			if (ecpUtils.sleep.notCalled) {
+			if (stub.notCalled) {
 				assert.fail('sleep was not called');
 			}
 		});
@@ -115,12 +116,13 @@ describe('ECP', function () {
 				}
 			};
 
-			ecpUtils.sleep = sinon.spy((milliseconds: number) => {
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
 			});
+
 			await ecp.sendKeyPress(ECP.Key.HOME, wait);
 
-			if (ecpUtils.sleep.notCalled) {
+			if (stub.notCalled) {
 				assert.fail('sleep was not called');
 			}
 		});
@@ -213,7 +215,8 @@ describe('ECP', function () {
 				await ecp.sendLaunchChannel({
 					channelId: 'dev',
 					launchParameters: {},
-					verifyLaunch: true
+					verifyLaunch: true,
+					verifyLaunchTimeOut: 20
 				});
 			} catch (e) {
 				expect(e.name).to.equal('sendLaunchChannelVerifyLaunch');

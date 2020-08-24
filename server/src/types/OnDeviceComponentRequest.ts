@@ -93,10 +93,13 @@ export interface ODCRequestOptions {
 export interface ODCRequest {
 	id: string;
 	callbackPort: number;
-	type: ODCRequestTypes;
 	args: ODCRequestArgs;
-	options?: ODCRequestOptions;
+	type: ODCRequestTypes;
+	settings: {
+		logLevel: ODCLogLevels
+	};
 	callback?: (req: express.Request) => void;
+	version: string;
 }
 
 export interface ODCNodeRepresentation {
