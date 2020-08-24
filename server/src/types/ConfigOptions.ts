@@ -27,6 +27,12 @@ export interface DeviceConfigOptions {
 	/** The password for logging in to the developer portal on the target Roku device */
 	password: string;
 
+	/** If not overridden at the call site how long to wait before assuming a request failed */
+	defaultTimeout?: number;
+
+	/** Multiplier applied to request timeouts for all requests including those with an explicit value. Can be used in combination with defaultTimeout */
+	timeoutMultiplier?: number;
+
 	/** User defined list of properties for this device (name, isLowEnd, etc) */
 	properties: {};
 

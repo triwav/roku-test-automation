@@ -11,7 +11,6 @@ import { utils } from './utils';
 import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs } from '.';
 
 export class OnDeviceComponent {
-	public defaultTimeout = 5000;
 	private debugLog = false;
 	private static readonly version = '1.0.0';
 	private callbackListenPort?: number;
@@ -93,6 +92,7 @@ export class OnDeviceComponent {
 
 		if (!args.retryInterval) args.retryInterval = 100;
 
+		const deviceConfig = this.device.getConfig();
 		let retryTimeout: number;
 
 		if (args.retryTimeout !== undefined) {
@@ -100,9 +100,13 @@ export class OnDeviceComponent {
 			// Adding a reasonable amount of time so that we get a more specific error message instead of the generic timeout
 			options.timeout = retryTimeout + 200;
 		} else {
-			retryTimeout = options.timeout ?? this.defaultTimeout;
+			retryTimeout = options.timeout ?? deviceConfig.defaultTimeout ?? 10000;
 			retryTimeout -= 200;
 		}
+
+		const multiplier = deviceConfig.timeoutMultiplier ?? 1;
+		retryTimeout *= multiplier;
+
 		args.retryTimeout = retryTimeout;
 
 		const result = await this.sendRequest('observeField', this.breakOutFieldFromKeyPath(args), options);
@@ -171,7 +175,10 @@ export class OnDeviceComponent {
 			sendRequest();
 		});
 
-		const timeout = options?.timeout ?? this.defaultTimeout;
+		const deviceConfig = this.device.getConfig();
+		let timeout = options?.timeout ?? deviceConfig.defaultTimeout ?? 10000;
+		const multiplier = deviceConfig.timeoutMultiplier ?? 1;
+		timeout *= multiplier;
 		try {
 			return await utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`);
 		} finally {
