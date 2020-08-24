@@ -23,6 +23,7 @@ const resourcesToCopy = [
 	[path.join(serverFolder, 'package.json'), 'package.json'],
 	[path.join(serverFolder, 'rta-config.schema.json'), path.join('server', 'rta-config.schema.json')],
 	[path.resolve(__dirname + '/../../device'), 'device'],
+	[path.resolve(__dirname + '/../../README.md'), 'README.md'],
 ];
 
 for (const resourceMapping of resourcesToCopy) {
