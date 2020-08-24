@@ -53,6 +53,10 @@
                     "items": {
                         "additionalProperties": false,
                         "properties": {
+                            "defaultTimeout": {
+                                "description": "If not overridden at the call site how long to wait before assuming a request failed",
+                                "type": "number"
+                            },
                             "host": {
                                 "description": "The IP address or hostname of the target Roku device.",
                                 "type": "string"
@@ -74,6 +78,10 @@
                                     "png"
                                 ],
                                 "type": "string"
+                            },
+                            "timeoutMultiplier": {
+                                "description": "Multiplier applied to request timeouts for all requests including those with an explicit value. Can be used in combination with defaultTimeout",
+                                "type": "number"
                             }
                         },
                         "type": "object"
