@@ -7,3 +7,4 @@ out
 .env
 tsconfig.tsbuildinfo
 release
+server/src/RokuDevice.spec.ts

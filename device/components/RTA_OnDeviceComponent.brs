@@ -13,6 +13,7 @@ sub onRenderThreadRequestChange(event as Object)
 
 	requestType = request.type
 	args = request.args
+	request.timespan = createObject("roTimespan")
 
 	response = Invalid
 	if requestType = "callFunc" then
@@ -364,6 +365,7 @@ sub sendBackResponse(request as Object, response as Object)
 	response = recursivelyConvertValueToJsonCompatible(response)
 	if NOT isBoolean(response.success) then response.success = true
 	response.id = request.id
+	if request.timespan <> Invalid then response.timeTaken = request.timespan.TotalMilliseconds()
 	m.task.renderThreadResponse = response
 end sub
 
