@@ -50,6 +50,7 @@ export class OnDeviceComponent {
 	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options: ODCRequestOptions = {}): Promise<{
 		found: boolean;
 		value: any;
+		timeTaken: number;
 	}> {
 		const result = await this.sendRequest('getValueAtKeyPath', args, options);
 		return result.body;
@@ -58,6 +59,7 @@ export class OnDeviceComponent {
 	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options: ODCRequestOptions = {}): Promise<{
 		[key: string]: any;
 		found: boolean;
+		timeTaken: number;
 	}> {
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
 		return result.body;

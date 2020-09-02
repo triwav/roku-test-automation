@@ -365,7 +365,10 @@ sub sendBackResponse(request as Object, response as Object)
 	response = recursivelyConvertValueToJsonCompatible(response)
 	if NOT isBoolean(response.success) then response.success = true
 	response.id = request.id
-	if request.timespan <> Invalid then response.timeTaken = request.timespan.TotalMilliseconds()
+	if request.timespan <> Invalid then
+		response["timeTaken"] = request.timespan.TotalMilliseconds()
+	end if
+	
 	m.task.renderThreadResponse = response
 end sub
 

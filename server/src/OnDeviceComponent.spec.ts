@@ -62,6 +62,11 @@ describe('OnDeviceComponent', function () {
 			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.-1.name'});
 			expect(value).to.equal('lastItem');
 		});
+
+		it('should return timeTaken as a number', async () => {
+			const {timeTaken} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
+			expect(timeTaken).to.be.a('number');
+		});
 	});
 
 	describe('getValuesAtKeyPaths', function () {
