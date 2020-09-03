@@ -37,6 +37,7 @@ export class OnDeviceComponent {
 
 	public async callFunc(args: ODCCallFuncArgs, options: ODCRequestOptions = {}): Promise<{
 		value: any;
+		timeTaken: number;
 	}> {
 		const result = await this.sendRequest('callFunc', args, options);
 		return result.body;
@@ -77,8 +78,9 @@ export class OnDeviceComponent {
 
 	public async observeField(args: ODCObserveFieldArgs, options: ODCRequestOptions = {}): Promise<{
 		/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not  */
-		observerFired: boolean
-		value: any
+		observerFired: boolean;
+		value: any;
+		timeTaken: number;
 	}> {
 		let match = args.match;
 		if (match !== undefined) {
