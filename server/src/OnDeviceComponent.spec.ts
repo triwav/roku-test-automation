@@ -177,7 +177,7 @@ describe('OnDeviceComponent', function () {
 			assert.fail('Should have thrown an exception');
 		});
 
-		it('should succeed if given a valid node for its parent keyPath', async () => {
+		it('should succeed if given a valid node for its parent keyPath and should return timeTaken value', async () => {
 			const args = {keyPath: 'AuthManager.isLoggedIn'};
 			await setAndVerifyValue({...args, value: false});
 			const observePromise = odc.observeField(args);
