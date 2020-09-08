@@ -283,8 +283,9 @@ describe('OnDeviceComponent', function () {
 			const {value: actualStartingValue} = await odc.getValueAtKeyPath(args);
 			expect(actualStartingValue).to.equal(args.expectedStartingValue, `${args.base}.${args.keyPath} did not match expected value before set`);
 		}
-		await odc.setValueAtKeyPath(args);
+		const { timeTaken } = await odc.setValueAtKeyPath(args);
 		const {value: actualValue} = await odc.getValueAtKeyPath(args);
 		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
+		expect(timeTaken).to.be.a('number', 'timeTaken was not a number when returned from setValueAtKeyPath');
 	}
 });
