@@ -8,7 +8,7 @@ import { ecp, odc, device } from '.';
 
 describe('OnDeviceComponent', function () {
 	before(async () => {
-		await device.deploy({rootDir: '../testProject'});
+		await device.deploy({rootDir: '../testProject'}, {preventMultipleDeployments: true});
 		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});
 
@@ -271,6 +271,163 @@ describe('OnDeviceComponent', function () {
 		it('should work with funcs taking params', async () => {
 			const {value} = await odc.callFunc({base: 'scene', keyPath: '', funcName: 'multiplyNumbers', funcParams: [3, 5]});
 			expect(value).to.be.equal(15);
+		});
+	});
+
+	describe('registry', function () {
+		const firstSectionName = 'rtaFirstSectionName';
+		const secondSectionName = 'rtaSecondSectionName';
+
+		const firstKey = 'firstItem';
+		const secondKey = 'secondItem';
+		let firstKeyValue: string;
+		let secondKeyValue: string;
+
+		const thirdKey = 'thirdItem';
+		const fourthKey = 'fourthItem';
+		let thirdKeyValue: string;
+		let fourthKeyValue: string;
+
+		beforeEach(async function () {
+			firstKeyValue = utils.addRandomPostfix('firstKeyValue');
+			secondKeyValue = utils.addRandomPostfix('secondKeyValue');
+			thirdKeyValue = utils.addRandomPostfix('thirdKeyValue');
+			fourthKeyValue = utils.addRandomPostfix('fourthKeyValue');
+
+			await odc.writeRegistry({values: {
+				[firstSectionName]: {
+					[firstKey]: firstKeyValue,
+					[secondKey]: secondKeyValue
+				},
+				[secondSectionName]: {
+					[thirdKey]: thirdKeyValue,
+					[fourthKey]: fourthKeyValue
+				}
+			}});
+		});
+
+		afterEach(async function () {
+			await odc.deleteRegistrySections({sections: [firstSectionName, secondSectionName]});
+		});
+
+		describe('registryRead', function () {
+			it('should return all registry values if no params passed in', async () => {
+				const {values} = await odc.readRegistry();
+
+				const firstSection = values[firstSectionName];
+				expect(firstSection[firstKey]).to.equal(firstKeyValue);
+				expect(firstSection[secondKey]).to.equal(secondKeyValue);
+
+				const secondSection = values[secondSectionName];
+				expect(secondSection[thirdKey]).to.equal(thirdKeyValue);
+				expect(secondSection[fourthKey]).to.equal(fourthKeyValue);
+			});
+
+			it('should return the requested registry values if arrays provided', async () => {
+				const {values} = await odc.readRegistry({values: {
+					[firstSectionName]: [secondKey],
+					[secondSectionName]: [thirdKey, fourthKey]
+				}});
+
+				const firstSection = values[firstSectionName];
+				expect(firstSection[firstKey]).to.be.undefined;
+				expect(firstSection[secondKey]).to.equal(secondKeyValue);
+
+				const secondSection = values[secondSectionName];
+				expect(secondSection[thirdKey]).to.equal(thirdKeyValue);
+				expect(secondSection[fourthKey]).to.equal(fourthKeyValue);
+			});
+
+			it('should return the requested registry value if string passed in', async () => {
+				const {values} = await odc.readRegistry({values: {
+					[firstSectionName]: firstKey
+				}});
+
+				const firstSection = values[firstSectionName];
+				expect(firstSection[firstKey]).to.equal(firstKeyValue);
+				expect(firstSection[secondKey]).to.be.undefined;
+
+				expect(values[secondSectionName]).to.be.undefined;
+			});
+		});
+
+		describe('registryWrite', function () {
+			it('should successfully be able to write and delete a section field', async () => {
+				await odc.writeRegistry({values: {
+					[firstSectionName]: {
+						[firstKey]: firstKeyValue
+					}
+				}});
+
+				const {values} = await odc.readRegistry({values: {
+					[firstSectionName]: firstKey
+				}});
+				expect(values[firstSectionName][firstKey]).to.be.equal(firstKeyValue);
+
+				await odc.writeRegistry({values: {
+					[firstSectionName]: {
+						[firstKey]: null
+					}
+				}});
+
+				const {values: valuesAfterDelete} = await odc.readRegistry({values: {
+					[firstSectionName]: firstKey
+				}});
+				expect(valuesAfterDelete[firstSectionName][firstKey]).to.be.undefined;
+			});
+		});
+
+		describe('deleteRegistrySections', function () {
+			it('should delete all values in the specified registry section if string provided', async () => {
+				await odc.deleteRegistrySections({sections: firstSectionName});
+				const {values} = await odc.readRegistry({values: {
+					[firstSectionName]: [],
+					[secondSectionName]: []
+				}});
+
+				const firstSection = values[firstSectionName];
+				expect(firstSection[firstKey]).to.be.undefined;
+				expect(firstSection[secondKey]).to.be.undefined;
+
+				const secondSection = values[secondSectionName];
+				expect(secondSection[thirdKey]).to.equal(thirdKeyValue);
+				expect(secondSection[fourthKey]).to.equal(fourthKeyValue);
+			});
+
+			it('should delete all values in the specified registry sections if arrays provided', async () => {
+				await odc.deleteRegistrySections({sections: [firstSectionName, secondSectionName]});
+
+				const {values} = await odc.readRegistry({values: {
+					[firstSectionName]: [],
+					[secondSectionName]: []
+				}});
+
+				const firstSection = values[firstSectionName];
+				expect(firstSection[firstKey]).to.be.undefined;
+				expect(firstSection[secondKey]).to.be.undefined;
+
+				const secondSection = values[secondSectionName];
+				expect(secondSection[thirdKey]).to.be.undefined;
+				expect(secondSection[fourthKey]).to.be.undefined;
+			});
+		});
+
+		describe('deleteEntireRegistry', function () {
+			it('should delete all values in the specified registry section if string provided', async () => {
+				await odc.deleteEntireRegistry();
+				const {values} = await odc.readRegistry({values: {
+					[firstSectionName]: [],
+					[secondSectionName]: []
+				}});
+
+				const firstSection = values[firstSectionName];
+				expect(firstSection[firstKey]).to.be.undefined;
+				expect(firstSection[secondKey]).to.be.undefined;
+
+				const secondSection = values[secondSectionName];
+				expect(secondSection[thirdKey]).to.be.undefined;
+				expect(secondSection[fourthKey]).to.be.undefined;
+			});
 		});
 	});
 

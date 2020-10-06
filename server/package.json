@@ -28,7 +28,7 @@
         "express": "^4.17.1",
         "fs-extra": "^7.0.1",
         "get-stack-trace": "^2.0.3",
-        "http-proxy-middleware": "^1.0.3",
+        "http-network-proxy": "^1.0.4",
         "needle": "^2.3.2",
         "path": "^0.12.7",
         "portfinder": "^1.0.26",
@@ -83,8 +83,8 @@
     "mocha": {
         "timeout": 72000,
         "require": [
-			"source-map-support/register"
-		],
+            "source-map-support/register"
+        ],
         "file": [
             "./dist/test/include.js"
         ]

@@ -3,6 +3,11 @@
 	"files": [
 		"components/**/*.+(xml|brs)",
 		"source/**/*.+(brs)",
-		"manifest"
+		"manifest", {
+			"src": [
+				"../device/**/*"
+			],
+			"dest": "/"
+		}
 	]
 }

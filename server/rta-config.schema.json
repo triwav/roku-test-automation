@@ -30,6 +30,7 @@
             "additionalProperties": false,
             "properties": {
                 "logLevel": {
+                    "description": "Device side log output level",
                     "enum": [
                         "debug",
                         "error",
@@ -39,6 +40,10 @@
                         "warn"
                     ],
                     "type": "string"
+                },
+                "restoreRegistry": {
+                    "description": "Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.\nAt which point it will clear the registry completely and write back the stored registry values that were previously stored.",
+                    "type": "boolean"
                 }
             },
             "type": "object"

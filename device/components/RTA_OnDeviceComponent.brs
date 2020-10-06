@@ -174,7 +174,6 @@ function processIsInFocusChainRequest(args as Object) as Object
 	}
 end function
 
-
 function processObserveFieldRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
@@ -362,7 +361,6 @@ end function
 
 sub sendBackResponse(request as Object, response as Object)
 	response = recursivelyConvertValueToJsonCompatible(response)
-	if NOT isBoolean(response.success) then response.success = true
 	response.id = request.id
 	m.task.renderThreadResponse = response
 end sub

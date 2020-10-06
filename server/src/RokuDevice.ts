@@ -8,8 +8,8 @@ import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 
 export class RokuDevice {
-	public config?: ConfigOptions;
 	public deployed = false;
+	private config?: ConfigOptions;
 	private needle = needle;
 
 	constructor(config?: ConfigOptions) {
@@ -23,7 +23,17 @@ export class RokuDevice {
 			utils.validateRTAConfigSchema(config, [section]);
 			this.config = config;
 		}
-		const configSection = this.config?.[section];
+		return this.config?.[section];
+	}
+
+	public getCurrentDeviceConfig() {
+		const section = 'RokuDevice';
+		if (!this.config) {
+			const config = utils.getConfigFromEnvironment();
+			utils.validateRTAConfigSchema(config, [section]);
+			this.config = config;
+		}
+		const configSection = this.getConfig();
 		return configSection.devices[configSection.deviceIndex ?? 0];
 	}
 
@@ -35,9 +45,10 @@ export class RokuDevice {
 			if (this.deployed) return;
 		}
 
+		const deviceConfig = this.getCurrentDeviceConfig();
 		options = rokuDeploy.getOptions(options);
-		options.host = this.getConfig().host;
-		options.password = this.getConfig().password;
+		options.host = deviceConfig.host;
+		options.password = deviceConfig.password;
 
 		if (args?.injectTestingFiles !== false) {
 			const files = options.files ?? [];
@@ -56,7 +67,7 @@ export class RokuDevice {
 	}
 
 	public async sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {
-		let url = `http://${this.getConfig().host}:8060/${path}`;
+		let url = `http://${this.getCurrentDeviceConfig().host}:8060/${path}`;
 
 		if (params && Object.keys(params).length) {
 			url = url.replace(/\?.*|$/, '?' + querystring.build(params));
@@ -82,7 +93,7 @@ export class RokuDevice {
 	}
 
 	private async generateScreenshot() {
-		const url = `http://${this.getConfig().host}/plugin_inspect`;
+		const url = `http://${this.getCurrentDeviceConfig().host}/plugin_inspect`;
 		const data = {
 			archive: '',
 			mysubmit: 'Screenshot'
@@ -93,12 +104,12 @@ export class RokuDevice {
 	}
 
 	private async saveScreenshot(outputFilePath: string) {
-		const config = this.getConfig();
+		const deviceConfig = this.getCurrentDeviceConfig();
 		await utils.ensureDirExistForFilePath(outputFilePath);
 		const options = this.getOptions(true);
-		const ext = `.${config.screenshotFormat}`;
+		const ext = `.${deviceConfig.screenshotFormat}`;
 		options.output = outputFilePath + ext;
-		const url = `http://${config.host}/pkgs/dev${ext}`;
+		const url = `http://${deviceConfig.host}/pkgs/dev${ext}`;
 		let result = await this.needle('get', url, options);
 		if (result.statusCode !== 200) {
 			throw new Error(`Could not download screenshot at ${url}. Make sure you have the correct screenshot format in your config`);
@@ -110,7 +121,7 @@ export class RokuDevice {
 		const options: needle.NeedleOptions = {};
 		if (requiresAuth) {
 			options.username = 'rokudev';
-			options.password = this.getConfig().password;
+			options.password = this.getCurrentDeviceConfig().password;
 			options.auth = 'digest';
 		}
 

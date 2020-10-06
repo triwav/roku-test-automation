@@ -2,8 +2,10 @@
 <component name="MainScene" extends="Scene">
 	<script type="text/brightscript" uri="MainScene.brs" />
 	<script type="text/brightscript" uri="RTA_common.brs" />
+	<script type="text/brightscript" uri="pkg:/source/RTA_helpers.brs" />
 	<interface>
 		<function name="multiplyNumbers" />
+		<function name="setPosterUrl" />
 	</interface>
 	<children>
 		<Group id="testTarget">
@@ -15,5 +17,6 @@
 			</Group>
 			<Group id="child3" />
 		</Group>
+		<Poster id="poster" />
 	</children>
 </component>
