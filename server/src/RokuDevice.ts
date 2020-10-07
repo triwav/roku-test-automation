@@ -64,6 +64,7 @@ export class RokuDevice {
 			const manifestContents = fsExtra.readFileSync(manifestPath, 'utf-8').replace('ENABLE_RTA=false', 'ENABLE_RTA=true');
 			fsExtra.writeFileSync(manifestPath, manifestContents);
 		});
+		this.deployed = true;
 	}
 
 	public async sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {

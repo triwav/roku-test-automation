@@ -3,10 +3,9 @@ const expect = chai.expect;
 import * as assert from 'assert';
 
 import { utils } from './utils';
-import { ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
 import { ecp, odc, device, proxy } from '.';
 
-describe.only('NetworkProxy', function () {
+describe('NetworkProxy', function () {
 	before(async () => {
 		await device.deploy({rootDir: '../testProject'}, {preventMultipleDeployments: true});
 		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
@@ -14,20 +13,20 @@ describe.only('NetworkProxy', function () {
 
 	it('should be able to intercept a request', async () => {
 		await proxy.start();
-		proxy.addBreakPointListener((args) => {
-			console.log('addBreakPointListener');
 
-			return null as any;
+		const imageUrl = 'https://picsum.photos/600/?r=' + Math.random();
+		const promise = new Promise((resolve) => {
+			proxy.observeRequest(imageUrl, () => {
+				resolve();
+			});
 		});
-		const imageUrl = 'https://picsum.photos/600';
-		proxy.observeRequest(imageUrl, (test) => {
-			debugger;
-		});
+
 		await odc.callFunc({
 			base: 'scene',
 			keyPath: '',
 			funcName: 'setPosterUrl',
 			funcParams: [imageUrl]
 		});
+		await utils.promiseTimeout(promise, 2000, 'Did not receive proxy request from Roku device');
 	});
 });
