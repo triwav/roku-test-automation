@@ -28,5 +28,4 @@ end function
 
 function setPosterUrl(url as String) as Dynamic
 	m.poster.uri = RTA_injectProxy(url)
-	print "m.poster.uri" m.poster.uri
 end function

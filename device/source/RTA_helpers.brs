@@ -4,6 +4,5 @@ function RTA_injectProxy(url as String) as String
 	if proxyAddress <> "" then
 		url = "http://" + proxyAddress + "/;" + url
 	end if
-	print "RTA_injectProxy" url
 	return url
 end function
