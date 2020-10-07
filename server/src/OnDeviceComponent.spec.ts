@@ -13,9 +13,10 @@ describe('OnDeviceComponent', function () {
 	});
 
 	describe('getValueAtKeyPath', function () {
-		it('found should be true if key path was found', async () => {
-			const {found} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
+		it('found should be true if key path was found and has timeTaken as a number', async () => {
+			const {found, timeTaken} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
 			expect(found).to.be.true;
+			expect(timeTaken).to.be.a('number');
 		});
 
 		it('found should be false if key path was not found', async () => {
@@ -65,14 +66,15 @@ describe('OnDeviceComponent', function () {
 	});
 
 	describe('getValuesAtKeyPaths', function () {
-		it('should work with multiple values', async () => {
-			const {subchild1, subchild2} = await odc.getValuesAtKeyPaths({requests: {
+		it('should work with multiple values and should return the timeTaken value', async () => {
+			const {subchild1, subchild2, timeTaken} = await odc.getValuesAtKeyPaths({requests: {
 					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
 					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
 				}
 			});
 			expect(subchild1.id).to.eq('subchild1');
 			expect(subchild2.id).to.eq('subchild2');
+			expect(timeTaken).to.be.a('number');
 		});
 	});
 
@@ -175,14 +177,15 @@ describe('OnDeviceComponent', function () {
 			assert.fail('Should have thrown an exception');
 		});
 
-		it('should succeed if given a valid node for its parent keyPath', async () => {
+		it('should succeed if given a valid node for its parent keyPath and should return timeTaken value', async () => {
 			const args = {keyPath: 'AuthManager.isLoggedIn'};
 			await setAndVerifyValue({...args, value: false});
 			const observePromise = odc.observeField(args);
 			await setAndVerifyValue({...args, value: true});
-			const {value, observerFired} = await observePromise;
+			const {value, observerFired, timeTaken} = await observePromise;
 			expect(value).to.be.true;
 			expect(observerFired).to.be.true;
+			expect(timeTaken).to.be.a('number');
 		});
 
 		it('should wait for value to match if requested and should work with simple match property', async () => {
@@ -268,9 +271,10 @@ describe('OnDeviceComponent', function () {
 			expect(value).to.be.true;
 		});
 
-		it('should work with funcs taking params', async () => {
-			const {value} = await odc.callFunc({base: 'scene', keyPath: '', funcName: 'multiplyNumbers', funcParams: [3, 5]});
+		it('should work with funcs taking params and has timeTaken as a number', async () => {
+			const {value, timeTaken} = await odc.callFunc({base: 'scene', keyPath: '', funcName: 'multiplyNumbers', funcParams: [3, 5]});
 			expect(value).to.be.equal(15);
+			expect(timeTaken).to.be.a('number');
 		});
 	});
 
@@ -436,8 +440,9 @@ describe('OnDeviceComponent', function () {
 			const {value: actualStartingValue} = await odc.getValueAtKeyPath(args);
 			expect(actualStartingValue).to.equal(args.expectedStartingValue, `${args.base}.${args.keyPath} did not match expected value before set`);
 		}
-		await odc.setValueAtKeyPath(args);
+		const { timeTaken } = await odc.setValueAtKeyPath(args);
 		const {value: actualValue} = await odc.getValueAtKeyPath(args);
 		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
+		expect(timeTaken).to.be.a('number', 'timeTaken was not a number when returned from setValueAtKeyPath');
 	}
 });
