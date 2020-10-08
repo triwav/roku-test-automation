@@ -6,6 +6,7 @@ sub init()
 end sub
 
 function getVersion() as String
+	' TODO update from package.json
 	return "1.0.0"
 end function
 
@@ -17,14 +18,26 @@ end function
 sub runTaskThread()
 	m.activeTransfers = {}
 	m.validRequestTypes = {
-		"callFunc": true
-		"getFocusedNode": true
-		"getValueAtKeyPath": true
-		"getValuesAtKeyPaths": true
-		"hasFocus": true
-		"isInFocusChain": true
-		"observeField": true
-		"setValueAtKeyPath": true
+		"callFunc": {}
+		"getFocusedNode": {}
+		"getValueAtKeyPath": {}
+		"getValuesAtKeyPaths": {}
+		"hasFocus": {}
+		"isInFocusChain": {}
+		"observeField": {}
+		"setValueAtKeyPath": {}
+		"readRegistry": {
+			"handler": processReadRegistryRequest
+		}
+		"writeRegistry": {
+			"handler": processWriteRegistryRequest
+		}
+		"deleteRegistrySections": {
+			"handler": processDeleteRegistrySectionsRequest
+		}
+		"getServerHost": {
+			"handler": processGetServerHostRequest
+		}
 	}
 
 	address = createObject("roSocketAddress")
@@ -120,7 +133,14 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 	end if
 
 	requestType = getStringAtKeyPath(request, "type")
-	if m.validRequestTypes[requestType] = true then
+	requestConfig = m.validRequestTypes[requestType]
+	if requestConfig <> Invalid then
+		handler = requestConfig.handler
+		if isFunction(handler) then
+			handler(request)
+			return
+		end if
+
 		requestId = request.id
 
 		if m.activeRequests[requestId] <> Invalid then
@@ -134,6 +154,112 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 	end if
 end sub
 
+sub processReadRegistryRequest(request as Object)
+	args = request.args
+	values = args.values
+	if NOT isAA(values) OR values.isEmpty() then
+		sections = createObject("roRegistry").getSectionList()
+		values = {}
+		for each section in sections
+			values[section] = {}
+		end for
+	end if
+
+	outputValues = {}
+	for each section in values
+		sec = createObject("roRegistrySection", section)
+		if sec = Invalid then
+			sendBackError(request, "Could not create registry section '" + section + "'")
+			return
+		end if
+		sectionRequestedValues = values[section]
+
+		if isString(sectionRequestedValues) then
+			sectionRequestedValues = [sectionRequestedValues]
+		else if NOT isArray(sectionRequestedValues) OR sectionRequestedValues.isEmpty()
+			sectionRequestedValues = sec.getKeyList()
+		end if
+		outputValues[section] = sec.readMulti(sectionRequestedValues)
+	end for
+
+	sendBackResponse(request, {
+		"values": outputValues
+	})
+end sub
+
+sub processWriteRegistryRequest(request as Object)
+	args = request.args
+	values = args.values
+	for each section in values
+		sec = createObject("roRegistrySection", section)
+		if sec = Invalid then
+			sendBackError(request, "Could not create registry section '" + section + "'")
+			return
+		end if
+
+		' Have to clear out null values or it will cause the write to fail
+		sectionItemKeys = values[section]
+		for each key in sectionItemKeys
+			if sectionItemKeys[key] = Invalid
+				sec.delete(key)
+				sectionItemKeys.delete(key)
+			end if
+		end for
+
+		sectionValues = values[section]
+
+		if NOT sectionValues.isEmpty() AND NOT sec.writeMulti(sectionValues) then
+			sendBackError(request, "Could not write values for registry section '" + section + "'")
+			return
+		end if
+	end for
+
+	if NOT createObject("roRegistry").flush() then
+		sendBackError(request, "Failed flushing registry")
+		return
+	end if
+
+	sendBackResponse(request, {})
+end sub
+
+sub processDeleteRegistrySectionsRequest(request as Object)
+	args = request.args
+	registry = createObject("roRegistry")
+
+	sections = args.sections
+	if isString(sections) then
+		sections = [sections]
+	end if
+
+	if sections.isEmpty() then
+		if args.allowEntireRegistryDelete then
+			sections = registry.getSectionList()
+		else
+			logInfo("Delete request did not pass in any sections")
+		end if
+	end if
+
+	for each section in sections
+		if NOT registry.delete(section) then
+			sendBackError(request, "Failed deleting registry section '" + section + "'")
+			return
+		end if
+	end for
+
+	if NOT registry.flush() then
+		sendBackError(request, "Failed flushing registry")
+		return
+	end if
+
+	sendBackResponse(request, {})
+end sub
+
+sub processGetServerHostRequest(request as Object)
+	sendBackResponse(request, {
+		"host": request.callbackHost
+	})
+end sub
+
 sub sendBackError(request as Object, message as String)
 	logError(message)
 	sendBackResponse(request, buildErrorResponseObject(message))
@@ -141,6 +267,7 @@ end sub
 
 sub sendBackResponse(request as Object, response as Dynamic)
 	if isAA(response) then
+		if NOT isBoolean(response.success) then response.success = true
 		formattedResponse = formatJson(response)
 	else
 		formattedResponse = response

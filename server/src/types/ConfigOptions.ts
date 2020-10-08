@@ -1,9 +1,10 @@
 import { ODCLogLevels } from './OnDeviceComponentRequest';
 
 export enum ConfigBaseKeyEnum {
-	RokuDevice,
 	ECP,
-	OnDeviceComponent
+	NetworkProxy,
+	OnDeviceComponent,
+	RokuDevice
 }
 export type ConfigBaseKeyTypes = keyof typeof ConfigBaseKeyEnum;
 
@@ -13,6 +14,7 @@ export interface ConfigOptions {
 	RokuDevice: RokuDeviceConfigOptions;
 	ECP?: ECPConfigOptions;
 	OnDeviceComponent?: OnDeviceComponentConfigOptions;
+	NetworkProxy: NetworkProxyOptions;
 }
 
 export interface RokuDeviceConfigOptions {
@@ -51,5 +53,15 @@ export interface ECPConfigOptions {
 }
 
 export interface OnDeviceComponentConfigOptions {
+	/** Device side log output level */
 	logLevel?: ODCLogLevels;
+	/**
+	 * Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.
+	 * At which point it will clear the registry completely and write back the stored registry values that were previously stored.
+	 */
+	restoreRegistry: boolean;
+}
+
+export interface NetworkProxyOptions {
+
 }

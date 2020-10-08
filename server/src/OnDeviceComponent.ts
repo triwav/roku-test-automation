@@ -8,21 +8,23 @@ import { getStackTrace } from 'get-stack-trace';
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs } from '.';
+import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs, ODCWriteRegistryArgs, ODCReadRegistryArgs, ODCDeleteEntireRegistrySectionsArgs, ODCDeleteRegistrySectionsArgs, ODCGetServerHostArgs } from '.';
 
 export class OnDeviceComponent {
+	public device: RokuDevice;
 	private debugLog = false;
+	// TODO pull from package.json
 	private static readonly version = '1.0.0';
 	private callbackListenPort?: number;
-	private device: RokuDevice;
+	private storedDeviceRegistry?: {};
 	private config?: ConfigOptions;
 	private sentRequests: { [key: string]: ODCRequest } = {};
 	private app = this.setupExpress();
 	private server?: http.Server;
 
-	constructor(config?: ConfigOptions) {
+	constructor(device: RokuDevice, config?: ConfigOptions) {
 		this.config = config;
-		this.device = new RokuDevice(config);
+		this.device = device;
 	}
 
 	public getConfig() {
@@ -43,9 +45,9 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async getFocusedNode(args?: ODCGetFocusedNodeArgs, options: ODCRequestOptions = {}): Promise<ODCNodeRepresentation> {
-		const result = await this.sendRequest('getFocusedNode', args ?? {}, options);
-		return result.body.node;
+	public async getFocusedNode(args: ODCGetFocusedNodeArgs = {}, options: ODCRequestOptions = {}) {
+		const result = await this.sendRequest('getFocusedNode', args, options);
+		return result.body.node as ODCNodeRepresentation;
 	}
 
 	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options: ODCRequestOptions = {}): Promise<{
@@ -63,7 +65,10 @@ export class OnDeviceComponent {
 		timeTaken: number;
 	}> {
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
-		return result.body;
+		return result.body as {
+			[key: string]: any;
+			found: boolean;
+		};
 	}
 
 	public async hasFocus(args: ODCHasFocusArgs, options: ODCRequestOptions = {}): Promise<boolean> {
@@ -96,7 +101,7 @@ export class OnDeviceComponent {
 
 		if (!args.retryInterval) args.retryInterval = 100;
 
-		const deviceConfig = this.device.getConfig();
+		const deviceConfig = this.device.getCurrentDeviceConfig();
 		let retryTimeout: number;
 
 		if (args.retryTimeout !== undefined) {
@@ -121,6 +126,40 @@ export class OnDeviceComponent {
 		timeTaken: number;
 	}> {
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
+		return result.body;
+	}
+
+	public async readRegistry(args: ODCReadRegistryArgs = {}, options: ODCRequestOptions = {}): Promise<{
+		values: {
+			[section: string]: {[sectionItemKey: string]: string}
+		}
+	}> {
+		const result = await this.sendRequest('readRegistry', args, options);
+		return result.body;
+	}
+
+	public async writeRegistry(args: ODCWriteRegistryArgs, options: ODCRequestOptions = {}): Promise<{}> {
+		const result = await this.sendRequest('writeRegistry', args, options);
+		return result.body;
+	}
+
+	public async deleteRegistrySections(args: ODCDeleteRegistrySectionsArgs, options: ODCRequestOptions = {}): Promise<{}> {
+		const result = await this.sendRequest('deleteRegistrySections', args, options);
+		return result.body;
+	}
+
+	public async deleteEntireRegistry(args: ODCDeleteEntireRegistrySectionsArgs = {}, options: ODCRequestOptions = {}): Promise<{}> {
+		const deleteSectionsArgs: ODCDeleteRegistrySectionsArgs = {
+			sections: [],
+			allowEntireRegistryDelete: true
+		};
+		return await this.deleteRegistrySections(deleteSectionsArgs, options);
+	}
+
+	public async getServerHost(args: ODCGetServerHostArgs = {}, options: ODCRequestOptions = {}): Promise<{
+		host: string
+	}> {
+		const result = await this.sendRequest('getServerHost', args, options);
 		return result.body;
 	}
 
@@ -158,7 +197,7 @@ export class OnDeviceComponent {
 			};
 
 			const client = udp.createSocket('udp4');
-			const host = this.device.getConfig().host;
+			const host = this.device.getCurrentDeviceConfig().host;
 			if (this.debugLog) console.log(`Sending request to ${host} with body: ${body}`);
 
 			client.on('message', function (message, remote) {
@@ -181,7 +220,7 @@ export class OnDeviceComponent {
 			sendRequest();
 		});
 
-		const deviceConfig = this.device.getConfig();
+		const deviceConfig = this.device.getCurrentDeviceConfig();
 		let timeout = options?.timeout ?? deviceConfig.defaultTimeout ?? 10000;
 		const multiplier = deviceConfig.timeoutMultiplier ?? 1;
 		timeout *= multiplier;
@@ -204,9 +243,19 @@ export class OnDeviceComponent {
 			if (this.debugLog) console.log(`Listening for callbacks on ${callbackListenPort}`);
 		});
 		this.callbackListenPort = callbackListenPort;
+
+		if (this.getConfig()?.restoreRegistry) {
+			if (this.debugLog) console.log(`Storing original device registry state`);
+			const result = await this.readRegistry();
+			this.storedDeviceRegistry = result.values;
+		}
 	}
 
-	public shutdown() {
+	public async shutdown() {
+		if (this.storedDeviceRegistry) {
+			if (this.debugLog) console.log(`Restoring device registry to original state`);
+			await this.writeRegistry({values: this.storedDeviceRegistry});
+		}
 		if (this.server) {
 			this.server.close();
 			this.server = undefined;
@@ -237,14 +286,13 @@ export class OnDeviceComponent {
 
 	private getCaller(stackTrace?: any[]) {
 		if (stackTrace) {
-			let previousFrame;
-			for (const frame of stackTrace.reverse()) {
-				if (frame.typeName === 'OnDeviceComponent') {
-					if (previousFrame) {
-						return `(${previousFrame.fileName}:${previousFrame.lineNumber}:${previousFrame.columnNumber})`;
-					}
+			for (let i = stackTrace.length - 1; i >= 0 ; i--) {
+				const currentFrame = stackTrace[i];
+				if (currentFrame.typeName === 'OnDeviceComponent') {
+					// Go back one to get to the actual call that the user made
+					const frame = stackTrace[i + 1];
+					return `(${frame.fileName}:${frame.lineNumber}:${frame.columnNumber})`;
 				}
-				previousFrame = frame;
 			}
 		}
 		return '';

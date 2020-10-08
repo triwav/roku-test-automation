@@ -1,4 +1,5 @@
 sub init()
+	m.poster = m.top.findNode("poster")
 	m.subchild2 = m.top.findNode("subchild2")
 	m.subchild2.setFocus(true)
 	m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
@@ -23,4 +24,8 @@ end sub
 
 function multiplyNumbers(a as Dynamic, b as Dynamic) as Dynamic
 	return a * b
+end function
+
+function setPosterUrl(url as String) as Dynamic
+	m.poster.uri = RTA_injectProxy(url)
 end function

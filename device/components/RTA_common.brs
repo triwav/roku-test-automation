@@ -154,6 +154,16 @@ function isNode(value as Dynamic) as Boolean
 	return type(value) = "roSGNode"
 end function
 
+' /**
+' * @description Checks if the supplied value is a valid Function type
+' * @param {Dynamic} value The variable to be checked
+' * @return {Boolean} Results of the check
+' */
+function isFunction(value as Dynamic) as Boolean
+	valueType = type(value)
+	return (valueType = "roFunction") OR (valueType = "Function")
+end function
+
 '*************************************************************************
 '#endregion *** TYPE CHECKING
 '*************************************************************************

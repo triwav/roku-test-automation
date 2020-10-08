@@ -30,7 +30,7 @@
 			"request": "launch",
 			"cwd": "${workspaceFolder}/server",
 			"program": "${workspaceFolder}/server/node_modules/mocha/bin/_mocha",
-			"args": [ "--bail", "./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js" ],
+			"args": [ "--bail", "./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js", "./dist/NetworkProxy.spec.js" ],
 			"console": "integratedTerminal",
 			"protocol": "inspector",
 			"internalConsoleOptions": "neverOpen"

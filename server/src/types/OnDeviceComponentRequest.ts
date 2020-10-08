@@ -2,8 +2,10 @@ import * as express from 'express';
 
 export enum ODCRequestEnum {
 	callFunc,
+	deleteRegistrySections,
 	getFocusedNode,
 	getRoots,
+	getServerHost,
 	getValueAtKeyPath,
 	getValuesAtKeyPaths,
 	handshake,
@@ -11,8 +13,10 @@ export enum ODCRequestEnum {
 	isInFocusChain,
 	observeField,
 	observeFocus,
+	readRegistry,
 	setFocus,
-	setValueAtKeyPath
+	setValueAtKeyPath,
+	writeRegistry,
 }
 export type ODCRequestTypes = keyof typeof ODCRequestEnum;
 
@@ -21,6 +25,8 @@ export enum ODCKeyPathBaseEnum {
 	scene
 }
 export type ODCKeyPathBaseTypes = keyof typeof ODCKeyPathBaseEnum;
+
+export declare type ODCLogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
 
 export interface ODCCallFuncArgs {
 	base?: ODCKeyPathBaseTypes;
@@ -59,8 +65,6 @@ export interface ODCIsInFocusChainArgs {
 	keyPath: string;
 }
 
-export declare type ODCLogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
-
 export interface ODCObserveFieldArgs {
 	base?: ODCKeyPathBaseTypes;
 	keyPath: string;
@@ -83,7 +87,30 @@ export interface ODCSetValueAtKeyPathArgs {
 	value: any;
 }
 
-export type ODCRequestArgs = ODCCallFuncArgs | ODCGetFocusedNodeArgs | ODCGetValueAtKeyPathArgs | ODCGetValuesAtKeyPathsArgs | ODCHasFocusArgs | ODCIsInFocusChainArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs | ODCHandshakeArgs;
+export interface ODCReadRegistryArgs {
+	values?: {
+		[section: string]: string[] | string
+	};
+}
+
+export interface ODCWriteRegistryArgs {
+	values: {
+		[section: string]: {[sectionItemKey: string]: string | null}
+	};
+}
+
+export interface ODCDeleteRegistrySectionsArgs {
+	sections: string[] | string;
+	allowEntireRegistryDelete?: boolean;
+}
+
+// tslint:disable-next-line: no-empty-interface
+export interface ODCDeleteEntireRegistrySectionsArgs {}
+
+// tslint:disable-next-line: no-empty-interface
+export interface ODCGetServerHostArgs {}
+
+export type ODCRequestArgs = ODCCallFuncArgs | ODCGetFocusedNodeArgs | ODCGetValueAtKeyPathArgs | ODCGetValuesAtKeyPathsArgs | ODCHasFocusArgs | ODCIsInFocusChainArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs | ODCHandshakeArgs | ODCReadRegistryArgs | ODCWriteRegistryArgs | ODCDeleteRegistrySectionsArgs | ODCDeleteEntireRegistrySectionsArgs;
 
 export interface ODCRequestOptions {
 	/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
