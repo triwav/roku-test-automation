@@ -68,6 +68,7 @@ export class OnDeviceComponent {
 		return result.body as {
 			[key: string]: any;
 			found: boolean;
+			timeTaken: number;
 		};
 	}
 
