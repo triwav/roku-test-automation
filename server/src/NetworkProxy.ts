@@ -41,7 +41,14 @@ export class NetworkProxy {
 		return ApplicationRequestProxy.start(this.port, configFilePath);
 	}
 
-	public stop() {
+	public async stop() {
+		await this.odc.writeRegistry({
+			values: {
+				rokuTestAutomation: {
+					proxyAddress: null
+				}
+			}
+		});
 		return ApplicationRequestProxy.stop();
 	}
 
