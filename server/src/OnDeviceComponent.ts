@@ -65,10 +65,7 @@ export class OnDeviceComponent {
 		timeTaken: number;
 	}> {
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
-		return result.body as {
-			[key: string]: any;
-			found: boolean;
-		};
+		return result.body;
 	}
 
 	public async hasFocus(args: ODCHasFocusArgs, options: ODCRequestOptions = {}): Promise<boolean> {
