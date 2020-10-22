@@ -145,6 +145,7 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 
 		if m.activeRequests[requestId] <> Invalid then
 			logVerbose("Ignoring request id " + requestId + ". Already received and running")
+			return
 		end if
 
 		m.activeRequests[request.id] = request
