@@ -1,6 +1,6 @@
 {
     "name": "roku-test-automation",
-    "version": "1.0.55",
+    "version": "1.0.56",
     "description": "Helps with automating functional tests",
     "main": "server/dist/index.js",
     "typings": "server/dist/index.d.ts",
@@ -28,7 +28,7 @@
         "express": "^4.17.1",
         "fs-extra": "^7.0.1",
         "get-stack-trace": "^2.0.3",
-        "http-network-proxy": "^1.0.5",
+        "http-network-proxy": "^1.0.6",
         "needle": "^2.3.2",
         "path": "^0.12.7",
         "portfinder": "^1.0.26",
