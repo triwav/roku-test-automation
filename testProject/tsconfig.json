@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "target": "es5",
+    "module": "commonjs",
+    "sourceMap": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "declaration": true,
+    "strict": true,
+    "lib": [
+      "es2015"
+    ]
+  },
+  "compileOnSave": true,
+  "include": [
+    "automatedTests/**/*.ts"
+  ]
+}

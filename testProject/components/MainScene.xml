@@ -2,21 +2,15 @@
 <component name="MainScene" extends="Scene">
 	<script type="text/brightscript" uri="MainScene.brs" />
 	<script type="text/brightscript" uri="RTA_common.brs" />
+	<script type="text/brightscript" uri="pkg:/source/common.brs" />
 	<script type="text/brightscript" uri="pkg:/source/RTA_helpers.brs" />
 	<interface>
+		<field id="pagesContainer" type="node" />
 		<function name="multiplyNumbers" />
 		<function name="setPosterUrl" />
 	</interface>
 	<children>
-		<Group id="testTarget">
-			<Group id="child1" />
-			<Group id="child2">
-				<Group id="subchild1" />
-				<Group id="subchild2" />
-				<Group id="subchild3" />
-			</Group>
-			<Group id="child3" />
-		</Group>
 		<Poster id="poster" />
+		<Group id="pagesContainer" />
 	</children>
 </component>

@@ -235,7 +235,7 @@ sub processDeleteRegistrySectionsRequest(request as Object)
 		if args.allowEntireRegistryDelete then
 			sections = registry.getSectionList()
 		else
-			logInfo("Delete request did not pass in any sections")
+			sendBackError(request, "Delete request did not pass in any sections")
 		end if
 	end if
 

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="AppButton" extends="Button">
+	<script type="text/brightscript" uri="AppButton.brs" />
+</component>

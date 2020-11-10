@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="LandingPage" extends="BasePage">
+	<script type="text/brightscript" uri="LandingPage.brs" />
+	<children>
+		<AppButton id="loginButton" text="Login" translation="[300, 150]" />
+		<Group id="testTarget">
+			<Group id="child1" />
+			<Group id="child2">
+				<Group id="subchild1" />
+				<Group id="subchild2" />
+				<Group id="subchild3" />
+			</Group>
+			<Group id="child3" />
+		</Group>
+		<Poster id="poster" />
+	</children>
+</component>

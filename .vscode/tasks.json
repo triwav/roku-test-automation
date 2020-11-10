@@ -12,13 +12,14 @@
 				"kind": "build",
 				"isDefault": true
 			}
-		}, {
+		},
+		{
+			"label": "compile-automated-tests",
 			"type": "npm",
-			"group": {
-				"kind": "test",
-				"isDefault": true
+			"options": {
+				"cwd": "testProject"
 			},
-			"script": "test",
+			"script": "automatedTests:compile",
 			"problemMatcher": []
 		}
 	]

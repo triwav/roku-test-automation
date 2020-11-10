@@ -79,13 +79,14 @@ describe('OnDeviceComponent', function () {
 	describe('getFocusedNode', function () {
 		it('should return currently focused node', async () => {
 			const {id} = await odc.getFocusedNode();
-			expect(id).to.equal('subchild2');
+			expect(id).to.equal('loginButton');
 		});
 	});
 
 	describe('hasFocus', function () {
 		it('should return true when current node has focus', async () => {
-			expect(await odc.hasFocus({base: 'scene', keyPath: 'subchild2'})).to.be.true;
+			const hasFocus = await odc.hasFocus({base: 'scene', keyPath: 'pagesContainer.loginButton'});
+			expect(hasFocus).to.be.true;
 		});
 
 		it('should return false when current node does not have focus', async () => {
@@ -95,7 +96,8 @@ describe('OnDeviceComponent', function () {
 
 	describe('isInFocusChain', function () {
 		it('should return true when current node is in focus chain', async () => {
-			expect(await odc.isInFocusChain({base: 'scene', keyPath: 'child2'})).to.be.true;
+			const isInFocusChain = await odc.isInFocusChain({base: 'scene', keyPath: 'pagesContainer.loginButton'});
+			expect(isInFocusChain).to.be.true;
 		});
 
 		it('should return false when current node is not in focus chain', async () => {

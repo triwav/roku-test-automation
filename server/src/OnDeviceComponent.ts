@@ -280,8 +280,11 @@ export class OnDeviceComponent {
 			for (let i = stackTrace.length - 1; i >= 0 ; i--) {
 				const currentFrame = stackTrace[i];
 				if (currentFrame.typeName === 'OnDeviceComponent') {
-					// Go back one to get to the actual call that the user made
-					const frame = stackTrace[i + 1];
+					// Go back one to get to the actual call that the user made if it exists
+					let frame = stackTrace[i + 1];
+					if (!frame) {
+						frame = currentFrame;
+					}
 					return `(${frame.fileName}:${frame.lineNumber}:${frame.columnNumber})`;
 				}
 			}
