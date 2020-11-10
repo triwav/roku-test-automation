@@ -12,7 +12,7 @@ In your project go ahead and install the npm module:
 npm install roku-test-automation --save-dev
 ```
 
-Once installed, the standard way for using RTA is via the singletons `ecp`, like
+Once installed, the standard way for using RTA is via the singletons like
 
 ```ts
 import { ecp, odc, device, utils } from 'roku-test-automation';
@@ -50,22 +50,7 @@ To keep a single config file and aid in running multiple tests at once, RTA read
 utils.setupEnvironmentFromConfigFile('<PATH-TO-CONFIG-FILE>')
 ```
 
- to setup the environment for you. To avoid having to do this in each test file you can setup a global include in your mocha package.json setup like:
-
- ```json
-"mocha": {
-	"timeout": 5000,
-	"file": [
-		"./src/test/include.ts"
-	],
-	"require": [
-		"ts-node/register",
-		"source-map-support/register"
-	]
-}
-```
-
-be sure to change the include.ts path to match where you put your include file.
+ to setup the environment for you. To avoid having to do this in each test file you can setup a global include in the mocha section of your package.json as demonstrated in `/testProject/package.json`. Be sure to change the path to match where you put your include file.
 
 If you're going to use the OnDeviceComponent then there are a number of files that need to be copied over into your app. If you're not using the [BrightScript Extension for VSCode](https://marketplace.visualstudio.com/items?itemName=celsoaf.brightscript) yet then now is a great time to try it out. If you are all you need to is add:
 
@@ -80,7 +65,9 @@ If you're going to use the OnDeviceComponent then there are a number of files th
 
 to your bsconfig.json or launch.json configuration files array. No need to keep the files in sync in the future when you upgrade this module.
 
-If you did this all the steps above correct you should be ready to start making use of RTA's components.
+RTA's RokuDevice also exposes a `deploy()` function for including these files and also turning on a bs_const for `ENABLE_RTA` if included in your manifest.
+
+If you did all the steps above correct you should be ready to start making use of RTA's components.
 
 ## Components
 
@@ -93,11 +80,13 @@ RTA contains most of the standard ECP commands including:
 * Sending text to the device
 * Getting the current active app
 
+---
+
 ### **OnDeviceComponent**
 
 The core piece of RTA is the OnDeviceComponent. It functions similarly to [Roku's RALE](https://devtools.web.roku.com/roku-advanced-layout-editor/) in that you have a component that is initialized on the device as used in the testProject [here](https://github.com/triwav/roku-test-automation/blob/master/testProject/components/MainScene.brs#L4)  
 `m.odc = createObject("RTA_OnDeviceComponent")`  
-Once setup you can send requests to the device to either kick off something to check or check whether the expected outcome occurred. The following is list of all current request types:
+Once setup you can send requests to the device to either kick off an event or check whether the expected outcome occurred or both. The following is list of all current request types:
 
 ---
 
@@ -117,7 +106,7 @@ At the heart of almost all requests internally is getValueAtKeyPath. It serves a
 getValuesAtKeyPaths allows you to retrieve multiple values with a single request. It  takes one property for `args`:  
 **`requests`: object** A list of the individual getValueAtKeyPath args with a user supplied key that will be returned as the same key for the output object.
 
-The [getValuesAtKeyPaths unit test](https://github.com/triwav/roku-test-automation/blob/master/server/src/OnDeviceComponent.spec.ts#L59) provides an example of its usage
+The [getValuesAtKeyPaths unit test](https://github.com/triwav/roku-test-automation/blob/master/server/src/OnDeviceComponent.spec.ts#L70) provides an example of its usage
 
 ---
 
@@ -152,7 +141,7 @@ Check if the node at the supplied key path is in the focus chain. It takes the s
 
 **observeField(args: [ODCObserveFieldArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L63), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {observerFired: boolean, value}**  
 Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use observeField to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:  
-**`match`?: any | {base, keyPath, value}** sometimes when you are observing a field you don't just want the first change. You're looking for a specific value. In this case you can pass the value you're looking for match. In this case, `base` and `keyPath` are the same as those the base level args. It's even more powerful than that though. You can also supply an object where the value your matching against actually comes from a totally different node than the one being observed.
+**`match`?: any | {base, keyPath, value}** sometimes when you are observing a field you don't just want the first change. You're looking for a specific value. In this case you can pass the value you're looking for the match like `await odc.observeField({keyPath: 'AuthManager.isLoggedIn', match: true})` In this case, `base` and `keyPath` for match are the same as those for the base level args. It's even more powerful than that though. You can also supply an object where the value your matching against actually comes from a totally different node than the one being observed.
 
 One note, to simplify writing tests, if `match` is supplied and the value already matches it will not setup an observer but will just return right away. Without this you'd have to write something like:
 
@@ -171,9 +160,62 @@ const result = await odc.observeField(...);
 
 to help distinguish if the observer actually fired the property `observerFired` is returned in the response object
 
+---
+
+**readRegistry(args: [ODCReadRegistryArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L90), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {
+		values: {
+			[section: string]: {[sectionItemKey: string]: string}
+		}
+	}**  
+
+Allows for reading from the registry. If no specific sections are requested then it will return the entire contents of the registry
+
+---
+
+**writeRegistry(args: [ODCWriteRegistryArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L96), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84))**  
+
+Allows for writing to the registry. If `null` is passed for a sectionItemKey that key will be deleted. If `null` is passed for a section that entire section will be deleted.
+
+---
+
+**deleteRegistrySections(args: [ODCDeleteRegistrySectionsArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L102), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84))**  
+
+Allows for deleting sections from the registry. Similar functionality can be achieved with `writeRegistry` passing null sections but helps to make it clearer if a mixed model isn't needed.
+
+---
+
+**deleteEntireRegistry(args: [ODCDeleteRegistrySectionsArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L108), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84))**  
+
+Provides a way to clear out all sections in registry. Uses `deleteRegistrySections` under the hood but makes it clearer what is being done
+
+---
+
 ### **RokuDevice**
 
 Serves as the middle man for ECP requests and provides access to some of the capabilities provided by the Roku's built in web server. Currently only creating and retrieving a screenshot is included. Depending on usage, [roku-deploy](https://www.npmjs.com/package/roku-deploy) may eventually be integrated to offer side load capability as well.
+
+---
+
+### **NetworkProxy**
+
+This class serves as a wrapper around the [http-network-proxy](https://www.npmjs.com/package/http-network-proxy) npm module. It is still in active development and will change some as testing shows necessary changes. At it's core the idea is to be able to take a [Charles](https://www.charlesproxy.com/) config file and use those same rules in your tests. The following methods are exposed:
+
+`start(configFilePath: string = 'charlesRewrite.xml')`  
+sets up the proxy, loads the provided config in and writes to the device's registry to get it ready to proxy requests.
+
+`stop()`  
+Used to shutdown the proxy port when you no longer want to proxy. Also sends an ODC request to the device
+
+`reloadConfig(configFilePath: string = 'charlesRewrite.xml')`  
+Gives the ability to reload the config without having to stop and restart the entire proxy
+
+`addBreakPointListener(onProxyRequestCallback: OnProxyRequestCallback)`  
+Allows you add a callback that will be called for every breakpoint Charles would have run into
+
+`observeRequest(url: string, onProxyResponseCallback: OnProxyResponseCallback)`  
+Provides a simplified way of receiving a callback when a url is accessed without needing to create a Charles config file for that case.
+
+---
 
 ### **utils**
 

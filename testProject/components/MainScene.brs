@@ -1,8 +1,12 @@
 sub init()
+	#if ENABLE_RTA
+		m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
+	#end if
+
+	m.top.pagesContainer = m.top.findNode("pagesContainer")
+
 	m.poster = m.top.findNode("poster")
-	m.subchild2 = m.top.findNode("subchild2")
-	m.subchild2.setFocus(true)
-	m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
+
 	m.global.addFields({
 		"AuthManager": createObject("roSGNode", "AuthManager")
 		"booleanValue": true
@@ -14,8 +18,11 @@ sub init()
 
 	m.timer = createObject("roSGNode", "Timer")
 	m.timer.observeFieldScoped("fire", "onTimerFired")
-	m.timer.duration = 3
+	m.timer.duration = 1.5
 	m.timer.control = "start"
+
+	landingPage = m.top.pagesContainer.createChild("LandingPage")
+	setFocus(landingPage)
 end sub
 
 sub onTimerFired()

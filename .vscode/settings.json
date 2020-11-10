@@ -7,5 +7,9 @@
 		"portfinder",
 		"subchild"
 	],
-	"brightscript.output.focusOnLaunch": false
+	"brightscript.output.focusOnLaunch": false,
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/dist": true
+	}
 }

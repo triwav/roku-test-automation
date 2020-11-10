@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomePage" extends="BasePage">
+	<script type="text/brightscript" uri="HomePage.brs" />
+	<interface>
+	</interface>
+	<children>
+		<LayoutGroup id="layoutGroup" horizAlignment="center" translation="[960, 210]">
+			<Label text="you are now logged in" />
+			<RowList id="rowList" />
+		</LayoutGroup>
+	</children>
+</component>

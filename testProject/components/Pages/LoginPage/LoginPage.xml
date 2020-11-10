@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="LoginPage" extends="BasePage">
+	<script type="text/brightscript" uri="LoginPage.brs" />
+	<interface>
+	</interface>
+	<children>
+		<LayoutGroup id="layoutGroup" horizAlignment="center" translation="[960, 210]">
+			<Rectangle width="1920" />
+			<AppButton id="emailButton" />
+			<AppButton id="passwordButton" />
+			<AppButton id="submitButton" text="Submit" />
+		</LayoutGroup>
+	</children>
+</component>

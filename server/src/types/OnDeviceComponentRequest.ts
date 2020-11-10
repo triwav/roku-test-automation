@@ -130,28 +130,30 @@ export interface ODCRequest {
 }
 
 export interface ODCNodeRepresentation {
-	id: string;
-	focusedChild: ODCNodeRepresentation;
-	focusable: boolean;
+	// Allow other fields
+	[key: string]: any;
 	change: {
 		Index1: number
 		Index2: number
 		Operation: string
 	};
-
-	// Group fields
-	visible?: boolean;
+	childRenderOrder?: 'renderFirst' | 'renderLast';
+	children: ODCNodeRepresentation[];
+	clippingRect?: [number, number, number, number];
+	enableRenderTracking?: boolean;
+	focusedChild: ODCNodeRepresentation;
+	focusable: boolean;
+	id: string;
+	inheritParentOpacity?: boolean;
+	inheritParentTransform?: boolean;
+	muteAudioGuide?: boolean;
 	opacity?: number;
-	translation?: [number, number];
+	renderPass?: number;
+	renderTracking?: 'none' | 'partial' | 'full';
 	rotation?: number;
 	scale?: [number, number];
 	scaleRotateCenter?: [number, number];
-	childRenderOrder?: 'renderFirst' | 'renderLast';
-	inheritParentTransform?: boolean;
-	inheritParentOpacity?: boolean;
-	clippingRect?: [number, number, number, number];
-	renderPass?: number;
-	muteAudioGuide?: boolean;
-	enableRenderTracking?: boolean;
-	renderTracking?: 'none' | 'partial' | 'full';
+	subtype: string;
+	translation?: [number, number];
+	visible?: boolean;
 }
