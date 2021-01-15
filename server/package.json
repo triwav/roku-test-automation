@@ -1,6 +1,6 @@
 {
     "name": "roku-test-automation",
-    "version": "1.0.56",
+    "version": "1.0.57",
     "description": "Helps with automating functional tests",
     "main": "server/dist/index.js",
     "typings": "server/dist/index.d.ts",
@@ -10,7 +10,8 @@
         "tslint": "tslint \"./src/**/*.ts\" --outputAbsolutePaths --project tsconfig.json",
         "test:device": "npm run build && nyc mocha dist/RokuDevice.spec.js dist/OnDeviceComponent.spec.js",
         "test:all": "npm run build && nyc mocha dist/**/*.spec.js",
-        "buildConfigSchema": "typescript-json-schema  src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps --refs false",
+        "buildConfigSchema": "typescript-json-schema src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps --refs false --required",
+        "buildRequestArgsSchema": "typescript-json-schema src/types/OnDeviceComponentRequest.ts ODCRequestArgs --out requestArgs.schema.json",
         "buildRelease": "npx ts-node scripts/buildRelease.ts"
     },
     "repository": {
@@ -28,7 +29,7 @@
         "express": "^4.17.1",
         "fs-extra": "^7.0.1",
         "get-stack-trace": "^2.0.3",
-        "http-network-proxy": "^1.0.6",
+        "http-network-proxy": "^1.0.7",
         "needle": "^2.3.2",
         "path": "^0.12.7",
         "portfinder": "^1.0.26",

@@ -18,6 +18,11 @@ const outputFolder = path.resolve(__dirname + '/../../release');
 
 rimraf.sync(outputFolder);
 
+output = execSync(`npm run buildConfigSchema && npm run buildRequestArgsSchema`, {
+	encoding: 'utf8'
+});
+console.log(output);
+
 const resourcesToCopy = [
 	[path.join(serverFolder, 'dist'), path.join('server', 'dist')],
 	[path.join(serverFolder, 'package.json'), 'package.json'],

@@ -13,21 +13,24 @@ export class NetworkProxy {
 	}
 
 	public getConfig() {
-		const section = 'NetworkProxy';
 		if (!this.config) {
 			const config = utils.getConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config, [section]);
+			utils.validateRTAConfigSchema(config);
 			this.config = config;
 		}
-		const configSection = this.config?.[section];
-		return configSection;
+		return this.config?.NetworkProxy;
 	}
 
-	public async start(configFilePath: string = 'charlesRewrite.xml') {
+	public async start(configFilePath?: string) {
 		const {host} = await this.odc.getServerHost();
+		const config = this.getConfig();
 
 		if (!this.port) {
-			this.port = await portfinder.getPortPromise();
+			if(config?.port) {
+				this.port = config.port;
+			} else {
+				this.port = await portfinder.getPortPromise();
+			}
 		}
 		const proxyAddress = `${host}:${this.port}`;
 
@@ -38,6 +41,11 @@ export class NetworkProxy {
 				}
 			}
 		});
+
+		if (config?.forwardProxy) {
+			ApplicationRequestProxy.forwardProxy = config.forwardProxy;
+		}
+
 		return ApplicationRequestProxy.start(this.port, configFilePath);
 	}
 
@@ -52,7 +60,7 @@ export class NetworkProxy {
 		return ApplicationRequestProxy.stop();
 	}
 
-	public reloadConfig(configFilePath: string = 'charlesRewrite.xml') {
+	public reloadConfig(configFilePath) {
 		return ApplicationRequestProxy.reloadConfig(configFilePath);
 	}
 

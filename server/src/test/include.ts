@@ -1,7 +1,8 @@
 import { utils } from '../utils';
-import { odc } from '../';
+import { proxy, odc } from '../';
 utils.setupEnvironmentFromConfigFile();
 
-after(function () {
-	odc.shutdown();
+after(async function () {
+	await proxy.stop();
+	await odc.shutdown();
 });
