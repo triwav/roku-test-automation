@@ -14,7 +14,7 @@ export interface ConfigOptions {
 	RokuDevice: RokuDeviceConfigOptions;
 	ECP?: ECPConfigOptions;
 	OnDeviceComponent?: OnDeviceComponentConfigOptions;
-	NetworkProxy: NetworkProxyOptions;
+	NetworkProxy?: NetworkProxyOptions;
 }
 
 export interface RokuDeviceConfigOptions {
@@ -36,7 +36,7 @@ export interface DeviceConfigOptions {
 	timeoutMultiplier?: number;
 
 	/** User defined list of properties for this device (name, isLowEnd, etc) */
-	properties: {};
+	properties?: {};
 
 	/** Devices default to jpg but if you've changed to png you'll need so supply this */
 	screenshotFormat?: 'png' | 'jpg';
@@ -59,9 +59,12 @@ export interface OnDeviceComponentConfigOptions {
 	 * Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.
 	 * At which point it will clear the registry completely and write back the stored registry values that were previously stored.
 	 */
-	restoreRegistry: boolean;
+	restoreRegistry?: boolean;
 }
 
 export interface NetworkProxyOptions {
+	port?: number;
 
+	/** Useful for visually debugging issues. Use in the format like (http://127.0.0.1:8888). DOES NOT WORK WITH RELATIVE REDIRECTS IN CHARLES!!! */
+	forwardProxy?: string;
 }

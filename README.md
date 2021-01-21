@@ -192,7 +192,7 @@ Provides a way to clear out all sections in registry. Uses `deleteRegistrySectio
 
 ### **RokuDevice**
 
-Serves as the middle man for ECP requests and provides access to some of the capabilities provided by the Roku's built in web server. Currently only creating and retrieving a screenshot is included. Depending on usage, [roku-deploy](https://www.npmjs.com/package/roku-deploy) may eventually be integrated to offer side load capability as well.
+Serves as the middle man for ECP requests and provides access to some of the capabilities provided by the Roku's built in web server. Currently creates and retrieves a screenshot as well as provides a helper for deploying
 
 ---
 

@@ -26,6 +26,19 @@
             },
             "type": "object"
         },
+        "NetworkProxy": {
+            "additionalProperties": false,
+            "properties": {
+                "forwardProxy": {
+                    "description": "Useful for visually debugging issues. Use in the format like (http://127.0.0.1:8888). DOES NOT WORK WITH RELATIVE REDIRECTS IN CHARLES!!!",
+                    "type": "string"
+                },
+                "port": {
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
         "OnDeviceComponent": {
             "additionalProperties": false,
             "properties": {
@@ -89,14 +102,24 @@
                                 "type": "number"
                             }
                         },
+                        "required": [
+                            "host",
+                            "password"
+                        ],
                         "type": "object"
                     },
                     "type": "array"
                 }
             },
+            "required": [
+                "devices"
+            ],
             "type": "object"
         }
     },
+    "required": [
+        "RokuDevice"
+    ],
     "type": "object"
 }
 

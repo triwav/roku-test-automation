@@ -17,20 +17,18 @@ export class RokuDevice {
 	}
 
 	public getConfig() {
-		const section = 'RokuDevice';
 		if (!this.config) {
 			const config = utils.getConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config, [section]);
+			utils.validateRTAConfigSchema(config);
 			this.config = config;
 		}
-		return this.config?.[section];
+		return this.config?.RokuDevice;
 	}
 
 	public getCurrentDeviceConfig() {
-		const section = 'RokuDevice';
 		if (!this.config) {
 			const config = utils.getConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config, [section]);
+			utils.validateRTAConfigSchema(config);
 			this.config = config;
 		}
 		const configSection = this.getConfig();
@@ -108,7 +106,7 @@ export class RokuDevice {
 		const deviceConfig = this.getCurrentDeviceConfig();
 		await utils.ensureDirExistForFilePath(outputFilePath);
 		const options = this.getOptions(true);
-		const ext = `.${deviceConfig.screenshotFormat}`;
+		const ext = `.${deviceConfig.screenshotFormat ?? 'jpg'}`;
 		options.output = outputFilePath + ext;
 		const url = `http://${deviceConfig.host}/pkgs/dev${ext}`;
 		let result = await this.needle('get', url, options);

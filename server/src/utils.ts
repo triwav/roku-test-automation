@@ -15,6 +15,9 @@ class Utils {
 		const matchingDevices = {};
 		config.RokuDevice.devices.forEach((device, index) => {
 			for (const key in deviceSelector) {
+				if (!device.properties) {
+					continue;
+				}
 				const requestedValue = deviceSelector[key];
 				if (device.properties[key] !== requestedValue) continue;
 			}
@@ -26,16 +29,18 @@ class Utils {
 
 	/** Helper for setting up process.env from a config */
 	public setupEnvironmentFromConfigFile(configFilePath: string = 'rta-config.json', deviceSelector: {} | number = 0) {
-		const config = this.parseJsonFile(configFilePath);
-		if (typeof deviceSelector === 'number') {
-			config.deviceIndex = deviceSelector;
+		const config: ConfigOptions = this.parseJsonFile(configFilePath);
+		if (!config.RokuDevice) {
+			console.log('Config did not contain RokuDevice object!!!');
+		} else if (typeof deviceSelector === 'number') {
+			config.RokuDevice.deviceIndex = deviceSelector;
 		} else {
 			const matchingDevices = this.getMatchingDevices(config, deviceSelector);
 			const keys = Object.keys(matchingDevices);
 			if (keys.length === 0) {
 				throw utils.makeError('NoMatchingDevicesFound', 'No devices matched the device selection criteria');
 			}
-			config.deviceIndex = parseInt(keys[0]);
+			config.RokuDevice.deviceIndex = parseInt(keys[0]);
 		}
 		process.env.rtaConfig = JSON.stringify(config);
 	}
@@ -43,20 +48,11 @@ class Utils {
 	/** Validates the ConfigOptions schema the current class is using
 	 * @param sectionsToValidate - if non empty array will only validate the sections provided instead of the whole schema
 	 */
-	public validateRTAConfigSchema(config: any, propertiesToValidate: ConfigBaseKeyTypes[] = []) {
+	public validateRTAConfigSchema(config: any) {
 		const schema = utils.parseJsonFile(__dirname + '/../rta-config.schema.json');
-		if (propertiesToValidate.length > 0) {
-			for (const key of propertiesToValidate) {
-				if (!ajv.validate(schema.properties[key], config[key])) {
-					const error = ajv.errors?.[0];
-					throw utils.makeError('ConfigValidationError', `${key}${error?.dataPath} ${error?.message}`);
-				}
-			}
-		} else {
-			if (!ajv.validate(schema, config)) {
-				const error = ajv.errors?.[0];
-				throw utils.makeError('ConfigValidationError', `${error?.dataPath} ${error?.message}`);
-			}
+		if (!ajv.validate(schema, config)) {
+			const error = ajv.errors?.[0];
+			throw utils.makeError('ConfigValidationError', `${error?.dataPath} ${error?.message}`);
 		}
 	}
 

@@ -28,13 +28,12 @@ export class OnDeviceComponent {
 	}
 
 	public getConfig() {
-		const section = 'OnDeviceComponent';
 		if (!this.config) {
 			const config = utils.getOptionalConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config, [section]);
+			utils.validateRTAConfigSchema(config);
 			this.config = config;
 		}
-		return this.config?.[section];
+		return this.config?.OnDeviceComponent;
 	}
 
 	public async callFunc(args: ODCCallFuncArgs, options: ODCRequestOptions = {}): Promise<{
@@ -263,7 +262,7 @@ export class OnDeviceComponent {
 	private setupExpress() {
 		const app = express();
 
-		app.use(express.json());
+		app.use(express.json({limit: '2MB'}));
 
 		app.post('/callback/:id', (req, res) => {
 			const id = req.params.id;

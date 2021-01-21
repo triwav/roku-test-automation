@@ -17,7 +17,7 @@ describe('NetworkProxy', function () {
 		const imageUrl = 'https://picsum.photos/600/?r=' + Math.random();
 		const promise = new Promise((resolve) => {
 			proxy.observeRequest(imageUrl, () => {
-				resolve();
+				resolve(null);
 			});
 		});
 
