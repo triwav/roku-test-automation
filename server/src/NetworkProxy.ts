@@ -1,9 +1,8 @@
 import { ApplicationRequestProxy, OnProxyRequestCallback, OnProxyResponseCallback } from 'http-network-proxy';
-import * as portfinder from 'portfinder';
 import { ConfigOptions, OnDeviceComponent, utils } from '.';
 
 export class NetworkProxy {
-	public port?: number;
+	private proxyAddress?: string;
 	private config?: ConfigOptions;
 	private odc: OnDeviceComponent;
 
@@ -21,43 +20,60 @@ export class NetworkProxy {
 		return this.config?.NetworkProxy;
 	}
 
+	/** Starts the proxy server and reads in the Charles config file and tells the Roku to start sending requests to the proxy server */
 	public async start(configFilePath?: string) {
 		const {host} = await this.odc.getServerHost();
 		const config = this.getConfig();
-
-		if (!this.port) {
-			if(config?.port) {
-				this.port = config.port;
-			} else {
-				this.port = await portfinder.getPortPromise();
-			}
-		}
-		const proxyAddress = `${host}:${this.port}`;
-
-		await this.odc.writeRegistry({
-			values: {
-				rokuTestAutomation: {
-					proxyAddress: proxyAddress
-				}
-			}
-		});
 
 		if (config?.forwardProxy) {
 			ApplicationRequestProxy.forwardProxy = config.forwardProxy;
 		}
 
-		return ApplicationRequestProxy.start(this.port, configFilePath);
+		const proxy = await ApplicationRequestProxy.start(config?.port, configFilePath);
+		this.debugLog(`Proxy started on port ${proxy.port}`);
+		this.proxyAddress = `${host}:${proxy.port}`;
+		await this.setRokuProxyAddress(this.proxyAddress);
+		return proxy;
+	}
+
+	/** Stops requests from being proxied but doesn't shutdown the proxy server */
+	public async pause() {
+		try {
+			return this.setRokuProxyAddress(null);
+		} catch(e) {
+			await ApplicationRequestProxy.stop();
+			throw e;
+		}
+	}
+
+	/** Starts sending requests through the proxy again after a call to stop() */
+	public resume() {
+		if (!this.proxyAddress) {
+			return utils.makeError('ProxyNotStarted', `Proxy not started yet. Call start() instead`);
+		}
+
+		return this.setRokuProxyAddress(this.proxyAddress);
+	}
+
+	private async setRokuProxyAddress(proxyAddress: string | null) {
+		try {
+			return this.odc.writeRegistry({
+				values: {
+					rokuTestAutomation: {
+						proxyAddress: proxyAddress
+					}
+				}
+			});
+		} catch(e) {
+			await ApplicationRequestProxy.stop();
+			throw e;
+		}
 	}
 
 	public async stop() {
-		await this.odc.writeRegistry({
-			values: {
-				rokuTestAutomation: {
-					proxyAddress: null
-				}
-			}
-		});
-		return ApplicationRequestProxy.stop();
+		await this.pause();
+		await ApplicationRequestProxy.stop();
+		this.debugLog('Proxy stopped');
 	}
 
 	public reloadConfig(configFilePath) {
@@ -70,5 +86,11 @@ export class NetworkProxy {
 
 	public observeRequest(url: string, onProxyResponseCallback: OnProxyResponseCallback) {
 		return ApplicationRequestProxy.observeRequest(url, onProxyResponseCallback);
+	}
+
+	private debugLog(message: string, args?) {
+		if (this.getConfig()?.serverDebugLogging) {
+			console.log(`[NetworkProxy] ${message}`, ...args);
+		}
 	}
 }
