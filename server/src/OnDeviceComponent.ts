@@ -12,7 +12,6 @@ import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArg
 
 export class OnDeviceComponent {
 	public device: RokuDevice;
-	private debugLog = false;
 	// TODO pull from package.json
 	private static readonly version = '1.0.0';
 	private callbackListenPort?: number;
@@ -194,7 +193,7 @@ export class OnDeviceComponent {
 
 			const client = udp.createSocket('udp4');
 			const host = this.device.getCurrentDeviceConfig().host;
-			if (this.debugLog) console.log(`Sending request to ${host} with body: ${body}`);
+			this.debugLog(`Sending request to ${host} with body: ${body}`);
 
 			client.on('message', function (message, remote) {
 				const json = JSON.parse(message.toString());
@@ -234,29 +233,39 @@ export class OnDeviceComponent {
 		}
 		const callbackListenPort = await portfinder.getPortPromise();
 
-		if (this.debugLog) console.log(`Starting callback server`);
+		this.debugLog('Starting callback server');
 		this.server = this.app.listen(callbackListenPort, () => {
-			if (this.debugLog) console.log(`Listening for callbacks on ${callbackListenPort}`);
+			this.debugLog(`Listening for callbacks on ${callbackListenPort}`);
 		});
 		this.callbackListenPort = callbackListenPort;
 
 		if (this.getConfig()?.restoreRegistry) {
-			if (this.debugLog) console.log(`Storing original device registry state`);
+			this.debugLog('Storing original device registry state');
 			const result = await this.readRegistry();
 			this.storedDeviceRegistry = result.values;
 		}
 	}
 
 	public async shutdown() {
+		this.debugLog(`Shutting down`);
+
 		if (this.storedDeviceRegistry) {
-			if (this.debugLog) console.log(`Restoring device registry to original state`);
+			this.debugLog(`Restoring device registry to original state`);
 			await this.writeRegistry({values: this.storedDeviceRegistry});
 		}
-		if (this.server) {
-			this.server.close();
-			this.server = undefined;
-		}
-		if (this.debugLog) console.log(`Shutting down ODC`);
+
+
+		return new Promise((resolve) => {
+			if (this.server) {
+				this.server.close((e) => {
+					resolve(null);
+					this.debugLog(`Server shutdown`);
+				});
+				this.server = undefined;
+			} else {
+				resolve(null);
+			}
+		});
 	}
 
 	private setupExpress() {
@@ -268,7 +277,7 @@ export class OnDeviceComponent {
 			const id = req.params.id;
 			const request = this.sentRequests[id];
 			if (request) {
-				if (this.debugLog) console.log(`Server received response`, req.body);
+				this.debugLog(`Server received response`, req.body);
 				request.callback?.(req);
 				res.send('OK');
 				delete this.sentRequests[id];
@@ -295,5 +304,11 @@ export class OnDeviceComponent {
 			}
 		}
 		return '';
+	}
+
+	private debugLog(message: string, args?) {
+		if (this.getConfig()?.serverDebugLogging) {
+			console.log(`[ODC] ${message}`, ...args);
+		}
 	}
 }

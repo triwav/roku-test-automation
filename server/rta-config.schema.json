@@ -34,7 +34,12 @@
                     "type": "string"
                 },
                 "port": {
+                    "description": "What port the proxy will run on. If not provided will fine one itself",
                     "type": "number"
+                },
+                "serverDebugLogging": {
+                    "description": "Enable debug logging on the server side",
+                    "type": "boolean"
                 }
             },
             "type": "object"
@@ -56,6 +61,10 @@
                 },
                 "restoreRegistry": {
                     "description": "Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.\nAt which point it will clear the registry completely and write back the stored registry values that were previously stored.",
+                    "type": "boolean"
+                },
+                "serverDebugLogging": {
+                    "description": "Enable debug logging on the server side",
                     "type": "boolean"
                 }
             },

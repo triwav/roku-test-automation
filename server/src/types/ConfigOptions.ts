@@ -55,6 +55,10 @@ export interface ECPConfigOptions {
 export interface OnDeviceComponentConfigOptions {
 	/** Device side log output level */
 	logLevel?: ODCLogLevels;
+
+	/** Enable debug logging on the server side */
+	serverDebugLogging?: boolean;
+
 	/**
 	 * Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.
 	 * At which point it will clear the registry completely and write back the stored registry values that were previously stored.
@@ -63,7 +67,11 @@ export interface OnDeviceComponentConfigOptions {
 }
 
 export interface NetworkProxyOptions {
+	/** What port the proxy will run on. If not provided will fine one itself */
 	port?: number;
+
+	/** Enable debug logging on the server side */
+	serverDebugLogging?: boolean;
 
 	/** Useful for visually debugging issues. Use in the format like (http://127.0.0.1:8888). DOES NOT WORK WITH RELATIVE REDIRECTS IN CHARLES!!! */
 	forwardProxy?: string;
