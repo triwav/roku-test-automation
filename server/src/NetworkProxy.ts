@@ -25,9 +25,7 @@ export class NetworkProxy {
 		const {host} = await this.odc.getServerHost();
 		const config = this.getConfig();
 
-		if (config?.forwardProxy) {
-			ApplicationRequestProxy.forwardProxy = config.forwardProxy;
-		}
+		ApplicationRequestProxy.forwardProxy = config?.forwardProxy;
 
 		const proxy = await ApplicationRequestProxy.start(config?.port, configFilePath);
 		this.debugLog(`Proxy started on port ${proxy.port}`);
@@ -57,20 +55,26 @@ export class NetworkProxy {
 
 	private async setRokuProxyAddress(proxyAddress: string | null) {
 		try {
-			return this.odc.writeRegistry({
+			return await this.odc.writeRegistry({
 				values: {
 					rokuTestAutomation: {
 						proxyAddress: proxyAddress
 					}
 				}
+			}, {
+				timeout: 2000
 			});
 		} catch(e) {
 			await ApplicationRequestProxy.stop();
-			throw e;
 		}
 	}
 
 	public async stop() {
+		if (!this.proxyAddress) {
+			this.debugLog('Proxy was not running');
+			// If we weren't running nothing to stop
+			return;
+		}
 		await this.pause();
 		await ApplicationRequestProxy.stop();
 		this.debugLog('Proxy stopped');
@@ -88,7 +92,7 @@ export class NetworkProxy {
 		return ApplicationRequestProxy.observeRequest(url, onProxyResponseCallback);
 	}
 
-	private debugLog(message: string, args?) {
+	private debugLog(message: string, ...args) {
 		if (this.getConfig()?.serverDebugLogging) {
 			console.log(`[NetworkProxy] ${message}`, ...args);
 		}

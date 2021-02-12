@@ -188,7 +188,6 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	timePassed = 0
 	if NOT parentIsNode OR NOT fieldExists then
 		retryTimeout = args.retryTimeout
-
 		if retryTimeout > 0 then
 			request.id = request.id
 			requestContext = request.context
@@ -209,7 +208,11 @@ function processObserveFieldRequest(request as Object) as Dynamic
 			else
 				timePassed = requestContext.timespan.totalMilliseconds()
 				if timePassed < retryTimeout then
-					requestContext.timer.control = "start"
+					timer = requestContext.timer
+					if timePassed + args.retryInterval > retryTimeout then
+						timer.duration = (retryTimeout - timePassed) / 1000
+					end if
+					timer.control = "start"
 					return Invalid
 				end if
 			end if
@@ -366,7 +369,7 @@ sub sendBackResponse(request as Object, response as Object)
 	if request.timespan <> Invalid then
 		response["timeTaken"] = request.timespan.TotalMilliseconds()
 	end if
-	
+
 	m.task.renderThreadResponse = response
 end sub
 

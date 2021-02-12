@@ -3,6 +3,7 @@ import * as rokuDeploy from 'roku-deploy';
 import * as fsExtra from 'fs-extra';
 import * as querystring from 'needle/lib/querystring';
 import * as mocha from 'mocha';
+import * as net from 'net';
 
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
@@ -89,6 +90,51 @@ export class RokuDevice {
 
 	public async getTestScreenshot(contextOrSuite: mocha.Context | mocha.Suite) {
 		await this.getScreenshot(utils.getTestTitlePath(contextOrSuite).join('/'));
+	}
+
+	public async getTelnetLog() {
+		return new Promise(async (resolve, reject) => {
+			const socket = net.createConnection(8085, this.getCurrentDeviceConfig().host);
+
+			let content = '';
+			let timeout;
+			socket.on("data", (data) => {
+				content += String(data);
+
+				// Cancel any previous timeout
+				if (timeout) {
+					clearTimeout(timeout);
+				}
+
+				// We might get more data so have to wait for that to come in before proceeding
+				timeout = setTimeout(() => {
+					resolve(this.processTelnetLog(content));
+					socket.destroy();
+				}, 400);
+			});
+
+			socket.on('close', () => {
+				resolve(this.processTelnetLog(content) + '\nSocket Closed');
+				socket.destroy();
+			});
+
+			socket.on('error', (e) => {
+				reject(e);
+				socket.destroy();
+			});
+		});
+	}
+
+	private processTelnetLog(content: string) {
+		const lines = content.split('\n');
+		let splitContents = [] as string[];
+		for (const line of lines.reverse()) {
+			splitContents.unshift(line);
+			if (/------\s+compiling.*------/i.exec(line)) {
+				break;
+			}
+		}
+		return splitContents.join('\n');
 	}
 
 	private async generateScreenshot() {
