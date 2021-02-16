@@ -14,6 +14,7 @@ export class OnDeviceComponent {
 	public device: RokuDevice;
 	// TODO pull from package.json
 	private static readonly version = '1.0.0';
+	private defaultTimeout = 10000;
 	private callbackListenPort?: number;
 	private storedDeviceRegistry?: {};
 	private config?: ConfigOptions;
@@ -104,7 +105,7 @@ export class OnDeviceComponent {
 			// Adding a reasonable amount of time so that we get a more specific error message instead of the generic timeout
 			options.timeout = retryTimeout + 200;
 		} else {
-			retryTimeout = options.timeout ?? deviceConfig.defaultTimeout ?? 10000;
+			retryTimeout = options.timeout ?? deviceConfig.defaultTimeout ?? this.defaultTimeout;
 			retryTimeout -= 200;
 		}
 
@@ -179,6 +180,7 @@ export class OnDeviceComponent {
 		};
 		const body = JSON.stringify(request);
 
+		let client: udp.Socket | undefined;
 		let retryInterval;
 		const promise = new Promise<express.Request>((resolve, reject) => {
 			request.callback = (req) => {
@@ -191,7 +193,7 @@ export class OnDeviceComponent {
 				}
 			};
 
-			const client = udp.createSocket('udp4');
+			client = udp.createSocket('udp4');
 			const host = this.device.getCurrentDeviceConfig().host;
 			this.debugLog(`Sending request to ${host} with body: ${body}`);
 
@@ -202,27 +204,38 @@ export class OnDeviceComponent {
 					reject(`Received id '${receivedId}' did not match request id '${requestId}'`);
 				}
 				clearInterval(retryInterval);
-				client.close();
+				client?.close();
+				client = undefined;
 			});
 
 			this.sentRequests[requestId] = request;
-			const sendRequest = () => {
-				client.send(body, 9000, host, async (err) => {
+			const _sendRequest = () => {
+				client?.send(body, 9000, host, async (err) => {
 					if (err) reject(err);
 				});
 			};
-			retryInterval = setInterval(sendRequest, 300);
-			sendRequest();
+			retryInterval = setInterval(_sendRequest, 300);
+			_sendRequest();
 		});
 
 		const deviceConfig = this.device.getCurrentDeviceConfig();
-		let timeout = options?.timeout ?? deviceConfig.defaultTimeout ?? 10000;
+		let timeout = options?.timeout ?? deviceConfig.defaultTimeout ?? this.defaultTimeout;
 		const multiplier = deviceConfig.timeoutMultiplier ?? 1;
 		timeout *= multiplier;
 		try {
-			return await utils.promiseTimeout(promise, timeout, `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}`);
+			return await utils.promiseTimeout(promise, timeout);
+		} catch(e) {
+			let message: string;
+			if (e.name === 'Timeout') {
+				const logs = await this.device.getTelnetLog();
+				message = `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}\nLog contents:\n${logs}`;
+			} else {
+				message = e
+			}
+			throw new Error(message);
 		} finally {
 			clearInterval(retryInterval);
+			client?.close();
 		}
 	}
 
@@ -246,24 +259,32 @@ export class OnDeviceComponent {
 		}
 	}
 
-	public async shutdown() {
+	public async shutdown(waitForServerShutdown: boolean = false) {
 		this.debugLog(`Shutting down`);
 
-		if (this.storedDeviceRegistry) {
-			this.debugLog(`Restoring device registry to original state`);
-			await this.writeRegistry({values: this.storedDeviceRegistry});
-		}
+		return new Promise(async (resolve) => {
+			if (!this.server) {
+				resolve(undefined);
+				return;
+			}
 
-
-		return new Promise((resolve) => {
-			if (this.server) {
-				this.server.close((e) => {
-					resolve(null);
-					this.debugLog(`Server shutdown`);
+			if (this.storedDeviceRegistry) {
+				this.debugLog(`Restoring device registry to original state`);
+				await this.writeRegistry({
+					values: this.storedDeviceRegistry
 				});
-				this.server = undefined;
-			} else {
-				resolve(null);
+			}
+
+			this.server.close((e) => {
+				this.debugLog(`Server shutdown`);
+				if (waitForServerShutdown) {
+					resolve(e);
+				}
+			});
+
+			this.server = undefined;
+			if (!waitForServerShutdown) {
+				resolve(undefined);
 			}
 		});
 	}
@@ -306,7 +327,7 @@ export class OnDeviceComponent {
 		return '';
 	}
 
-	private debugLog(message: string, args?) {
+	private debugLog(message: string, ...args) {
 		if (this.getConfig()?.serverDebugLogging) {
 			console.log(`[ODC] ${message}`, ...args);
 		}

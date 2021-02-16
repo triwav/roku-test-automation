@@ -11,6 +11,16 @@
 			"group": {
 				"kind": "build",
 				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "silent",
+				"focus": false,
+				"panel": "shared",
+				"clear": false
+			},
+			"runOptions": {
+				"runOn": "folderOpen"
 			}
 		},
 		{

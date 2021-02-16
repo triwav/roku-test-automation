@@ -81,7 +81,7 @@ class Utils {
 				if (!message) {
 					message = 'Timed out after ' + milliseconds + 'ms.';
 				}
-				reject(new Error(message));
+				reject(this.makeError('Timeout', message));
 			}, milliseconds);
 		});
 

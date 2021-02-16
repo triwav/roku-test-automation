@@ -42,4 +42,11 @@ describe('RokuDevice', function () {
 			fsExtra.removeSync(screenShotPath);
 		});
 	});
+
+	describe('getTelnetLog', () => {
+		it('should be able to pull telnet logs', async () => {
+			const contents = await device.getTelnetLog();
+			expect(contents).to.not.be.empty;
+		});
+	});
 });

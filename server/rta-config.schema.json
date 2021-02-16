@@ -34,7 +34,7 @@
                     "type": "string"
                 },
                 "port": {
-                    "description": "What port the proxy will run on. If not provided will fine one itself",
+                    "description": "What port the proxy will run on. If not provided will find one itself",
                     "type": "number"
                 },
                 "serverDebugLogging": {

@@ -67,7 +67,7 @@ export interface OnDeviceComponentConfigOptions {
 }
 
 export interface NetworkProxyOptions {
-	/** What port the proxy will run on. If not provided will fine one itself */
+	/** What port the proxy will run on. If not provided will find one itself */
 	port?: number;
 
 	/** Enable debug logging on the server side */
