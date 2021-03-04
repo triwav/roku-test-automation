@@ -19,7 +19,12 @@ export interface ConfigOptions {
 
 export interface RokuDeviceConfigOptions {
 	devices: DeviceConfigOptions[];
+
+	/** zero based index of which `devices` index to use. If not provided defaults to 0 */
 	deviceIndex?: number;
+
+	/** Useful for debugging port 80 and ECP communication between Roku and server. Use in the format like (127.0.0.1:8888). */
+	proxy?: string;
 }
 
 export interface DeviceConfigOptions {

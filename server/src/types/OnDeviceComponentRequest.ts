@@ -28,21 +28,25 @@ export type ODCKeyPathBaseTypes = keyof typeof ODCKeyPathBaseEnum;
 
 export declare type ODCLogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
 
-export interface ODCCallFuncArgs {
+interface ODCBaseKeyPath {
+	/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified  */
 	base?: ODCKeyPathBaseTypes;
 	keyPath: string;
+}
+
+interface ODCMaxChildDepth {
+	/** Controls how deep we'll recurse into node's tree structure. Defaults to 0 */
+	maxChildDepth?: number;
+}
+
+export interface ODCCallFuncArgs extends ODCBaseKeyPath {
 	funcName: string;
 	funcParams?: any[];
 }
 
-// tslint:disable-next-line: no-empty-interface
-export interface ODCGetFocusedNodeArgs {}
+export interface ODCGetFocusedNodeArgs extends ODCMaxChildDepth {}
 
-export interface ODCGetValueAtKeyPathArgs {
-	base?: ODCKeyPathBaseTypes;
-	keyPath: string;
-	timeout?: number;
-}
+export interface ODCGetValueAtKeyPathArgs extends ODCBaseKeyPath, ODCMaxChildDepth {}
 
 export interface ODCGetValuesAtKeyPathsArgs {
 	requests: {
@@ -55,35 +59,24 @@ export interface ODCHandshakeArgs {
 	logLevel: ODCLogLevels;
 }
 
-export interface ODCHasFocusArgs {
-	base?: ODCKeyPathBaseTypes;
-	keyPath: string;
-}
+export interface ODCHasFocusArgs extends ODCBaseKeyPath {}
 
-export interface ODCIsInFocusChainArgs {
-	base?: ODCKeyPathBaseTypes;
-	keyPath: string;
-}
-
-export interface ODCObserveFieldArgs {
-	base?: ODCKeyPathBaseTypes;
-	keyPath: string;
-	retryInterval?: number; /** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
-	retryTimeout?: number; /** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
-	match?: {
-		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified  */
-		base?: ODCKeyPathBaseTypes;
-		keyPath: string;
-		value: ODCObserveFieldMatchValueTypes;
-	} | ODCObserveFieldMatchValueTypes;
-}
+export interface ODCIsInFocusChainArgs extends ODCBaseKeyPath {}
 
 // TODO build out to support more complicated types
 export type ODCObserveFieldMatchValueTypes = string | number | boolean;
 
-export interface ODCSetValueAtKeyPathArgs {
-	base?: ODCKeyPathBaseTypes;
-	keyPath: string;
+interface ODCMatchObject extends ODCBaseKeyPath {
+	value: ODCObserveFieldMatchValueTypes;
+}
+
+export interface ODCObserveFieldArgs extends ODCBaseKeyPath {
+	retryInterval?: number; /** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
+	retryTimeout?: number; /** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
+	match?: ODCMatchObject | ODCObserveFieldMatchValueTypes;
+}
+
+export interface ODCSetValueAtKeyPathArgs extends ODCBaseKeyPath {
 	value: any;
 }
 

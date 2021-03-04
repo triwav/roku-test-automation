@@ -364,7 +364,7 @@ function getBaseObject(args as Object) as Dynamic
 end function
 
 sub sendBackResponse(request as Object, response as Object)
-	response = recursivelyConvertValueToJsonCompatible(response)
+	response = recursivelyConvertValueToJsonCompatible(response, getNumberAtKeyPath(request, "args.maxChildDepth"))
 	response.id = request.id
 	if request.timespan <> Invalid then
 		response["timeTaken"] = request.timespan.TotalMilliseconds()
@@ -373,26 +373,28 @@ sub sendBackResponse(request as Object, response as Object)
 	m.task.renderThreadResponse = response
 end sub
 
-function recursivelyConvertValueToJsonCompatible(value as Object) as Object
+function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth as Integer, depth = 0 as Integer) as Object
 	if isArray(value) then
 		for i = 0 to getLastIndex(value)
-			value[i] = recursivelyConvertValueToJsonCompatible(value[i])
+			value[i] = recursivelyConvertValueToJsonCompatible(value[i], maxChildDepth)
 		end for
 	else if isAA(value) then
 		for each key in value
-			value[key] = recursivelyConvertValueToJsonCompatible(value[key])
+			value[key] = recursivelyConvertValueToJsonCompatible(value[key], maxChildDepth)
 		end for
 	else if isNode(value) then
-		subtype = value.subtype()
-		children = value.getChildren(-1, 0)
-		value = value.getFields()
-		value.subtype = subtype
+		node = value
+		value = node.getFields()
 		value.delete("focusedChild")
-		value = recursivelyConvertValueToJsonCompatible(value)
-		for i = 0 to getLastIndex(children)
-			children[i] = recursivelyConvertValueToJsonCompatible(children[i])
-		end for
-		value.children = children
+		value.subtype = node.subtype()
+		value = recursivelyConvertValueToJsonCompatible(value, maxChildDepth)
+		if maxChildDepth > depth then
+			children = []
+			for each child in node.getChildren(-1, 0)
+				children.push(recursivelyConvertValueToJsonCompatible(child, maxChildDepth, depth + 1))
+			end for
+			value.children = children
+		end if
 	end if
 	return value
 end function

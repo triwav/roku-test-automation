@@ -272,6 +272,17 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 end function
 
 ' /**
+' * @description Used to find a nested number value in an object
+' * @param {Object} aa Object to drill down into.
+' * @param {String} keyPath A dot notation based string to the expected value.
+' * @param {Dynamic} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
+' * @return {Dynamic} The result of the drill down process
+' */
+function getNumberAtKeyPath(aa as Object, keyPath as String, fallback = 0 as Dynamic)
+	return getValueAtKeyPath(aa, keyPath, fallback, isNumber)
+end function
+
+' /**
 ' * @description Used to set a nested String value in the supplied object
 ' * @param {Object} base - Object to drill down into.
 ' * @param {String} keyPath - A dot notation based string to the expected value.

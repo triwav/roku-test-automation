@@ -3,7 +3,7 @@ const expect = chai.expect;
 import * as assert from 'assert';
 
 import { utils } from './utils';
-import { ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
+import { ODCNodeRepresentation, ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
 import { ecp, odc, device } from '.';
 
 describe('OnDeviceComponent', function () {
@@ -63,6 +63,28 @@ describe('OnDeviceComponent', function () {
 			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.-1.name'});
 			expect(value).to.equal('lastItem');
 		});
+
+		it('should not include children by default', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: ''});
+			expect(value.children).to.be.undefined;
+		});
+
+		it('should not include children if maxChildDepth set to zero', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', maxChildDepth: 0});
+			expect(value.children).to.be.undefined;
+		});
+
+
+		it('should include children to specified depth', async () => {
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', maxChildDepth: 2});
+			expect(value.children).to.not.be.empty;
+			for (const child of value.children) {
+				for (const subchild of child.children) {
+					// We only requested 2 so make sure it only returned two levels
+					expect(subchild.children).to.be.undefined;
+				}
+			}
+		});
 	});
 
 	describe('getValuesAtKeyPaths', function () {
@@ -82,6 +104,25 @@ describe('OnDeviceComponent', function () {
 		it('should return currently focused node', async () => {
 			const {id} = await odc.getFocusedNode();
 			expect(id).to.equal('loginButton');
+		});
+
+		it('should not include children by default', async () => {
+			const {children} = await odc.getFocusedNode();
+			expect(children).to.be.undefined;
+		});
+
+		it('should not include children if maxChildDepth set to zero', async () => {
+			const {children} = await odc.getFocusedNode({maxChildDepth: 0});
+			expect(children).to.be.undefined;
+		});
+
+		it('should include children to specified depth', async () => {
+			const {children} = await odc.getFocusedNode({maxChildDepth: 1});
+			expect(children).to.not.be.empty;
+			for (const child of children) {
+				// We only requested 1 so make sure it only returned a single level
+				expect(child.children).to.be.undefined;
+			}
 		});
 	});
 
@@ -155,7 +196,7 @@ describe('OnDeviceComponent', function () {
 				value: updateValue
 			});
 
-			const {found, value} = await odc.getValueAtKeyPath({keyPath: nodeKey});
+			const {found, value} = await odc.getValueAtKeyPath({keyPath: nodeKey, maxChildDepth: 1});
 			expect(found).to.be.true;
 			const childrenResult = value.children;
 			expect(childrenResult.length).to.equal(children.length);

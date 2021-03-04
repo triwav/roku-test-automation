@@ -74,6 +74,7 @@
             "additionalProperties": false,
             "properties": {
                 "deviceIndex": {
+                    "description": "zero based index of which `devices` index to use. If not provided defaults to 0",
                     "type": "number"
                 },
                 "devices": {
@@ -118,6 +119,10 @@
                         "type": "object"
                     },
                     "type": "array"
+                },
+                "proxy": {
+                    "description": "Useful for debugging port 80 and ECP communication between Roku and server. Use in the format like (127.0.0.1:8888).",
+                    "type": "string"
                 }
             },
             "required": [
