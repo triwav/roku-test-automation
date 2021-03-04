@@ -7,6 +7,10 @@ const ajv = new Ajv();
 import { ConfigOptions, DeviceConfigOptions, ConfigBaseKeyTypes } from './types/ConfigOptions';
 
 class Utils {
+	public getDeviceFilesPath() {
+		return path.resolve(__dirname + '/../../device');
+	}
+
 	public parseJsonFile(filePath: string) {
 		return JSON.parse(fsExtra.readFileSync(filePath, 'utf-8'));
 	}

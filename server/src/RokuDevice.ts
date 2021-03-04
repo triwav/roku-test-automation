@@ -52,7 +52,7 @@ export class RokuDevice {
 		if (args?.injectTestingFiles !== false) {
 			const files = options.files ?? [];
 			files.push({
-				src: __dirname + '/../../device/**/*',
+				src: `${utils.getDeviceFilesPath()}/**/*`,
 				dest: '/'
 			});
 			options.files = files;
@@ -170,8 +170,7 @@ export class RokuDevice {
 			options.auth = 'digest';
 		}
 
-		/** Useful for debugging port 80 and ECP communication between Roku and server */
-		options.proxy = '';
+		options.proxy = this.getConfig().proxy;
 		return options;
 	}
 }

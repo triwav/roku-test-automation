@@ -12,6 +12,7 @@
 				"kind": "build",
 				"isDefault": true
 			},
+			"isBackground": true,
 			"presentation": {
 				"echo": true,
 				"reveal": "silent",
