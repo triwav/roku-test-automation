@@ -11,7 +11,7 @@
         "test:device": "npm run build && mocha dist/RokuDevice.spec.js dist/OnDeviceComponent.spec.js",
         "test:all": "npm run build && mocha dist/**/*.spec.js",
         "buildConfigSchema": "typescript-json-schema src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps --refs false --required",
-        "buildRequestArgsSchema": "typescript-json-schema src/types/OnDeviceComponentRequest.ts ODC.RequestArgs --out requestArgs.schema.json",
+        "buildRequestArgsSchema": "typescript-json-schema src/types/OnDeviceComponentRequest.ts ODC.RequestArgs --propOrder --out requestArgs.schema.json",
         "buildRelease": "npx ts-node scripts/buildRelease.ts",
         "buildRelease:dev": "npx ts-node scripts/buildRelease.ts --dev"
     },

@@ -42,15 +42,15 @@ sub onRenderThreadRequestChange(event as Object)
 end sub
 
 function processCallFuncRequest(args as Object) as Object
-	keyPath = args.keyPath
+	keyPath = getStringAtKeyPath(args, "keyPath")
 	node = processGetValueAtKeyPathRequest(args).value
 	if NOT isNode(node) then
-		return buildErrorResponseObject("Node not found at key path' " + keyPath + "'")
+		return buildErrorResponseObject("Node not found at key path '" + keyPath + "'")
 	end if
 
 	funcName = args.funcName
 	if NOT isNonEmptyString(funcName) then
-		return buildErrorResponseObject("Valid callFunc name not passed in")
+		return buildErrorResponseObject("CallFunc request did not have valid 'funcName' param passed in")
 	end if
 
 	p = args.funcParams
@@ -104,10 +104,7 @@ function processGetValueAtKeyPathRequest(args as Object) as Object
 		return buildErrorResponseObject("Could not handle base type of '" + args.base + "'")
 	end if
 
-	keyPath = args.keyPath
-	if NOT isString(keyPath) then
-		return buildErrorResponseObject("Had invalid keyPath")
-	end if
+	keyPath = getStringAtKeyPath(args, "keyPath")
 
 	if keyPath <> "" then
 		value = getValueAtKeyPath(base, keyPath, "[[VALUE_NOT_FOUND]]")
@@ -140,7 +137,7 @@ function processGetValuesAtKeyPathsRequest(args as Object) as Object
 end function
 
 function processHasFocusRequest(args as Object) as Object
-	keyPath = args.keyPath
+	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
 
 	if result.found <> true then
@@ -158,7 +155,7 @@ function processHasFocusRequest(args as Object) as Object
 end function
 
 function processIsInFocusChainRequest(args as Object) as Object
-	keyPath = args.keyPath
+	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
 
 	if result.found <> true then
@@ -178,7 +175,7 @@ end function
 function processObserveFieldRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
-	keyPath = args.keyPath
+	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
 	node = result.value
 	field = args.field
@@ -276,12 +273,13 @@ sub observeFieldCallback(event as Object)
 	for each requestId in m.activeObserveFieldRequests
 		request = m.activeObserveFieldRequests[requestId]
 		args = request.args
+		keyPath = getStringAtKeyPath(args, "keyPath")
 		if node.isSameNode(request.node) AND args.field = field then
 			match = args.match
 			if isAA(match) then
 				result = processGetValueAtKeyPathRequest(match)
 				if result.found <> true then
-					logDebug("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
+					logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
 					node.unobserveFieldScoped(field)
 					m.activeObserveFieldRequests.delete(requestId)
 					sendBackResponse(request, buildErrorResponseObject("Match was requested and key path was not valid"))
@@ -293,7 +291,7 @@ sub observeFieldCallback(event as Object)
 					return
 				end if
 			end if
-			logDebug("Unobserved '" + field + "' at key path '" + args.keyPath + "'")
+			logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
 			node.unobserveFieldScoped(field)
 			m.activeObserveFieldRequests.delete(requestId)
 			sendBackResponse(request, {
@@ -307,7 +305,7 @@ sub observeFieldCallback(event as Object)
 end sub
 
 function processSetValueAtKeyPathRequest(args as Object) as Object
-	keyPath = args.keyPath
+	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
 
 	if result.found <> true then
