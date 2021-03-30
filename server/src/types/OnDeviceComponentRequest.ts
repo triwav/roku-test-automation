@@ -1,152 +1,154 @@
 import * as express from 'express';
 
-export enum ODCRequestEnum {
-	callFunc,
-	deleteRegistrySections,
-	getFocusedNode,
-	getRoots,
-	getServerHost,
-	getValueAtKeyPath,
-	getValuesAtKeyPaths,
-	handshake,
-	hasFocus,
-	isInFocusChain,
-	observeField,
-	observeFocus,
-	readRegistry,
-	setFocus,
-	setValueAtKeyPath,
-	writeRegistry,
-}
-export type ODCRequestTypes = keyof typeof ODCRequestEnum;
+export namespace ODC {
+	export enum RequestEnum {
+		callFunc,
+		deleteRegistrySections,
+		getFocusedNode,
+		getRoots,
+		getServerHost,
+		getValueAtKeyPath,
+		getValuesAtKeyPaths,
+		handshake,
+		hasFocus,
+		isInFocusChain,
+		observeField,
+		readRegistry,
+		setValueAtKeyPath,
+		writeRegistry,
+	}
+	export type RequestTypes = keyof typeof RequestEnum;
 
-export enum ODCKeyPathBaseEnum {
-	global,
-	scene
-}
-export type ODCKeyPathBaseTypes = keyof typeof ODCKeyPathBaseEnum;
+	export enum KeyPathBaseEnum {
+		global,
+		scene
+	}
+	export type KeyPathBaseTypes = keyof typeof KeyPathBaseEnum;
 
-export declare type ODCLogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
+	export declare type LogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
 
-interface ODCBaseKeyPath {
-	/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified  */
-	base?: ODCKeyPathBaseTypes;
-	keyPath: string;
-}
+	interface BaseKeyPath {
+		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified  */
+		base?: KeyPathBaseTypes;
+		keyPath: string;
+	}
 
-interface ODCMaxChildDepth {
-	/** Controls how deep we'll recurse into node's tree structure. Defaults to 0 */
-	maxChildDepth?: number;
-}
+	interface MaxChildDepth {
+		/** Controls how deep we'll recurse into node's tree structure. Defaults to 0 */
+		maxChildDepth?: number;
+	}
 
-export interface ODCCallFuncArgs extends ODCBaseKeyPath {
-	funcName: string;
-	funcParams?: any[];
-}
+	export interface CallFuncArgs extends BaseKeyPath {
+		funcName: string;
+		funcParams?: any[];
+	}
 
-export interface ODCGetFocusedNodeArgs extends ODCMaxChildDepth {}
+	export interface GetFocusedNodeArgs extends MaxChildDepth {}
 
-export interface ODCGetValueAtKeyPathArgs extends ODCBaseKeyPath, ODCMaxChildDepth {}
+	export interface GetValueAtKeyPathArgs extends BaseKeyPath, MaxChildDepth {}
 
-export interface ODCGetValuesAtKeyPathsArgs {
-	requests: {
-		[key: string]: ODCGetValueAtKeyPathArgs;
-	};
-}
+	export interface GetValuesAtKeyPathsArgs {
+		requests: {
+			[key: string]: GetValueAtKeyPathArgs;
+		};
+	}
 
-export interface ODCHandshakeArgs {
-	version: string;
-	logLevel: ODCLogLevels;
-}
+	export interface HandshakeArgs {
+		version: string;
+		logLevel: LogLevels;
+	}
 
-export interface ODCHasFocusArgs extends ODCBaseKeyPath {}
+	export interface HasFocusArgs extends BaseKeyPath {}
 
-export interface ODCIsInFocusChainArgs extends ODCBaseKeyPath {}
+	export interface IsInFocusChainArgs extends BaseKeyPath {}
 
-// TODO build out to support more complicated types
-export type ODCObserveFieldMatchValueTypes = string | number | boolean;
+	// TODO build out to support more complicated types
+	export type ObserveFieldMatchValueTypes = string | number | boolean;
 
-interface ODCMatchObject extends ODCBaseKeyPath {
-	value: ODCObserveFieldMatchValueTypes;
-}
+	interface MatchObject extends BaseKeyPath {
+		value: ObserveFieldMatchValueTypes;
+	}
 
-export interface ODCObserveFieldArgs extends ODCBaseKeyPath {
-	retryInterval?: number; /** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
-	retryTimeout?: number; /** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
-	match?: ODCMatchObject | ODCObserveFieldMatchValueTypes;
-}
+	export interface ObserveFieldArgs extends BaseKeyPath {
+		/** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
+		retryInterval?: number;
+		/** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
+		retryTimeout?: number;
+		match?: MatchObject | ObserveFieldMatchValueTypes;
+	}
 
-export interface ODCSetValueAtKeyPathArgs extends ODCBaseKeyPath {
-	value: any;
-}
+	export interface SetValueAtKeyPathArgs extends BaseKeyPath {
+		value: any;
+	}
 
-export interface ODCReadRegistryArgs {
-	values?: {
-		[section: string]: string[] | string
-	};
-}
+	export interface ReadRegistryArgs {
+		values?: {
+			[section: string]: string[] | string
+		};
+	}
 
-export interface ODCWriteRegistryArgs {
-	values: {
-		[section: string]: {[sectionItemKey: string]: string | null}
-	};
-}
+	export interface WriteRegistryArgs {
+		values: {
+			[section: string]: {[sectionItemKey: string]: string | null}
+		};
+	}
 
-export interface ODCDeleteRegistrySectionsArgs {
-	sections: string[] | string;
-	allowEntireRegistryDelete?: boolean;
-}
+	export interface DeleteRegistrySectionsArgs {
+		sections: string[] | string;
+		allowEntireRegistryDelete?: boolean;
+	}
 
-// tslint:disable-next-line: no-empty-interface
-export interface ODCDeleteEntireRegistrySectionsArgs {}
+	// tslint:disable-next-line: no-empty-interface
+	export interface DeleteEntireRegistrySectionsArgs {}
 
-// tslint:disable-next-line: no-empty-interface
-export interface ODCGetServerHostArgs {}
+	// tslint:disable-next-line: no-empty-interface
+	export interface GetServerHostArgs {}
 
-export type ODCRequestArgs = ODCCallFuncArgs | ODCGetFocusedNodeArgs | ODCGetValueAtKeyPathArgs | ODCGetValuesAtKeyPathsArgs | ODCHasFocusArgs | ODCIsInFocusChainArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs | ODCHandshakeArgs | ODCReadRegistryArgs | ODCWriteRegistryArgs | ODCDeleteRegistrySectionsArgs | ODCDeleteEntireRegistrySectionsArgs;
+	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueAtKeyPathArgs | GetValuesAtKeyPathsArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueAtKeyPathArgs | HandshakeArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs;
 
-export interface ODCRequestOptions {
-	/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
-	timeout?: number;
-}
+	export interface RequestOptions {
+		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
+		timeout?: number;
+	}
 
-export interface ODCRequest {
-	id: string;
-	callbackPort: number;
-	args: ODCRequestArgs;
-	type: ODCRequestTypes;
-	settings: {
-		logLevel: ODCLogLevels
-	};
-	callback?: (req: express.Request) => void;
-	version: string;
-}
+	export interface Request {
+		id: string;
+		callbackPort: number;
+		args: RequestArgs;
+		type: RequestTypes;
+		settings: {
+			logLevel: LogLevels
+		};
+		callback?: (req: express.Request) => void;
+		version: string;
+	}
 
-export interface ODCNodeRepresentation {
-	// Allow other fields
-	[key: string]: any;
-	change: {
-		Index1: number
-		Index2: number
-		Operation: string
-	};
-	childRenderOrder?: 'renderFirst' | 'renderLast';
-	children: ODCNodeRepresentation[];
-	clippingRect?: [number, number, number, number];
-	enableRenderTracking?: boolean;
-	focusedChild: ODCNodeRepresentation;
-	focusable: boolean;
-	id: string;
-	inheritParentOpacity?: boolean;
-	inheritParentTransform?: boolean;
-	muteAudioGuide?: boolean;
-	opacity?: number;
-	renderPass?: number;
-	renderTracking?: 'none' | 'partial' | 'full';
-	rotation?: number;
-	scale?: [number, number];
-	scaleRotateCenter?: [number, number];
-	subtype: string;
-	translation?: [number, number];
-	visible?: boolean;
+	export interface NodeRepresentation {
+		// Allow other fields
+		[key: string]: any;
+		change: {
+			Index1: number
+			Index2: number
+			Operation: string
+		};
+		childRenderOrder?: 'renderFirst' | 'renderLast';
+		children: NodeRepresentation[];
+		clippingRect?: [number, number, number, number];
+		enableRenderTracking?: boolean;
+		focusedChild: NodeRepresentation;
+		focusable: boolean;
+		id: string;
+		inheritParentOpacity?: boolean;
+		inheritParentTransform?: boolean;
+		muteAudioGuide?: boolean;
+		opacity?: number;
+		renderPass?: number;
+		renderTracking?: 'none' | 'partial' | 'full';
+		rotation?: number;
+		scale?: [number, number];
+		scaleRotateCenter?: [number, number];
+		subtype: string;
+		translation?: [number, number];
+		visible?: boolean;
+	}
 }

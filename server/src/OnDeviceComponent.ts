@@ -8,7 +8,7 @@ import { getStackTrace } from 'get-stack-trace';
 import { RokuDevice } from './RokuDevice';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import { ODCRequest, ODCCallFuncArgs, ODCRequestOptions, ODCGetValueAtKeyPathArgs, ODCGetValuesAtKeyPathsArgs, ODCObserveFieldArgs, ODCSetValueAtKeyPathArgs, ODCRequestTypes, ODCRequestArgs, ODCIsInFocusChainArgs, ODCHasFocusArgs, ODCNodeRepresentation, ODCGetFocusedNodeArgs, ODCWriteRegistryArgs, ODCReadRegistryArgs, ODCDeleteEntireRegistrySectionsArgs, ODCDeleteRegistrySectionsArgs, ODCGetServerHostArgs } from '.';
+import { ODC } from '.';
 
 export class OnDeviceComponent {
 	public device: RokuDevice;
@@ -18,7 +18,7 @@ export class OnDeviceComponent {
 	private callbackListenPort?: number;
 	private storedDeviceRegistry?: {};
 	private config?: ConfigOptions;
-	private sentRequests: { [key: string]: ODCRequest } = {};
+	private sentRequests: { [key: string]: ODC.Request } = {};
 	private app = this.setupExpress();
 	private server?: http.Server;
 
@@ -36,7 +36,7 @@ export class OnDeviceComponent {
 		return this.config?.OnDeviceComponent;
 	}
 
-	public async callFunc(args: ODCCallFuncArgs, options: ODCRequestOptions = {}): Promise<{
+	public async callFunc(args: ODC.CallFuncArgs, options: ODC.RequestOptions = {}): Promise<{
 		value: any;
 		timeTaken: number;
 	}> {
@@ -44,12 +44,12 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async getFocusedNode(args: ODCGetFocusedNodeArgs = {}, options: ODCRequestOptions = {}) {
+	public async getFocusedNode(args: ODC.GetFocusedNodeArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('getFocusedNode', args, options);
-		return result.body.node as ODCNodeRepresentation;
+		return result.body.node as ODC.NodeRepresentation;
 	}
 
-	public async getValueAtKeyPath(args: ODCGetValueAtKeyPathArgs, options: ODCRequestOptions = {}): Promise<{
+	public async getValueAtKeyPath(args: ODC.GetValueAtKeyPathArgs, options: ODC.RequestOptions = {}): Promise<{
 		found: boolean;
 		value: any;
 		timeTaken: number;
@@ -58,7 +58,7 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async getValuesAtKeyPaths(args: ODCGetValuesAtKeyPathsArgs, options: ODCRequestOptions = {}): Promise<{
+	public async getValuesAtKeyPaths(args: ODC.GetValuesAtKeyPathsArgs, options: ODC.RequestOptions = {}): Promise<{
 		[key: string]: any;
 		found: boolean;
 		timeTaken: number;
@@ -67,17 +67,17 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async hasFocus(args: ODCHasFocusArgs, options: ODCRequestOptions = {}): Promise<boolean> {
+	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}): Promise<boolean> {
 		const result = await this.sendRequest('hasFocus', args, options);
 		return result.body.hasFocus;
 	}
 
-	public async isInFocusChain(args: ODCIsInFocusChainArgs, options: ODCRequestOptions = {}): Promise<boolean> {
+	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}): Promise<boolean> {
 		const result = await this.sendRequest('isInFocusChain', args, options);
 		return result.body.isInFocusChain;
 	}
 
-	public async observeField(args: ODCObserveFieldArgs, options: ODCRequestOptions = {}): Promise<{
+	public async observeField(args: ODC.ObserveFieldArgs, options: ODC.RequestOptions = {}): Promise<{
 		/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not  */
 		observerFired: boolean;
 		value: any;
@@ -118,14 +118,14 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async setValueAtKeyPath(args: ODCSetValueAtKeyPathArgs, options: ODCRequestOptions = {}): Promise<{
+	public async setValueAtKeyPath(args: ODC.SetValueAtKeyPathArgs, options: ODC.RequestOptions = {}): Promise<{
 		timeTaken: number;
 	}> {
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
 		return result.body;
 	}
 
-	public async readRegistry(args: ODCReadRegistryArgs = {}, options: ODCRequestOptions = {}): Promise<{
+	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}): Promise<{
 		values: {
 			[section: string]: {[sectionItemKey: string]: string}
 		}
@@ -134,25 +134,25 @@ export class OnDeviceComponent {
 		return result.body;
 	}
 
-	public async writeRegistry(args: ODCWriteRegistryArgs, options: ODCRequestOptions = {}): Promise<{}> {
+	public async writeRegistry(args: ODC.WriteRegistryArgs, options: ODC.RequestOptions = {}): Promise<{}> {
 		const result = await this.sendRequest('writeRegistry', args, options);
 		return result.body;
 	}
 
-	public async deleteRegistrySections(args: ODCDeleteRegistrySectionsArgs, options: ODCRequestOptions = {}): Promise<{}> {
+	public async deleteRegistrySections(args: ODC.DeleteRegistrySectionsArgs, options: ODC.RequestOptions = {}): Promise<{}> {
 		const result = await this.sendRequest('deleteRegistrySections', args, options);
 		return result.body;
 	}
 
-	public async deleteEntireRegistry(args: ODCDeleteEntireRegistrySectionsArgs = {}, options: ODCRequestOptions = {}): Promise<{}> {
-		const deleteSectionsArgs: ODCDeleteRegistrySectionsArgs = {
+	public async deleteEntireRegistry(args: ODC.DeleteEntireRegistrySectionsArgs = {}, options: ODC.RequestOptions = {}): Promise<{}> {
+		const deleteSectionsArgs: ODC.DeleteRegistrySectionsArgs = {
 			sections: [],
 			allowEntireRegistryDelete: true
 		};
 		return await this.deleteRegistrySections(deleteSectionsArgs, options);
 	}
 
-	public async getServerHost(args: ODCGetServerHostArgs = {}, options: ODCRequestOptions = {}): Promise<{
+	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}): Promise<{
 		host: string
 	}> {
 		const result = await this.sendRequest('getServerHost', args, options);
@@ -160,17 +160,17 @@ export class OnDeviceComponent {
 	}
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
-	private breakOutFieldFromKeyPath(args: ODCCallFuncArgs | ODCObserveFieldArgs | ODCSetValueAtKeyPathArgs) {
+	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.ObserveFieldArgs | ODC.SetValueAtKeyPathArgs) {
 		const keyPathParts = args.keyPath.split('.');
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}
 
-	private async sendRequest(type: ODCRequestTypes, args: ODCRequestArgs, options: ODCRequestOptions = {}) {
+	private async sendRequest(type: ODC.RequestTypes, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
 		const stackTrace = await getStackTrace();
 		await this.startServer();
 
 		const requestId = utils.randomStringGenerator();
-		const request: ODCRequest = {
+		const request: ODC.Request = {
 			id: requestId,
 			callbackPort: this.callbackListenPort!,
 			type: type,
