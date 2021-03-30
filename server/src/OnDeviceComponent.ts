@@ -197,11 +197,15 @@ export class OnDeviceComponent {
 			const host = this.device.getCurrentDeviceConfig().host;
 			this.debugLog(`Sending request to ${host} with body: ${body}`);
 
-			client.on('message', function (message, remote) {
+			client.on('message', (message) => {
 				const json = JSON.parse(message.toString());
 				let receivedId = json.id;
 				if (receivedId !== requestId) {
-					reject(`Received id '${receivedId}' did not match request id '${requestId}'`);
+					const rejectMessage = `Received id '${receivedId}' did not match request id '${requestId}'`;
+					this.debugLog(rejectMessage);
+					reject(rejectMessage);
+				} else {
+					this.debugLog(`Roku acknowledged requested id '${requestId}'`);
 				}
 				clearInterval(retryInterval);
 				client?.close();
@@ -225,14 +229,11 @@ export class OnDeviceComponent {
 		try {
 			return await utils.promiseTimeout(promise, timeout);
 		} catch(e) {
-			let message: string;
 			if (e.name === 'Timeout') {
 				const logs = await this.device.getTelnetLog();
-				message = `${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}\nLog contents:\n${logs}`;
-			} else {
-				message = e
+				e = new Error(`${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}\nLog contents:\n${logs}`);
 			}
-			throw new Error(message);
+			throw e;
 		} finally {
 			clearInterval(retryInterval);
 			client?.close();
