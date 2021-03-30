@@ -57,11 +57,6 @@ export namespace ODC {
 		};
 	}
 
-	export interface HandshakeArgs {
-		version: string;
-		logLevel: LogLevels;
-	}
-
 	export interface HasFocusArgs extends BaseKeyPath {}
 
 	export interface IsInFocusChainArgs extends BaseKeyPath {}
@@ -114,7 +109,7 @@ export namespace ODC {
 	// tslint:disable-next-line: no-empty-interface
 	export interface GetServerHostArgs {}
 
-	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueAtKeyPathArgs | GetValuesAtKeyPathsArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueAtKeyPathArgs | HandshakeArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs;
+	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueAtKeyPathArgs | GetValuesAtKeyPathsArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueAtKeyPathArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs;
 
 	export interface RequestOptions {
 		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */

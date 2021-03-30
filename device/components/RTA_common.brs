@@ -197,6 +197,23 @@ function findChildNodeWithId(parentNode as Object, id as String, maxDepth = 10 a
 	return Invalid
 end function
 
+' /**
+' * @description Gets the index position for this node in its parent
+' * @param {Node} node Object to get parent from
+' * @return {Integer} Result or -1
+' */
+function getNodeParentIndex(node as Object) as Integer
+	if isNode(node) then
+		parent = node.getParent()
+		for i = 0 to getLastIndex(parent)
+			if node.isSameNode(parent.getChild(i)) then
+				return i
+			end if
+		end for
+	end if
+	return -1
+end function
+
 '*************************************************************************
 '#endregion *** SG NODE UTILITIES
 '*************************************************************************
