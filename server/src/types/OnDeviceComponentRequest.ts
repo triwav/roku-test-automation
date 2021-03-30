@@ -30,7 +30,7 @@ export namespace ODC {
 	interface BaseKeyPath {
 		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
 		base?: KeyPathBaseTypes;
-		/** Holds the hierarchy value with each level separated by dot for ex: videoNode.title to what you are interested in getting the value form or written to. */
+		/** Holds the hierarchy value with each level separated by dot for ex: videoNode.title to what you are interested in getting the value from or written to. */
 		keyPath: string;
 	}
 
