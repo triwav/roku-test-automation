@@ -1,4 +1,5 @@
-import { ODCLogLevels } from './OnDeviceComponentRequest';
+import { ODC } from './OnDeviceComponentRequest';
+
 
 export enum ConfigBaseKeyEnum {
 	ECP,
@@ -59,7 +60,7 @@ export interface ECPConfigOptions {
 
 export interface OnDeviceComponentConfigOptions {
 	/** Device side log output level */
-	logLevel?: ODCLogLevels;
+	logLevel?: ODC.LogLevels;
 
 	/** Enable debug logging on the server side */
 	serverDebugLogging?: boolean;

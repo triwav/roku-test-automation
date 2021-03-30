@@ -3,7 +3,7 @@ const expect = chai.expect;
 import * as assert from 'assert';
 
 import { utils } from './utils';
-import { ODCNodeRepresentation, ODCSetValueAtKeyPathArgs } from './types/OnDeviceComponentRequest';
+import { ODC } from './types/OnDeviceComponentRequest';
 import { ecp, odc, device } from '.';
 
 describe('OnDeviceComponent', function () {
@@ -478,7 +478,7 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODCSetValueAtKeyPathArgs) {
+	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODC.SetValueAtKeyPathArgs) {
 		if (args.expectedStartingValue !== undefined) {
 			const {value: actualStartingValue} = await odc.getValueAtKeyPath(args);
 			expect(actualStartingValue).to.equal(args.expectedStartingValue, `${args.base}.${args.keyPath} did not match expected value before set`);

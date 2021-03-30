@@ -4,18 +4,24 @@ import * as Mocha from 'mocha';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
 
-import { ConfigOptions, DeviceConfigOptions, ConfigBaseKeyTypes } from './types/ConfigOptions';
+import { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
 
 class Utils {
+	/** Provides a way to easily get a path to device files for external access */
 	public getDeviceFilesPath() {
 		return path.resolve(__dirname + '/../../device');
+	}
+
+	/** Provides a way to easily get a path to server files for external access */
+	public getServerFilesPath() {
+		return path.resolve(__dirname + '/../');
 	}
 
 	public parseJsonFile(filePath: string) {
 		return JSON.parse(fsExtra.readFileSync(filePath, 'utf-8'));
 	}
 
-	public getMatchingDevices(config: ConfigOptions, deviceSelector: {}): { [key: string]: DeviceConfigOptions}  {
+	public getMatchingDevices(config: ConfigOptions, deviceSelector: {}): { [key: string]: DeviceConfigOptions} {
 		const matchingDevices = {};
 		config.RokuDevice.devices.forEach((device, index) => {
 			for (const key in deviceSelector) {

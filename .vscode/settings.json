@@ -10,6 +10,8 @@
 	"brightscript.output.focusOnLaunch": false,
 	"search.exclude": {
 		"**/node_modules": true,
+		"**/coverage": true,
+		"**/release": true,
 		"**/dist": true
 	}
 }
