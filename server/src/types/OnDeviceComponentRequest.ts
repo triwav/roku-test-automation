@@ -28,8 +28,9 @@ export namespace ODC {
 	export declare type LogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
 
 	interface BaseKeyPath {
-		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified  */
+		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
 		base?: KeyPathBaseTypes;
+		/** Holds the hierarchy value with each level separated by dot for ex: videoNode.title to what you are interested in getting the value from or written to. */
 		keyPath: string;
 	}
 
@@ -39,7 +40,9 @@ export namespace ODC {
 	}
 
 	export interface CallFuncArgs extends BaseKeyPath {
+		/** Name of the function that needs to be called. */
 		funcName: string;
+		/** List of input arguments that need to be passed to the function. */
 		funcParams?: any[];
 	}
 
@@ -48,6 +51,7 @@ export namespace ODC {
 	export interface GetValueAtKeyPathArgs extends BaseKeyPath, MaxChildDepth {}
 
 	export interface GetValuesAtKeyPathsArgs {
+		/** Retrieve multiple values with a single request. A list of the individual getValueAtKeyPath args */
 		requests: {
 			[key: string]: GetValueAtKeyPathArgs;
 		};
@@ -61,6 +65,7 @@ export namespace ODC {
 	export type ObserveFieldMatchValueTypes = string | number | boolean;
 
 	interface MatchObject extends BaseKeyPath {
+		/** If the match value is passed in then the observer will be fired when the field value equals to the value in match */
 		value: ObserveFieldMatchValueTypes;
 	}
 
@@ -73,23 +78,28 @@ export namespace ODC {
 	}
 
 	export interface SetValueAtKeyPathArgs extends BaseKeyPath {
+		/** Value that needs to be set to the field. Field path is defined by key path. */
 		value: any;
 	}
 
 	export interface ReadRegistryArgs {
+		/** List of Section keys of which we need data to be read, if empty then it will return entire contents of the registry */
 		values?: {
 			[section: string]: string[] | string
 		};
 	}
 
 	export interface WriteRegistryArgs {
+		/** Contains data that will be written to registry. If null is passed for a sectionItemKey that key will be deleted. If null is passed for a section that entire section will be deleted. */
 		values: {
 			[section: string]: {[sectionItemKey: string]: string | null}
 		};
 	}
 
 	export interface DeleteRegistrySectionsArgs {
+		/** Contains list of section keys that needs to be deleted. */
 		sections: string[] | string;
+		/** If true deletes the entry registry. */
 		allowEntireRegistryDelete?: boolean;
 	}
 
