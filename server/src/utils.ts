@@ -1,6 +1,6 @@
 import * as fsExtra from 'fs-extra';
 import * as path from 'path';
-import * as Mocha from 'mocha';
+import type * as Mocha from 'mocha';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
 
@@ -114,19 +114,19 @@ class Utils {
 
 	public getTestTitlePath(contextOrSuite: Mocha.Context | Mocha.Suite) {
 		let ctx: Mocha.Context;
-		if (contextOrSuite instanceof Mocha.Context) {
-			ctx = contextOrSuite;
-		} else if (contextOrSuite instanceof Mocha.Suite) {
-			ctx = contextOrSuite.ctx;
+		if (contextOrSuite.constructor.name === 'Context') {
+			ctx = contextOrSuite as Mocha.Context;
+		} else if (contextOrSuite.constructor.name === 'Suite') {
+			ctx = contextOrSuite.ctx as Mocha.Context;
 		} else {
 			throw new Error('Neither Mocha.Context or Mocha.Suite passed in');
 		}
 
-		if (!(ctx.test instanceof Mocha.Test)) {
+		if (!(ctx.test?.constructor.name === 'Test')) {
 			throw new Error('Mocha.Context did not contain test. At least surrounding Mocha.Suite must use non arrow function');
 		}
 
-		return ctx.test.titlePath();
+		return ctx.test?.titlePath();
 	}
 
 	public generateFileNameForTest(contextOrSuite: Mocha.Context | Mocha.Suite, extension: string) {
