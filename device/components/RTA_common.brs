@@ -253,7 +253,8 @@ end function
 ' * @return {Dynamic} The result of the drill down process
 ' */
 function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid as Dynamic, validator = isNotInvalid as Function) as Dynamic
-	if NOT isKeyedValueType(base) OR keyPath = "" then return fallback
+	if NOT isKeyedValueType(base) AND NOT isNonEmptyArray(base) then return fallback
+	if keyPath = "" then return fallback
 
 	keys = keyPath.tokenize(".")
 	level = base
@@ -332,6 +333,17 @@ function setValueAtKeyPath(base as Object, keyPath as String, value as Dynamic) 
 end function
 
 ' /**
+' * @description Used to find a nested Boolean value in an object
+' * @param {Object} aa Object to drill down into.
+' * @param {String} keyPath A dot notation based string to the expected value.
+' * @param {Boolean} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
+' * @return {Dynamic} The result of the drill down process
+' */
+function getBooleanAtKeyPath(aa as Object, keyPath as String, fallback = false as Boolean)
+	return getValueAtKeyPath(aa, keyPath, fallback, isBoolean)
+end function
+
+' /**
 ' * @description Used to find a nested String value in an object
 ' * @param {Object} aa Object to drill down into.
 ' * @param {String} keyPath A dot notation based string to the expected value.
@@ -340,6 +352,17 @@ end function
 ' */
 function getStringAtKeyPath(aa as Object, keyPath as String, fallback = "" as String)
 	return getValueAtKeyPath(aa, keyPath, fallback, isNonEmptyString)
+end function
+
+' /**
+' * @description Used to find a nested Array value in an object
+' * @param {Object} aa Object to drill down into.
+' * @param {String} keyPath A dot notation based string to the expected value.
+' * @param {Dynamic} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
+' * @return {Dynamic} The result of the drill down process
+' */
+function getArrayAtKeyPath(aa as Object, keyPath as String, fallback = [] as Object)
+	return getValueAtKeyPath(aa, keyPath, fallback, isArray)
 end function
 
 '*************************************************************************
@@ -362,6 +385,18 @@ function getLastIndex(value as Object) as Integer
 		return value.count() - 1
 	end if
 	return -1
+end function
+
+
+' /**
+' * @description Gets all the children nodes of the supplied node
+' * @param {roSGNode} node The node to get children from.
+' * @return {Array} Array containing the child nodes retrieved.
+' */
+function getAllChildren(node as Object) as Object
+	children = []
+	if isNode(node) then children.append(node.getChildren(-1, 0))
+	return children
 end function
 
 '*************************************************************************

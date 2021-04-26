@@ -1,9 +1,11 @@
 sub init()
-	m.task = createNode("RTA_OnDeviceComponentTask")
+	m.task = m.top.createChild("RTA_OnDeviceComponentTask")
 	m.task.observeFieldScoped("renderThreadRequest", "onRenderThreadRequestChange")
 	m.task.control = "RUN"
 
 	m.activeObserveFieldRequests = {}
+
+	m.nodeReferences = {}
 end sub
 
 sub onRenderThreadRequestChange(event as Object)
@@ -32,6 +34,12 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processObserveFieldRequest(request)
 	else if requestType = "setValueAtKeyPath" then
 		response = processSetValueAtKeyPathRequest(args)
+	else if requestType = "storeNodeReferences" then
+		response = processStoreNodeReferencesRequest(args)
+	else if requestType = "getNodeReferences" then
+		response = processGetNodeReferencesRequest(args)
+	else if requestType = "deleteNodeReferences" then
+		response = processDeleteNodeReferencesRequest(args)
 	else
 		response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
 	end if
@@ -354,20 +362,143 @@ function processSetValueAtKeyPathRequest(args as Object) as Object
 	return {}
 end function
 
+function processStoreNodeReferencesRequest(args as Object) as Object
+	nodeReferencesKey = args.key
+
+	if NOT isNonEmptyString(nodeReferencesKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	end if
+
+	allNodes = []
+	allNodes.append(m.top.getAll())
+
+	flatTree = []
+	' A shortcut to access nodes that were added on the end to reduce iteration/time in those cases by quite a bit
+	registers = []
+
+	currentNodeReference = 0
+	allNodesCount = allNodes.count()
+	while currentNodeReference < allNodesCount
+		node = allNodes[currentNodeReference]
+		parent = node.getParent()
+		parentRef = -1
+
+		if parent <> Invalid then
+			' First check our registers to see if there is a node we added that might be the parent
+			for each potentialParentRef in registers
+				potentialParent = allNodes[potentialParentRef]
+				if parent.isSameNode(potentialParent) then
+					parentRef = potentialParentRef
+					exit for
+				end if
+			end for
+
+			' Tried using while loop and goto but caused device crash so using a bunch of nested ifs instead :(
+			if (parentRef < 0) then
+				' Next go through the other nodes backwards since parent is usually before the child
+				for potentialParentRef = currentNodeReference - 1 to 0 step -1
+					potentialParent = allNodes[potentialParentRef]
+					if parent.isSameNode(potentialParent) then
+						parentRef = potentialParentRef
+						exit for
+					end if
+				end for
+
+				if (parentRef < 0) then
+					' Then go through the nodes after this node
+					for potentialParentRef = currentNodeReference + 1 to allNodesCount
+						potentialParent = allNodes[potentialParentRef]
+						if parent.isSameNode(potentialParent) then
+							parentRef = potentialParentRef
+							exit for
+						end if
+					end for
+
+					if (parentRef < 0) then
+						' If we got all the way to here then we have a "special parent" and need to add it to allNodes and registers
+						parentRef = allNodes.count()
+						registers.push(parentRef)
+
+						allNodes.push(parent)
+						allNodesCount++
+					end if
+				end if
+			end if
+		end if
+
+		representation = {
+			"id": node.id
+			"subtype": node.subtype()
+			"ref": currentNodeReference
+			"parentRef": parentRef
+		}
+
+		flatTree.push(representation)
+		currentNodeReference++
+	end while
+
+	m.nodeReferences[nodeReferencesKey] = allNodes
+	return {
+		"flatTree": flatTree
+	}
+end function
+
+function processGetNodeReferencesRequest(args as Object) as Object
+	nodeReferencesKey = args.key
+	if NOT isNonEmptyString(nodeReferencesKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	end if
+
+	nodeReferences = m.nodeReferences[nodeReferencesKey]
+	if NOT isArray(nodeReferences) then
+		return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
+	end if
+
+	requestedNodes = {}
+	indexes = getArrayAtKeyPath(args, "indexes")
+	if indexes.isEmpty() then
+		' Note in bigger apps this is a pretty exspensive call. Use cautiously
+		for index = 0 to getLastIndex(nodeReferences)
+			requestedNodes[index.toStr()] = nodeReferences[index]
+		end for
+	else
+		for each index in indexes
+			requestedNodes[index.toStr()] = nodeReferences[index]
+		end for
+	end if
+
+	return {
+		nodes: requestedNodes
+	}
+end function
+
+function processDeleteNodeReferencesRequest(args as Object) as Object
+	nodeReferencesKey = args.key
+	if NOT isString(nodeReferencesKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	end if
+	m.nodeReferences.delete(nodeReferencesKey)
+
+	return {}
+end function
+
 function getBaseObject(args as Object) as Dynamic
 	baseType = args.base
 	if baseType = "global" then return m.global
 	if baseType = "scene" then return m.top.getScene()
+	if baseType = "nodeRef" then
+		return m.nodeReferences[getStringAtKeyPath(args, "key")]
+	end if
 	return Invalid
 end function
 
 sub sendBackResponse(request as Object, response as Object)
-	response = recursivelyConvertValueToJsonCompatible(response, getNumberAtKeyPath(request, "args.maxChildDepth"))
-	response.id = request.id
-	if request.timespan <> Invalid then
-		response["timeTaken"] = request.timespan.TotalMilliseconds()
+	if getBooleanAtKeyPath(request, "args.convertResponseToJsonCompatible", true) then
+		response = recursivelyConvertValueToJsonCompatible(response, getNumberAtKeyPath(request, "args.responseMaxChildDepth"))
 	end if
 
+	response.id = request.id
+	response["timeTaken"] = request.timespan.totalMilliseconds()
 	m.task.renderThreadResponse = response
 end sub
 

@@ -2,6 +2,7 @@
 	"typescript.preferences.quoteStyle": "single",
 	"cSpell.words": [
 		"ODCIs",
+		"Renderable",
 		"deeplinking",
 		"findnode",
 		"portfinder",
