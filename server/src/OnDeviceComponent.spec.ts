@@ -1,4 +1,5 @@
 import * as chai from 'chai';
+chai.use(require('chai-arrays'));
 const expect = chai.expect;
 import * as assert from 'assert';
 
@@ -6,10 +7,102 @@ import { utils } from './utils';
 import { ODC } from './types/OnDeviceComponentRequest';
 import { ecp, odc, device } from '.';
 
+// Used to unwrap promise return types to get the true value
+type Unwrap<T> = T extends Promise<infer U> ? U : T extends (...args: any) => Promise<infer U> ? U : T extends (...args: any) => infer U ? U : T;
+
 describe('OnDeviceComponent', function () {
 	before(async () => {
 		await device.deploy({rootDir: '../testProject'}, {preventMultipleDeployments: true});
+
 		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
+	});
+
+	describe('nodeReferences', function () {
+		describe('storeNodeReferences', function () {
+			let storeResult: Unwrap<typeof odc.storeNodeReferences>;
+			before(async () => {
+				storeResult = await odc.storeNodeReferences();
+			});
+
+			it('should have the correct fields for flatTree', async () => {
+				expect(storeResult.flatTree).to.be.array();
+				for (const tree of storeResult.flatTree) {
+					expect(tree.id).to.be.string;
+					expect(tree.subtype).to.be.string
+					expect(tree.ref).to.be.a('number');
+					expect(tree.parentRef).to.be.a('number');
+				}
+			});
+
+			it('should have the correct fields for rootTree', async () => {
+				expect(storeResult.rootTree).to.be.array();
+				for (const tree of storeResult.rootTree) {
+					expect(tree.id).to.be.string;
+					expect(tree.subtype).to.be.string
+					expect(tree.ref).to.be.a('number');
+					expect(tree.parentRef).to.be.a('number');
+					expect(tree.children).to.be.array;
+				}
+			});
+		});
+
+		describe('getNodeReferences', function () {
+			let storeResult: Unwrap<typeof odc.storeNodeReferences>;
+			before(async () => {
+				storeResult = await odc.storeNodeReferences();
+			});
+
+			it('should get only the requested to nodes with the right return types', async () => {
+				const indexes = [] as number[];
+				for (const index in storeResult.flatTree) {
+					if (index === '12') break;
+					indexes.push(+index);
+				}
+				const getResult = await odc.getNodeReferences({
+					indexes: indexes
+				});
+				expect(getResult.nodes).to.be.array;
+				expect(Object.keys(getResult.nodes).length).to.equal(indexes.length);
+				for (const index of indexes) {
+					const node = getResult.nodes[index];
+
+					expect(node).to.be.ok;
+					expect(node.id).to.equal(storeResult.flatTree[index].id);
+					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
+				}
+			});
+
+			it('should return all values if we did not provided a list of indexes', async () => {
+				const getResult = await odc.getNodeReferences({
+					indexes: []
+				});
+				expect(getResult.nodes).to.be.array;
+				expect(Object.keys(getResult.nodes).length).to.equal(storeResult.flatTree.length);
+				for (const index in storeResult.flatTree) {
+					const node = getResult.nodes[index];
+
+					expect(node).to.be.ok;
+					expect(node.id).to.equal(storeResult.flatTree[index].id);
+					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
+				}
+			});
+		});
+
+		describe('deleteNodeReferences', function () {
+			it('should successfully delete the node references for the default key', async () => {
+				await odc.storeNodeReferences();
+				await odc.deleteNodeReferences();
+				try {
+					await odc.getNodeReferences({
+						indexes: []
+					});
+				} catch (e) {
+					// failed as expected
+					return;
+				}
+				assert.fail('Should have thrown an exception on the getNodeReferences if the references were removed');
+			});
+		});
 	});
 
 	describe('getValueAtKeyPath', function () {
@@ -70,13 +163,12 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should not include children if maxChildDepth set to zero', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', maxChildDepth: 0});
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', responseMaxChildDepth: 0});
 			expect(value.children).to.be.undefined;
 		});
 
-
 		it('should include children to specified depth', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', maxChildDepth: 2});
+			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', responseMaxChildDepth: 2});
 			expect(value.children).to.not.be.empty;
 			for (const child of value.children) {
 				for (const subchild of child.children) {
@@ -84,6 +176,15 @@ describe('OnDeviceComponent', function () {
 					expect(subchild.children).to.be.undefined;
 				}
 			}
+		});
+
+		it('should work with nodeRef base', async () => {
+			const storeResult = await odc.storeNodeReferences();
+			const key = 10;
+			const storeNode = storeResult.flatTree[key];
+			const {value} = await odc.getValueAtKeyPath({base: 'nodeRef', keyPath: `${key}`});
+			expect(value.id).to.equal(storeNode.id);
+			expect(value.subtype).to.equal(storeNode.subtype);
 		});
 	});
 
@@ -112,12 +213,12 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should not include children if maxChildDepth set to zero', async () => {
-			const {children} = await odc.getFocusedNode({maxChildDepth: 0});
+			const {children} = await odc.getFocusedNode({responseMaxChildDepth: 0});
 			expect(children).to.be.undefined;
 		});
 
 		it('should include children to specified depth', async () => {
-			const {children} = await odc.getFocusedNode({maxChildDepth: 1});
+			const {children} = await odc.getFocusedNode({responseMaxChildDepth: 1});
 			expect(children).to.not.be.empty;
 			for (const child of children) {
 				// We only requested 1 so make sure it only returned a single level
@@ -196,7 +297,7 @@ describe('OnDeviceComponent', function () {
 				value: updateValue
 			});
 
-			const {found, value} = await odc.getValueAtKeyPath({keyPath: nodeKey, maxChildDepth: 1});
+			const {found, value} = await odc.getValueAtKeyPath({keyPath: nodeKey, responseMaxChildDepth: 1});
 			expect(found).to.be.true;
 			const childrenResult = value.children;
 			expect(childrenResult.length).to.equal(children.length);

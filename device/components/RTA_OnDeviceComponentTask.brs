@@ -19,13 +19,16 @@ sub runTaskThread()
 	m.activeTransfers = {}
 	m.validRequestTypes = {
 		"callFunc": {}
+		"deleteNodeReferences": {}
 		"getFocusedNode": {}
+		"getNodeReferences": {}
 		"getValueAtKeyPath": {}
 		"getValuesAtKeyPaths": {}
 		"hasFocus": {}
 		"isInFocusChain": {}
 		"observeField": {}
 		"setValueAtKeyPath": {}
+		"storeNodeReferences": {}
 		"readRegistry": {
 			"handler": processReadRegistryRequest
 		}

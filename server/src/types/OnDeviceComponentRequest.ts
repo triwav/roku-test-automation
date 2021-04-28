@@ -3,9 +3,10 @@ import * as express from 'express';
 export namespace ODC {
 	export enum RequestEnum {
 		callFunc,
+		deleteNodeReferences,
 		deleteRegistrySections,
 		getFocusedNode,
-		getRoots,
+		getNodeReferences,
 		getServerHost,
 		getValueAtKeyPath,
 		getValuesAtKeyPaths,
@@ -15,40 +16,52 @@ export namespace ODC {
 		observeField,
 		readRegistry,
 		setValueAtKeyPath,
+		storeNodeReferences,
 		writeRegistry,
 	}
 	export type RequestTypes = keyof typeof RequestEnum;
 
-	export enum KeyPathBaseEnum {
+	export enum BaseEnum {
 		global,
-		scene
+		scene,
+		nodeRef
 	}
-	export type KeyPathBaseTypes = keyof typeof KeyPathBaseEnum;
+	export type BaseTypes = keyof typeof BaseEnum;
 
 	export declare type LogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
 
-	interface BaseKeyPath {
+	export interface BaseArgs {
 		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
-		base?: KeyPathBaseTypes;
+		base?: BaseTypes;
+
+		/** If base is 'nodeRef' this is the key that we used to store the node references on. If one isn't provided we use the automatically generated one */
+		key?: string;
+	}
+
+	export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
 		/** Holds the hierarchy value with each level separated by dot for ex: videoNode.title to what you are interested in getting the value from or written to. */
 		keyPath: string;
+
+		/** We have to convert nodes before converting to json. If this isn't needed then it causes a fairly significant overhead */
+		convertResponseToJsonCompatible?: boolean;
 	}
 
 	interface MaxChildDepth {
 		/** Controls how deep we'll recurse into node's tree structure. Defaults to 0 */
-		maxChildDepth?: number;
+		responseMaxChildDepth?: number;
 	}
 
 	export interface CallFuncArgs extends BaseKeyPath {
 		/** Name of the function that needs to be called. */
 		funcName: string;
+
 		/** List of input arguments that need to be passed to the function. */
 		funcParams?: any[];
 	}
 
 	export interface GetFocusedNodeArgs extends MaxChildDepth {}
 
-	export interface GetValueAtKeyPathArgs extends BaseKeyPath, MaxChildDepth {}
+	export interface GetValueAtKeyPathArgs extends BaseKeyPath {}
 
 	export interface GetValuesAtKeyPathsArgs {
 		/** Retrieve multiple values with a single request. A list of the individual getValueAtKeyPath args */
@@ -61,6 +74,24 @@ export namespace ODC {
 
 	export interface IsInFocusChainArgs extends BaseKeyPath {}
 
+	export interface StoreNodeReferences {
+		/** Key that we will store the node references on. If one isn't provided we use the automatically generated one */
+		key?: string;
+	}
+
+	export interface GetNodeReferences {
+		/** Key that the references were stored on. If one isn't provided we use the automatically generated one */
+		key?: string;
+
+		/** indexes in the array of which nodes we want to retrieve */
+		indexes: number[]
+	}
+
+	export interface DeleteNodeReferences {
+		/** Key that the references were stored on */
+		key?: string;
+	}
+
 	// TODO build out to support more complicated types
 	export type ObserveFieldMatchValueTypes = string | number | boolean;
 
@@ -72,8 +103,11 @@ export namespace ODC {
 	export interface ObserveFieldArgs extends BaseKeyPath {
 		/** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
 		retryInterval?: number;
+
 		/** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
 		retryTimeout?: number;
+
+		/** If provided will only return when this matches (including if it already equals that value) */
 		match?: MatchObject | ObserveFieldMatchValueTypes;
 	}
 
@@ -99,6 +133,7 @@ export namespace ODC {
 	export interface DeleteRegistrySectionsArgs {
 		/** Contains list of section keys that needs to be deleted. */
 		sections: string[] | string;
+
 		/** If true deletes the entry registry. */
 		allowEntireRegistryDelete?: boolean;
 	}
@@ -155,5 +190,25 @@ export namespace ODC {
 		subtype: string;
 		translation?: [number, number];
 		visible?: boolean;
+	}
+
+	export interface NodeTree {
+		id: string;
+
+		/** What type of node this as returned by node.subtype() */
+		subtype: string;
+
+		/** This is the reference to the index it was stored at that we can use in later calls. If -1 we don't have one. */
+		ref: number;
+
+		/** Same as ref but for the parent  */
+		parentRef: number;
+
+		children?: NodeTree[];
+	}
+
+	export interface ReturnTimeTaken {
+		/** How this request took to run on the device */
+		timeTaken: number;
 	}
 }

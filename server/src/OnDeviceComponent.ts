@@ -21,6 +21,7 @@ export class OnDeviceComponent {
 	private sentRequests: { [key: string]: ODC.Request } = {};
 	private app = this.setupExpress();
 	private server?: http.Server;
+	private defaultNodeReferencesKey = '';
 
 	constructor(device: RokuDevice, config?: ConfigOptions) {
 		this.config = config;
@@ -36,12 +37,14 @@ export class OnDeviceComponent {
 		return this.config?.OnDeviceComponent;
 	}
 
-	public async callFunc(args: ODC.CallFuncArgs, options: ODC.RequestOptions = {}): Promise<{
-		value: any;
-		timeTaken: number;
-	}> {
+	//#region requests run on render thread
+	public async callFunc(args: ODC.CallFuncArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
 		const result = await this.sendRequest('callFunc', args, options);
-		return result.body;
+		return result.body as {
+			value: any
+		} & ODC.ReturnTimeTaken;
 	}
 
 	public async getFocusedNode(args: ODC.GetFocusedNodeArgs = {}, options: ODC.RequestOptions = {}) {
@@ -49,40 +52,48 @@ export class OnDeviceComponent {
 		return result.body.node as ODC.NodeRepresentation;
 	}
 
-	public async getValueAtKeyPath(args: ODC.GetValueAtKeyPathArgs, options: ODC.RequestOptions = {}): Promise<{
-		found: boolean;
-		value: any;
-		timeTaken: number;
-	}> {
+	public async getValueAtKeyPath(args: ODC.GetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
 		const result = await this.sendRequest('getValueAtKeyPath', args, options);
-		return result.body;
+		return result.body as {
+			found: boolean;
+			value: any;
+		} & ODC.ReturnTimeTaken;
 	}
 
-	public async getValuesAtKeyPaths(args: ODC.GetValuesAtKeyPathsArgs, options: ODC.RequestOptions = {}): Promise<{
-		[key: string]: any;
-		found: boolean;
-		timeTaken: number;
-	}> {
+	public async getValuesAtKeyPaths(args: ODC.GetValuesAtKeyPathsArgs, options: ODC.RequestOptions = {}) {
+		for (const key in args.requests) {
+			const requestArgs = args.requests[key];
+			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
+		}
+
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
-		return result.body;
+		return result.body as {
+			[key: string]: any;
+			found: boolean;
+		} & ODC.ReturnTimeTaken;
 	}
 
-	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}): Promise<boolean> {
+	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		args.convertResponseToJsonCompatible = false;
 		const result = await this.sendRequest('hasFocus', args, options);
-		return result.body.hasFocus;
+		return result.body.hasFocus as boolean;
 	}
 
-	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}): Promise<boolean> {
+	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		args.convertResponseToJsonCompatible = false;
 		const result = await this.sendRequest('isInFocusChain', args, options);
-		return result.body.isInFocusChain;
+		return result.body.isInFocusChain as boolean;
 	}
 
-	public async observeField(args: ODC.ObserveFieldArgs, options: ODC.RequestOptions = {}): Promise<{
-		/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not  */
-		observerFired: boolean;
-		value: any;
-		timeTaken: number;
-	}> {
+	public async observeField(args: ODC.ObserveFieldArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
 		let match = args.match;
 		if (match !== undefined) {
 			// Check if it's an object. Also have to check constructor as array is also an instanceof Object, make sure it has the keyPath key
@@ -115,49 +126,114 @@ export class OnDeviceComponent {
 		args.retryTimeout = retryTimeout;
 
 		const result = await this.sendRequest('observeField', this.breakOutFieldFromKeyPath(args), options);
-		return result.body;
+		return result.body as {
+			/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not */
+			observerFired: boolean;
+			value: any;
+		} & ODC.ReturnTimeTaken;
 	}
 
-	public async setValueAtKeyPath(args: ODC.SetValueAtKeyPathArgs, options: ODC.RequestOptions = {}): Promise<{
-		timeTaken: number;
-	}> {
+	public async setValueAtKeyPath(args: ODC.SetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		args.convertResponseToJsonCompatible = false;
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
-		return result.body;
+		return result.body as ODC.ReturnTimeTaken;
 	}
 
-	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}): Promise<{
-		values: {
-			[section: string]: {[sectionItemKey: string]: string}
+	private conditionallyAddDefaultNodeReferenceKey(args: ODC.BaseArgs) {
+		if (!args.key) {
+			if (!args.base || args.base === 'nodeRef') {
+				if(!this.defaultNodeReferencesKey) {
+					this.defaultNodeReferencesKey = utils.randomStringGenerator();
+				}
+				args.key = this.defaultNodeReferencesKey;
+			}
 		}
-	}> {
+	}
+
+	public async storeNodeReferences(args: ODC.StoreNodeReferences = {}, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		(args as any).convertResponseToJsonCompatible = false;
+		const result = await this.sendRequest('storeNodeReferences', args, options);
+		const body = result.body as {
+			flatTree: ODC.NodeTree[];
+			rootTree: ODC.NodeTree[];
+		} & ODC.ReturnTimeTaken;
+
+		const rootTree = [] as ODC.NodeTree[];
+		for (const tree of body.flatTree) {
+			if (tree.parentRef === -1) {
+				rootTree.push(tree);
+				continue;
+			}
+			const parentTree = body.flatTree[tree.parentRef]
+			if (!parentTree.children) {
+				parentTree.children = []
+			}
+			parentTree.children.push(tree);
+		}
+		body.rootTree = rootTree;
+		return body;
+	}
+
+	public async getNodeReferences(args: ODC.GetNodeReferences, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		const result = await this.sendRequest('getNodeReferences', args, options);
+		return result.body as {
+			nodes: {
+				[key: string]: ODC.NodeRepresentation
+			}
+		} & ODC.ReturnTimeTaken;
+	}
+
+	public async deleteNodeReferences(args: ODC.DeleteNodeReferences = {}, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		(args as any).convertResponseToJsonCompatible = false;
+		const result = await this.sendRequest('deleteNodeReferences', args, options);
+		return result.body as ODC.ReturnTimeTaken;
+	}
+	//#endregion
+
+	//#region requests run on task thread
+	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}) {
+		(args as any).convertResponseToJsonCompatible = false;
 		const result = await this.sendRequest('readRegistry', args, options);
-		return result.body;
+		return result.body as {
+			values: {
+				[section: string]: {[sectionItemKey: string]: string}
+			}
+		} & ODC.ReturnTimeTaken;
 	}
 
-	public async writeRegistry(args: ODC.WriteRegistryArgs, options: ODC.RequestOptions = {}): Promise<{}> {
+	public async writeRegistry(args: ODC.WriteRegistryArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('writeRegistry', args, options);
-		return result.body;
+		return result.body as {};
 	}
 
-	public async deleteRegistrySections(args: ODC.DeleteRegistrySectionsArgs, options: ODC.RequestOptions = {}): Promise<{}> {
+	public async deleteRegistrySections(args: ODC.DeleteRegistrySectionsArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('deleteRegistrySections', args, options);
-		return result.body;
+		return result.body as {};
 	}
 
-	public async deleteEntireRegistry(args: ODC.DeleteEntireRegistrySectionsArgs = {}, options: ODC.RequestOptions = {}): Promise<{}> {
+	public async deleteEntireRegistry(args: ODC.DeleteEntireRegistrySectionsArgs = {}, options: ODC.RequestOptions = {}) {
 		const deleteSectionsArgs: ODC.DeleteRegistrySectionsArgs = {
 			sections: [],
 			allowEntireRegistryDelete: true
 		};
-		return await this.deleteRegistrySections(deleteSectionsArgs, options);
+		return await this.deleteRegistrySections(deleteSectionsArgs, options) as {};
 	}
 
-	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}): Promise<{
-		host: string
-	}> {
+	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('getServerHost', args, options);
-		return result.body;
+		return result.body as {
+			host: string
+		};
 	}
+	//#endregion
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
 	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.ObserveFieldArgs | ODC.SetValueAtKeyPathArgs) {
@@ -293,7 +369,7 @@ export class OnDeviceComponent {
 	private setupExpress() {
 		const app = express();
 
-		app.use(express.json({limit: '2MB'}));
+		app.use(express.json({limit: '16MB'}));
 
 		app.post('/callback/:id', (req, res) => {
 			const id = req.params.id;
