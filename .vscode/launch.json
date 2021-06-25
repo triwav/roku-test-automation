@@ -34,7 +34,11 @@
 			"password": "${env:ROKU_PASSWORD}",
 			"internalConsoleOptions": "neverOpen",
 			"stopDebuggerOnAppExit": true,
-			"injectRaleTrackerTask": true
+			"injectRaleTrackerTask": true,
+			"injectRdbOnDeviceComponent": true,
+			"bsConst": {
+				"ENABLE_RTA": true
+			}
 		}, {
 			"type": "node",
 			"request": "launch",

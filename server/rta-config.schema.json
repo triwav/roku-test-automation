@@ -47,6 +47,14 @@
         "OnDeviceComponent": {
             "additionalProperties": false,
             "properties": {
+                "disableCallOriginationLine": {
+                    "description": "We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line",
+                    "type": "boolean"
+                },
+                "disableTelnet": {
+                    "description": "We normally pull the telnet logs if the request timed out. If the telnet connection is already in use then this just adds additional noise in the output",
+                    "type": "boolean"
+                },
                 "logLevel": {
                     "description": "Device side log output level",
                     "enum": [

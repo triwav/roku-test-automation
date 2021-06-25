@@ -270,12 +270,9 @@ sub sendBackError(request as Object, message as String)
 end sub
 
 sub sendBackResponse(request as Object, response as Dynamic)
-	if isAA(response) then
-		if NOT isBoolean(response.success) then response.success = true
-		formattedResponse = formatJson(response)
-	else
-		formattedResponse = response
-	end if
+	if NOT isBoolean(response.success) then response.success = true
+	response["requestType"] = request.type
+	formattedResponse = formatJson(response)
 
 	callbackUrl = getCallbackUrl(request)
 	http = createObject("roUrlTransfer")
@@ -286,5 +283,5 @@ sub sendBackResponse(request as Object, response as Dynamic)
 	if NOT http.asyncPostFromString(formattedResponse) then
 		logError("Could not send callback")
 	end if
-	m.activeTransfers[http.GetIdentity().toStr()] = http
+	m.activeTransfers[http.getIdentity().toStr()] = http
 end sub
