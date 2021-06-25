@@ -242,7 +242,10 @@ export class OnDeviceComponent {
 	}
 
 	private async sendRequest(type: ODC.RequestTypes, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
-		const stackTrace = await getStackTrace();
+		let stackTrace;
+		if (!this.getConfig()?.disableCallOriginationLine) {
+			stackTrace = await getStackTrace();
+		}
 		await this.startServer();
 
 		const requestId = utils.randomStringGenerator();
@@ -306,8 +309,17 @@ export class OnDeviceComponent {
 			return await utils.promiseTimeout(promise, timeout);
 		} catch(e) {
 			if (e.name === 'Timeout') {
-				const logs = await this.device.getTelnetLog();
-				e = new Error(`${request.type} request timed out after ${timeout}ms ${this.getCaller(stackTrace)}\nLog contents:\n${logs}`);
+				let message = `${request.type} request timed out after ${timeout}ms`
+
+				if (!this.getConfig()?.disableCallOriginationLine) {
+					message += `${this.getCaller(stackTrace)}\n`;
+				}
+
+				if (!this.getConfig()?.disableTelnet) {
+					const logs = await this.device.getTelnetLog();
+					message += `Log contents:\n${logs}`;
+				}
+				e = new Error(message);
 			}
 			throw e;
 		} finally {
