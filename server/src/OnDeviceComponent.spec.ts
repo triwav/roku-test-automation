@@ -41,7 +41,27 @@ describe('OnDeviceComponent', function () {
 					expect(tree.subtype).to.be.string
 					expect(tree.ref).to.be.a('number');
 					expect(tree.parentRef).to.be.a('number');
-					expect(tree.children).to.be.array;
+					expect(tree.children).to.be.array();
+				}
+			});
+
+			it('should have exactly one global node included in the response', async () => {
+				let globalCount = 0;
+				expect(storeResult.rootTree).to.be.array();
+				for (const tree of storeResult.flatTree) {
+					expect(tree.global).to.be.oneOf([true, false]);
+					if (tree.global) {
+						globalCount++;
+					}
+				}
+
+				expect(globalCount).to.equal(1);
+			});
+
+			it('each tree should have a children array field', async () => {
+				expect(storeResult.rootTree).to.be.array();
+				for (const tree of storeResult.flatTree) {
+					expect(tree.children).to.be.array();
 				}
 			});
 		});
@@ -61,11 +81,9 @@ describe('OnDeviceComponent', function () {
 				const getResult = await odc.getNodeReferences({
 					indexes: indexes
 				});
-				expect(getResult.nodes).to.be.array;
 				expect(Object.keys(getResult.nodes).length).to.equal(indexes.length);
 				for (const index of indexes) {
 					const node = getResult.nodes[index];
-
 					expect(node).to.be.ok;
 					expect(node.id).to.equal(storeResult.flatTree[index].id);
 					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
@@ -76,7 +94,6 @@ describe('OnDeviceComponent', function () {
 				const getResult = await odc.getNodeReferences({
 					indexes: []
 				});
-				expect(getResult.nodes).to.be.array;
 				expect(Object.keys(getResult.nodes).length).to.equal(storeResult.flatTree.length);
 				for (const index in storeResult.flatTree) {
 					const node = getResult.nodes[index];
@@ -85,6 +102,18 @@ describe('OnDeviceComponent', function () {
 					expect(node.id).to.equal(storeResult.flatTree[index].id);
 					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
 				}
+			});
+
+			it('should include fields in the response', async () => {
+				const getResult = await odc.getNodeReferences({
+					indexes: [0]
+				});
+
+				const node = getResult.nodes[0];
+				expect(node.subtype).to.equal("MainScene");
+				expect(node.fields.visible.fieldType).to.equal("boolean");
+				expect(node.fields.visible.type).to.equal("roBoolean");
+				expect(node.fields.visible.value).to.equal(true);
 			});
 		});
 

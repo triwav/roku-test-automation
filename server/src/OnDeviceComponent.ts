@@ -164,6 +164,15 @@ export class OnDeviceComponent {
 
 		const rootTree = [] as ODC.NodeTree[];
 		for (const tree of body.flatTree) {
+			// Add in global as we only return true for the single global node to minimize payload size so need to add false for all the other nodes
+			if (!tree.global) {
+				tree.global = false;
+			}
+
+			if (!tree.children) {
+				tree.children = [];
+			}
+
 			if (tree.parentRef === -1) {
 				rootTree.push(tree);
 				continue;
@@ -184,7 +193,17 @@ export class OnDeviceComponent {
 		const result = await this.sendRequest('getNodeReferences', args, options);
 		return result.body as {
 			nodes: {
-				[key: string]: ODC.NodeRepresentation
+				[key: string]: {
+					"id": string;
+					"subtype": string;
+					"fields": {
+						[key: string]: {
+							"fieldType": string;
+							"type": string;
+							"value": any;
+						}
+					}
+				}
 			}
 		} & ODC.ReturnTimeTaken;
 	}
