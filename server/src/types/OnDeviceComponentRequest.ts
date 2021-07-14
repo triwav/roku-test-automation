@@ -204,7 +204,10 @@ export namespace ODC {
 		/** Same as ref but for the parent  */
 		parentRef: number;
 
-		children?: NodeTree[];
+		children: NodeTree[];
+
+		/** Let's us distinguish global node as it's own separate node from the Scene */
+		global: boolean;
 	}
 
 	export interface ReturnTimeTaken {

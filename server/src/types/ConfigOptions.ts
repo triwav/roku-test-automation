@@ -70,6 +70,12 @@ export interface OnDeviceComponentConfigOptions {
 	 * At which point it will clear the registry completely and write back the stored registry values that were previously stored.
 	 */
 	restoreRegistry?: boolean;
+
+	/** We normally pull the telnet logs if the request timed out. If the telnet connection is already in use then this just adds additional noise in the output */
+	disableTelnet?: boolean
+
+	/** We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line */
+	disableCallOriginationLine?: boolean
 }
 
 export interface NetworkProxyOptions {

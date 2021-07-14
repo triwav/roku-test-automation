@@ -1,4 +1,5 @@
 sub init()
+	logInfo("OnDeviceComponent init")
 	m.task = m.top.createChild("RTA_OnDeviceComponentTask")
 	m.task.observeFieldScoped("renderThreadRequest", "onRenderThreadRequestChange")
 	m.task.control = "RUN"
@@ -369,12 +370,16 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 		return buildErrorResponseObject("Invalid value supplied for 'key' param")
 	end if
 
+	' Reset to avoid keeping things alive across multiple refreshes
+	m.nodeReferences[nodeReferencesKey] = []
+
 	allNodes = []
 	allNodes.append(m.top.getAll())
 
 	flatTree = []
 	' A shortcut to access nodes that were added on the end to reduce iteration/time in those cases by quite a bit
 	registers = []
+	globalFound = false
 
 	currentNodeReference = 0
 	allNodesCount = allNodes.count()
@@ -433,6 +438,14 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 			"parentRef": parentRef
 		}
 
+		if NOT globalFound then
+			if m.global.isSameNode(node) then
+				representation.global = true
+				globalFound = true
+			end if
+		end if
+
+
 		flatTree.push(representation)
 		currentNodeReference++
 	end while
@@ -457,15 +470,32 @@ function processGetNodeReferencesRequest(args as Object) as Object
 	requestedNodes = {}
 	indexes = getArrayAtKeyPath(args, "indexes")
 	if indexes.isEmpty() then
-		' Note in bigger apps this is a pretty exspensive call. Use cautiously
+		' Note in bigger apps getting all nodes can create a very large response
 		for index = 0 to getLastIndex(nodeReferences)
-			requestedNodes[index.toStr()] = nodeReferences[index]
-		end for
-	else
-		for each index in indexes
-			requestedNodes[index.toStr()] = nodeReferences[index]
+			indexes.push(index)
 		end for
 	end if
+
+	for each index in indexes
+		node = nodeReferences[index]
+
+		fields = {}
+		fieldTypes = node.getFieldTypes()
+		for each key in node.getFieldTypes()
+			value = node[key]
+			fields[key] = {
+				"fieldType": fieldTypes[key]
+				"type": type(value)
+				"value": value
+			}
+		end for
+
+		requestedNodes[index.toStr()] = {
+			"id": node.id
+			"subtype": node.subtype()
+			"fields": fields
+		}
+	end for
 
 	return {
 		nodes: requestedNodes
