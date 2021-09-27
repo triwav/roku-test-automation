@@ -113,7 +113,7 @@ sub verifyAndHandleRequest(receivedString as String, socket as Object)
 	receiveAddress = socket.getReceivedFromAddress()
 	request["callbackHost"] = receiveAddress.getHostName()
 
-	socket.SetSendToAddress(receiveAddress)
+	socket.setSendToAddress(receiveAddress)
 	bytesSent = socket.sendStr(formatJson({
 		"id": requestId
 	}))

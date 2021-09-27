@@ -59,7 +59,13 @@ export namespace ODC {
 		funcParams?: any[];
 	}
 
-	export interface GetFocusedNodeArgs extends MaxChildDepth {}
+	export interface GetFocusedNodeArgs extends MaxChildDepth {
+		/** returns `ref` field in response that can be matched up with storeNodeReferences response for determining where we are in the node tree */
+		includeRef?: boolean;
+
+		/** Key that the references were stored on. If one isn't provided we use the automatically generated one */
+		key?: string;
+	}
 
 	export interface GetValueAtKeyPathArgs extends BaseKeyPath {}
 

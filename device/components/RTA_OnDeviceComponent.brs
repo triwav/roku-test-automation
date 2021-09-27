@@ -98,9 +98,32 @@ function processGetFocusedNodeRequest(args as Object) as Object
 		end if
 	end while
 
-	return {
+	result = {
 		"node": node
 	}
+
+	if getBooleanAtKeyPath(args, "includeRef") then
+		nodeReferencesKey = args.key
+
+		if NOT isNonEmptyString(nodeReferencesKey) then
+			return buildErrorResponseObject("Invalid value supplied for 'key' param")
+		end if
+
+		nodeReferences = m.nodeReferences[nodeReferencesKey]
+		if NOT isArray(nodeReferences) then
+			return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
+		end if
+
+		for i = 0 to getLastIndex(nodeReferences)
+			nodeReference = nodeReferences[i]
+			if node.isSameNode(nodeReference) then
+				result.ref = i
+				exit for
+			end if
+		end for
+	end if
+
+	return result
 end function
 
 function processGetValueAtKeyPathRequest(args as Object) as Object

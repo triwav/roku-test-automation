@@ -232,27 +232,49 @@ describe('OnDeviceComponent', function () {
 
 	describe('getFocusedNode', function () {
 		it('should return currently focused node', async () => {
-			const {id} = await odc.getFocusedNode();
-			expect(id).to.equal('loginButton');
+			const {node} = await odc.getFocusedNode();
+			expect(node.id).to.equal('loginButton');
 		});
 
 		it('should not include children by default', async () => {
-			const {children} = await odc.getFocusedNode();
-			expect(children).to.be.undefined;
+			const {node} = await odc.getFocusedNode();
+			expect(node.children).to.be.undefined;
 		});
 
 		it('should not include children if maxChildDepth set to zero', async () => {
-			const {children} = await odc.getFocusedNode({responseMaxChildDepth: 0});
-			expect(children).to.be.undefined;
+			const {node} = await odc.getFocusedNode({responseMaxChildDepth: 0});
+			expect(node.children).to.be.undefined;
 		});
 
 		it('should include children to specified depth', async () => {
-			const {children} = await odc.getFocusedNode({responseMaxChildDepth: 1});
-			expect(children).to.not.be.empty;
-			for (const child of children) {
+			const {node} = await odc.getFocusedNode({responseMaxChildDepth: 1});
+			expect(node.children).to.not.be.empty;
+			for (const child of node.children) {
 				// We only requested 1 so make sure it only returned a single level
 				expect(child.children).to.be.undefined;
 			}
+		});
+
+		it('should not include ref field by default', async () => {
+			const {ref} = await odc.getFocusedNode();
+			expect(ref).to.not.be.ok;
+		});
+
+		it('should fail if invalid key supplied or we did not store first', async () => {
+			try {
+				await odc.getFocusedNode({key: 'na', includeRef: true});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it('should return correct ref if requested', async () => {
+			const storeResult = await odc.storeNodeReferences();
+			const {node, ref} = await odc.getFocusedNode({includeRef: true});
+			expect(ref).to.be.ok;
+			expect(storeResult.flatTree[ref!].id).to.equal(node.id);
 		});
 	});
 
