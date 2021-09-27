@@ -174,6 +174,7 @@ export class OnDeviceComponent {
 				tree.global = false;
 			}
 
+			// parent or the child node can come first so have to check in both cases if children array already exists
 			if (!tree.children) {
 				tree.children = [];
 			}
@@ -182,9 +183,11 @@ export class OnDeviceComponent {
 				rootTree.push(tree);
 				continue;
 			}
-			const parentTree = body.flatTree[tree.parentRef]
+			const parentTree = body.flatTree[tree.parentRef];
+
+			// parent or the child node can come first so have to check in both cases if children array already exists
 			if (!parentTree.children) {
-				parentTree.children = []
+				parentTree.children = [];
 			}
 			parentTree.children.push(tree);
 		}
@@ -357,7 +360,11 @@ export class OnDeviceComponent {
 		if (this.server) {
 			return;
 		}
-		const callbackListenPort = await portfinder.getPortPromise();
+
+		let callbackListenPort = this.getConfig()?.callbackListenPort
+		if (!callbackListenPort) {
+			callbackListenPort = await portfinder.getPortPromise();
+		}
 
 		this.debugLog('Starting callback server');
 		this.server = this.app.listen(callbackListenPort, () => {

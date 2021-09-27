@@ -387,6 +387,9 @@ function processSetValueAtKeyPathRequest(args as Object) as Object
 end function
 
 function processStoreNodeReferencesRequest(args as Object) as Object
+	return processStoreNodeReferencesNewNewRequest(args)
+	' print "processStoreNodeReferencesRequest" args
+
 	nodeReferencesKey = args.key
 
 	if NOT isNonEmptyString(nodeReferencesKey) then
@@ -396,18 +399,26 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 	' Reset to avoid keeping things alive across multiple refreshes
 	m.nodeReferences[nodeReferencesKey] = []
 
+	m.t = createObject("roTimespan")
+
 	allNodes = []
 	allNodes.append(m.top.getAll())
-
+	print "time to get nodes took:" ; m.t.totalMilliseconds() : m.t.mark()
 	flatTree = []
 	' A shortcut to access nodes that were added on the end to reduce iteration/time in those cases by quite a bit
 	registers = []
 	globalFound = false
-
 	currentNodeReference = 0
 	allNodesCount = allNodes.count()
 	while currentNodeReference < allNodesCount
 		node = allNodes[currentNodeReference]
+		nodeSubtype = node.subtype()
+		' Nodes and ContentNodes can be owned by a Task thread and this slows down retrieval a LOT. If a user extends either of these it won't get caught but not going to worry about that edge case since I don't see any valid reasons for Tasks storing nodes anyways.
+		if nodeSubtype = "Node" OR nodeSubtype = "ContentNode" then
+			nodeId = ""
+		else
+			nodeId = node.id
+		end if
 		parent = node.getParent()
 		parentRef = -1
 
@@ -455,8 +466,8 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 		end if
 
 		representation = {
-			"id": node.id
-			"subtype": node.subtype()
+			"id": nodeId
+			"subtype": nodeSubtype
 			"ref": currentNodeReference
 			"parentRef": parentRef
 		}
@@ -468,16 +479,249 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 			end if
 		end if
 
-
 		flatTree.push(representation)
 		currentNodeReference++
 	end while
-
+	print "time to recurse took:" ; m.t.totalMilliseconds() : m.t.mark()
 	m.nodeReferences[nodeReferencesKey] = allNodes
 	return {
 		"flatTree": flatTree
 	}
 end function
+
+function processStoreNodeReferencesNewRequest(args as Object) as Object
+	print "processStoreNodeReferencesRequest" args
+
+	nodeReferencesKey = args.key
+
+	if NOT isNonEmptyString(nodeReferencesKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	end if
+
+	' Reset to avoid keeping things alive across multiple refreshes
+	m.nodeReferences[nodeReferencesKey] = []
+
+	allNodes = []
+	allNodes.append(m.top.getAll())
+
+	nodesWithoutParent = {}
+	for index = 0 to getLastIndex(allNodes)
+		nodesWithoutParent[index.toStr()] = allNodes[index]
+	end for
+
+	flatTree = []
+
+	currentNodeReference = 0
+	allNodesCount = allNodes.count()
+	parentFoundLookup = {}
+	operations = 0
+	m.t = createObject("roTimespan")
+	ts = createObject("roTimespan")
+	getChildCountTime = 0
+	gettingNodeTime = 0
+	deleteTime = 0
+
+	while currentNodeReference < allNodesCount
+		node = allNodes[currentNodeReference]
+
+		startingChildNodeReference = currentNodeReference + 1
+		ts.mark()
+		topIndex = node.getChildCount() - 1
+		getChildCountTime += ts.totalMilliseconds()
+		for childIndex = 0 to topIndex
+			ts.mark()
+			childNode = node.getChild(childIndex)
+			gettingNodeTime += ts.totalMilliseconds()
+			childRef = -1
+			found = false
+			representation = {
+				"id": childNode.id
+				"subtype": childNode.subtype()
+				"parentRef": currentNodeReference
+				"childIndex": childIndex
+			}
+
+			' Go through the nodes after this node as children usually come after
+			for potentialChildRef = startingChildNodeReference to allNodesCount
+				refString = potentialChildRef.toStr()
+				potentialChild = nodesWithoutParent[refString]
+				operations++
+				if potentialChild <> Invalid AND childNode.isSameNode(potentialChild) then
+					representation.ref = potentialChildRef
+					ts.mark()
+					nodesWithoutParent.delete(refString)
+					deleteTime += ts.totalMilliseconds()
+
+					' Next child is likely to come right after
+					startingChildNodeReference = potentialChildRef + 1
+					found = true
+					exit for
+				end if
+			end for
+
+			if NOT found then
+				' print "had to loop"
+
+				' start going back to the beginning
+				for potentialChildRef = startingChildNodeReference - 2 to 0 step -1
+					refString = potentialChildRef.toStr()
+					potentialChild = nodesWithoutParent[refString]
+					operations++
+					if potentialChild <> Invalid AND childNode.isSameNode(potentialChild) then
+						' print "match found at " potentialChildRef
+						representation.ref = potentialChildRef
+						ts.mark()
+						nodesWithoutParent.delete(refString)
+						deleteTime += ts.totalMilliseconds()
+						found = true
+						exit for
+					end if
+				end for
+			end if
+
+			if NOT found then
+				' print "did not exist adding"
+				nodeRef = allNodes.count()
+				representation.ref = nodeRef
+				allNodes.push(childNode)
+				nodesWithoutParent[nodeRef.toStr()] = childNode
+				allNodesCount++
+			end if
+			flatTree.push(representation)
+		end for
+		currentNodeReference++
+	end while
+	print "time to recurse took:" ; m.t.totalMilliseconds() : m.t.mark()
+	m.nodeReferences[nodeReferencesKey] = allNodes
+
+	print "operations: " operations
+	print "gettingNodeTime" gettingNodeTime
+	print "getChildCountTime" getChildCountTime
+	print "deleteTime" deleteTime
+	' print "nodesWithoutParent"
+	' nodesTruelyWithoutParent = 0
+	' for each key in nodesWithoutParent
+	' 	node = nodesWithoutParent[key]
+	' 	parent = node.getParent()
+	' 	if node.getParent() = Invalid then
+	' 		nodesTruelyWithoutParent++
+	' 	else
+	' 		print key node.subtype() " " node.id " parent: " parent.subtype() + " " parent.id
+	' 	end if
+	' end for
+	print "nodesWithoutParent" nodesWithoutParent.count()
+	print "node with" flatTree.count()
+	print "nodesTruelyWithoutParent" nodesTruelyWithoutParent
+	stop
+	return {
+		"flatTree": flatTree
+	}
+end function
+
+function processStoreNodeReferencesNewNewRequest(args as Object) as Object
+	print "processStoreNodeReferencesRequest" args
+
+	nodeReferencesKey = args.key
+
+	if NOT isNonEmptyString(nodeReferencesKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	end if
+
+	' Reset to avoid keeping things alive across multiple refreshes
+	m.nodeReferences[nodeReferencesKey] = []
+
+	storedNodes = []
+	flatTree = []
+
+	m.t = createObject("roTimespan")
+	arrayGridNodes = {}
+	buildTree(storedNodes, flatTree, m.top.getScene(), arrayGridNodes)
+	print "build Tree took:" ; m.t.totalMilliseconds()
+
+
+	arrayGridComponents = {}
+	for each key in arrayGridNodes
+		node = arrayGridNodes[key]
+		componentName = node.itemComponentName
+		if isString(componentName) then
+			arrayGridComponents[componentName] = componentName
+		else if isString(node.channelInfoComponentName) then
+			componentName = node.channelInfoComponentName
+			arrayGridComponents[componentName] = componentName
+		end if
+	end for
+
+	nodeCounts = {}
+	arrayGridTopChildren = []
+
+	for each node in m.top.getAll()
+		nodeType = node.subtype()
+		if nodeCounts[nodeType] = Invalid then
+			nodeCounts[nodeType] = 0
+		end if
+		nodeCounts[nodeType]++
+
+		for each componentName in arrayGridComponents
+			if nodeType = componentName then
+				parentStepCount = 0
+				previousParent = node
+				parent = node.getParent()
+				while parentStepCount < 5 AND isNode(parent)
+					if parent.isSubtype("ArrayGrid") AND parent.getParent().subtype() <> "RowListItem" then
+						alreadyExists = false
+						for each arrayGridTopChild in arrayGridTopChildren
+							if previousParent.isSameNode(arrayGridTopChild) then
+								alreadyExists = true
+								exit for
+							end if
+						end for
+						if NOT alreadyExists then
+							arrayGridTopChildren.push(previousParent)
+						end if
+					end if
+					previousParent = parent
+					parent = parent.getParent()
+					parentStepCount++
+				end while
+			end if
+		end for
+	end for
+
+	for each arrayGridTopChild in arrayGridTopChildren
+		for each arrayGridNodeRefString in arrayGridNodes
+			arrayGridNode = arrayGridNodes[arrayGridNodeRefString]
+			if arrayGridNode.isSameNode(arrayGridTopChild.getParent())
+				buildTree(storedNodes, flatTree, arrayGridTopChild, {}, strToI(arrayGridNodeRefString))
+			end if
+		end for
+	end for
+
+	print "time to recurse took:" ; m.t.totalMilliseconds() : m.t.mark()
+
+	return {
+		"flatTree": flatTree
+	}
+end function
+
+sub buildTree(storedNodes as Object, flatTree as Object, node as Object, arrayGridNodes as Object, parentRef = -1 as Integer)
+	currentNodeReference = storedNodes.count()
+	if node.isSubtype("ArrayGrid") then
+		arrayGridNodes[currentNodeReference.toStr()] = node
+	end if
+	storedNodes.push(node)
+	if node.rowIndex <> Invalid then print currentNodeReference " rowIndex" node.rowIndex
+	representation = {
+		"id": node.id
+		"subtype": node.subtype()
+		"ref": currentNodeReference
+		"parentRef": parentRef
+	}
+	flatTree.push(representation)
+
+	for each childNode in node.getChildren(-1, 0)
+		buildTree(storedNodes, flatTree, childNode, arrayGridNodes, currentNodeReference)
+	end for
+end sub
 
 function processGetNodeReferencesRequest(args as Object) as Object
 	nodeReferencesKey = args.key

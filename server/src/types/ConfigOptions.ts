@@ -76,6 +76,9 @@ export interface OnDeviceComponentConfigOptions {
 
 	/** We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line */
 	disableCallOriginationLine?: boolean
+
+	/** By default ODC tries to find an open callback port on the server. This allows you to set one explicitly */
+	callbackListenPort?: number;
 }
 
 export interface NetworkProxyOptions {
