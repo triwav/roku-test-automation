@@ -63,10 +63,18 @@ function processCallFuncRequest(args as Object) as Object
 	end if
 
 	p = args.funcParams
-	if NOT isNonEmptyArray(p) then p = [Invalid]
+	if p = Invalid then p = []
+
 	paramsCount = p.count()
 
-	if paramsCount = 1 then
+	if paramsCount = 0 then
+		if args.allowWithoutArgs <> Invalid and args.allowWithoutArgs then
+			result = node.callFunc(funcName)
+		else
+			' callFunc could fail on certain devices if no param was passed
+			result = node.callFunc(funcName, [Invalid])
+		end if
+	else if paramsCount = 1 then
 		result = node.callFunc(funcName, p[0])
 	else if paramsCount = 2 then
 		result = node.callFunc(funcName, p[0], p[1])

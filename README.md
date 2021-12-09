@@ -1,30 +1,30 @@
 # Roku Test Automation
 
-- [Roku Test Automation](#roku-test-automation)
-	- [Intro](#intro)
-	- [Integration](#integration)
-	- [Components](#components)
-		- [`ECP`](#ecp)
-		- [`OnDeviceComponent`](#ondevicecomponent)
-			- [`getValueAtKeyPath`](#getvalueatkeypath)
-			- [`getValuesAtKeyPaths`](#getvaluesatkeypaths)
-			- [`setValueAtKeyPath`](#setvalueatkeypath)
-			- [`callFunc`](#callfunc)
-			- [`getFocusedNode`](#getfocusednode)
-			- [`hasFocus`](#hasfocus)
-			- [`isInFocusChain`](#isinfocuschain)
-			- [`observeField`](#observefield)
-			- [`readRegistry`](#readregistry)
-			- [`writeRegistry`](#writeregistry)
-			- [`deleteRegistrySections`](#deleteregistrysections)
-			- [`deleteEntireRegistry`](#deleteentireregistry)
-		- [`RokuDevice`](#rokudevice)
-		- [`NetworkProxy`](#networkproxy)
-		- [`utils`](#utils)
-			- [`setupEnvironmentFromConfigFile`](#setupenvironmentfromconfigfile)
-			- [`getMatchingDevices`](#getmatchingdevices)
-			- [`addRandomPostfix`](#addrandompostfix)
-			- [`sleep`](#sleep)
+-   [Roku Test Automation](#roku-test-automation)
+    -   [Intro](#intro)
+    -   [Integration](#integration)
+    -   [Components](#components)
+        -   [`ECP`](#ecp)
+        -   [`OnDeviceComponent`](#ondevicecomponent)
+            -   [`getValueAtKeyPath`](#getvalueatkeypath)
+            -   [`getValuesAtKeyPaths`](#getvaluesatkeypaths)
+            -   [`setValueAtKeyPath`](#setvalueatkeypath)
+            -   [`callFunc`](#callfunc)
+            -   [`getFocusedNode`](#getfocusednode)
+            -   [`hasFocus`](#hasfocus)
+            -   [`isInFocusChain`](#isinfocuschain)
+            -   [`observeField`](#observefield)
+            -   [`readRegistry`](#readregistry)
+            -   [`writeRegistry`](#writeregistry)
+            -   [`deleteRegistrySections`](#deleteregistrysections)
+            -   [`deleteEntireRegistry`](#deleteentireregistry)
+        -   [`RokuDevice`](#rokudevice)
+        -   [`NetworkProxy`](#networkproxy)
+        -   [`utils`](#utils)
+            -   [`setupEnvironmentFromConfigFile`](#setupenvironmentfromconfigfile)
+            -   [`getMatchingDevices`](#getmatchingdevices)
+            -   [`addRandomPostfix`](#addrandompostfix)
+            -   [`sleep`](#sleep)
 
 ## Intro
 
@@ -169,7 +169,8 @@ odc.setValueAtKeyPath({
 Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-program/core-concepts/handling-application-events.md#functional-fields) on a node. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
 -   `funcName: string` the name of the interface function that you want to run
--   `funcParams?: any[]` an array of params to pass to the function. **If not supplied (Invalid) will be passed for the params list.**
+-   `funcParams?: any[]` an array of params to pass to the function.
+-   `allowWithoutArgs?: boolean` if `true` and no `funcParams` are passed, the function will be called without injecting the placeholder `Invalid` argument.
 
 ```ts
 odc.callFunc({
