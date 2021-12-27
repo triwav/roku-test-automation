@@ -1,0 +1,17 @@
+{
+  "name": "player",
+  "value": "",
+  "attributes": {
+    "error": "false",
+    "state": "close"
+  },
+  "children": [{
+    "name": "plugin",
+    "value": "",
+    "attributes": {
+      "bandwidth": "19111730 bps",
+      "id": "dev",
+      "name": "App name"
+    }
+  }]
+}

@@ -233,4 +233,126 @@ describe('ECP', function () {
 			});
 		});
 	});
+
+	describe('getMediaPlayer', function () {
+		it('app_closed', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getMediaPlayer();
+			expect(result.state).to.equal('close');
+			expect(result.error).to.equal(false);
+			expect(result.plugin).to.not.be.ok;
+		});
+
+		it('player_closed', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getMediaPlayer();
+
+			expect(result.state).to.equal('close');
+			expect(result.error).to.equal(false);
+
+			expect(result.plugin?.bandwidth).to.equal('19111730 bps');
+			expect(result.plugin?.id).to.equal('dev');
+			expect(result.plugin?.name).to.equal('App name');
+		});
+
+		it('player_startup', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getMediaPlayer();
+
+			expect(result.state).to.equal('startup');
+			expect(result.error).to.equal(false);
+
+			expect(result.plugin?.bandwidth).to.equal('19111730 bps');
+			expect(result.plugin?.id).to.equal('dev');
+			expect(result.plugin?.name).to.equal('App name');
+
+			expect(result.buffering?.current).to.equal('0');
+			expect(result.buffering?.max).to.equal('1000');
+			expect(result.buffering?.target).to.equal('1000');
+
+			expect(result.new_stream?.speed).to.equal('128000 bps');
+
+			expect(result.duration?.value).to.equal('8551626 ms');
+
+			expect(result.is_live?.value).to.equal('false');
+		});
+
+		it('player_buffering', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getMediaPlayer();
+
+			expect(result.state).to.equal('buffer');
+			expect(result.error).to.equal(false);
+
+			expect(result.plugin?.bandwidth).to.equal('19111730 bps');
+			expect(result.plugin?.id).to.equal('dev');
+			expect(result.plugin?.name).to.equal('App name');
+
+			expect(result.buffering?.current).to.equal('0');
+			expect(result.buffering?.max).to.equal('1000');
+			expect(result.buffering?.target).to.equal('1000');
+
+			expect(result.new_stream?.speed).to.equal('128000 bps');
+
+			expect(result.duration?.value).to.equal('8551626 ms');
+
+			expect(result.is_live?.value).to.equal('false');
+		});
+
+		it('player_playing', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getMediaPlayer();
+
+			expect(result.state).to.equal('play');
+			expect(result.error).to.equal(false);
+
+			expect(result.plugin?.bandwidth).to.equal('19111730 bps');
+			expect(result.plugin?.id).to.equal('dev');
+			expect(result.plugin?.name).to.equal('App name');
+
+			expect(result.format?.audio).to.equal('aac_adts');
+			expect(result.format?.captions).to.equal('webvtt');
+			expect(result.format?.container).to.equal('hls');
+			expect(result.format?.drm).to.equal('none');
+			expect(result.format?.video).to.equal('mpeg4_10b');
+
+			expect(result.buffering?.current).to.equal('1000');
+			expect(result.buffering?.max).to.equal('1000');
+			expect(result.buffering?.target).to.equal('0');
+
+			expect(result.new_stream?.speed).to.equal('128000 bps');
+
+			expect(result.duration?.value).to.equal('8551626 ms');
+
+			expect(result.is_live?.value).to.equal('false');
+		});
+
+		it('player_paused', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getMediaPlayer();
+
+			expect(result.state).to.equal('pause');
+			expect(result.error).to.equal(false);
+
+			expect(result.plugin?.bandwidth).to.equal('19111730 bps');
+			expect(result.plugin?.id).to.equal('dev');
+			expect(result.plugin?.name).to.equal('App name');
+
+			expect(result.format?.audio).to.equal('aac_adts');
+			expect(result.format?.captions).to.equal('webvtt');
+			expect(result.format?.container).to.equal('hls');
+			expect(result.format?.drm).to.equal('none');
+			expect(result.format?.video).to.equal('mpeg4_10b');
+
+			expect(result.buffering?.current).to.equal('1000');
+			expect(result.buffering?.max).to.equal('1000');
+			expect(result.buffering?.target).to.equal('0');
+
+			expect(result.new_stream?.speed).to.equal('128000 bps');
+
+			expect(result.duration?.value).to.equal('8551626 ms');
+
+			expect(result.is_live?.value).to.equal('false');
+		});
+	});
 });
