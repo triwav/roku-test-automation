@@ -3,6 +3,7 @@ import { ActiveAppResponse } from './types/ActiveAppResponse';
 import { ConfigOptions } from './types/ConfigOptions';
 import { ECPKeys } from './types/ECPKeys';
 import { utils } from './utils';
+import { MediaPlayerResponse } from './types/MediaPlayerResponse';
 
 export class ECP {
 	//store the import on the class to make testing easier
@@ -101,6 +102,26 @@ export class ECP {
 				title: child.value
 			};
 		}
+		return response;
+	}
+
+	public async getMediaPlayer() {
+		const result = await this.device.sendECP(`query/media-player`);
+		const player = result.body;
+		if (!player) throw utils.makeError('getMediaPlayerInvalidResponse', 'Received invalid media-player response from device');
+
+		const response: MediaPlayerResponse = {
+			state: player.attributes.state,
+			error: player.attributes.error === 'true',
+		};
+
+		for (let child of player.children) {
+			response[child.name] = {
+				...child.attributes,
+				value: child.value
+			};
+		}
+
 		return response;
 	}
 }
