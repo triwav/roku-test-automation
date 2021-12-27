@@ -101,10 +101,11 @@ If you did all the steps above correct you should be ready to start making use o
 
 RTA contains most of the standard ECP commands including:
 
--   Launching/deeplinking into a channel
--   Sending keypress and keypress sequences to the device
--   Sending text to the device
--   Getting the current active app
+- Launching/deeplinking into a channel
+- Sending keypress and keypress sequences to the device
+- Sending text to the device
+- Getting the current active app
+- Getting the media player
 
 ---
 
