@@ -1,0 +1,9 @@
+{
+  "name": "player",
+  "value": "",
+  "attributes": {
+    "error": "false",
+    "state": "close"
+  },
+  "children": []
+}
