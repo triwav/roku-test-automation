@@ -46,6 +46,7 @@
         "@types/sinon": "^7.5.2",
         "@types/xmljs": "^0.3.0",
         "chai": "^4.2.0",
+        "chai-arrays": "^2.2.0",
         "mocha": "^8.3.2",
         "nyc": "^14.1.1",
         "rimraf": "^2.7.1",

@@ -16,3 +16,7 @@ end sub
 function loginUser(_)
 	m.top.isLoggedIn = true
 end function
+
+function loginUserNoArgs()
+	m.top.isLoggedIn = true
+end function

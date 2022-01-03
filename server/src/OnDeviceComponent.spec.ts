@@ -1,5 +1,7 @@
-import * as chai from 'chai';
-chai.use(require('chai-arrays'));
+const chai = require('chai');
+const assertArrays = require('chai-arrays');
+chai.use(assertArrays);
+
 const expect = chai.expect;
 import * as assert from 'assert';
 
@@ -25,7 +27,7 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('should have the correct fields for flatTree', async () => {
-				expect(storeResult.flatTree).to.be.array();
+				expect(storeResult.flatTree).to.be.an('array');
 				for (const tree of storeResult.flatTree) {
 					expect(tree.id).to.be.string;
 					expect(tree.subtype).to.be.string
@@ -35,19 +37,19 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('should have the correct fields for rootTree', async () => {
-				expect(storeResult.rootTree).to.be.array();
+				expect(storeResult.rootTree).to.be.an('array');
 				for (const tree of storeResult.rootTree) {
 					expect(tree.id).to.be.string;
 					expect(tree.subtype).to.be.string
 					expect(tree.ref).to.be.a('number');
 					expect(tree.parentRef).to.be.a('number');
-					expect(tree.children).to.be.array();
+					expect(tree.children).to.be.an('array');
 				}
 			});
 
 			it('should have exactly one global node included in the response', async () => {
 				let globalCount = 0;
-				expect(storeResult.rootTree).to.be.array();
+				expect(storeResult.rootTree).to.be.an('array');
 				for (const tree of storeResult.flatTree) {
 					expect(tree.global).to.be.oneOf([true, false]);
 					if (tree.global) {
@@ -59,9 +61,9 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('each tree should have a children array field', async () => {
-				expect(storeResult.rootTree).to.be.array();
+				expect(storeResult.rootTree).to.be.an('array');
 				for (const tree of storeResult.flatTree) {
-					expect(tree.children).to.be.array();
+					expect(tree.children).to.be.an('array');
 				}
 			});
 		});
@@ -436,10 +438,18 @@ describe('OnDeviceComponent', function () {
 			assert.fail('Should have thrown an exception');
 		});
 
-		it(`should work with funcs that don't take any params`, async () => {
+		it(`should inject an placeholder param to the function if no funcParams are passed`, async () => {
 			const args = {keyPath: 'AuthManager.isLoggedIn'};
 			await setAndVerifyValue({...args, value: false});
 			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUser'});
+			const {value} = await odc.getValueAtKeyPath(args);
+			expect(value).to.be.true;
+		});
+
+		it(`should work with funcs that don't take any arguments when allowWithoutArgs param is set to true`, async () => {
+			const args = {keyPath: 'AuthManager.isLoggedIn'};
+			await setAndVerifyValue({...args, value: false});
+			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUserNoArgs', allowWithoutArgs: true});
 			const {value} = await odc.getValueAtKeyPath(args);
 			expect(value).to.be.true;
 		});

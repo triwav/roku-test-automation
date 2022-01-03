@@ -1,7 +1,7 @@
 {
 	"scripts": {
 		"automatedTests:compile": "tsc",
-		"automatedTests": "npm run automatedTests:compile && mocha ./dist/automatedTests/**/*.js"
+		"automatedTests": "npm run automatedTests:compile && mocha './dist/automatedTests/**/*.js'"
 	},
 	"dependencies": {
 		"chai": "^4.2.0",

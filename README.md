@@ -170,7 +170,8 @@ odc.setValueAtKeyPath({
 Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-program/core-concepts/handling-application-events.md#functional-fields) on a node. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
 -   `funcName: string` the name of the interface function that you want to run
--   `funcParams?: any[]` an array of params to pass to the function. **If not supplied (Invalid) will be passed for the params list.**
+-   `funcParams?: any[]` an array of params to pass to the function.
+-   `allowWithoutArgs?: boolean` if `true` and no `funcParams` are passed, the function will be called without injecting the placeholder `Invalid` argument.
 
 ```ts
 odc.callFunc({
