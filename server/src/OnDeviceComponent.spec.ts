@@ -45,24 +45,53 @@ describe('OnDeviceComponent', function () {
 				}
 			});
 
-			it('should have exactly one global node included in the response', async () => {
-				let globalCount = 0;
-				expect(storeResult.rootTree).to.be.array();
-				for (const tree of storeResult.flatTree) {
-					expect(tree.global).to.be.oneOf([true, false]);
-					if (tree.global) {
-						globalCount++;
-					}
-				}
-
-				expect(globalCount).to.equal(1);
-			});
-
 			it('each tree should have a children array field', async () => {
 				expect(storeResult.rootTree).to.be.array();
 				for (const tree of storeResult.flatTree) {
 					expect(tree.children).to.be.array();
 				}
+			});
+
+			it('should not include node count info by default', async () => {
+				expect(storeResult.totalNodes).to.not.be.ok;
+				expect(storeResult.nodeCountByType).to.not.be.ok;
+			});
+
+			describe('nodeCountInfo', function () {
+				before(async () => {
+					storeResult = await odc.storeNodeReferences({
+						includeNodeCountInfo: true
+					});
+				});
+
+				it('should include node count info if requested', async () => {
+					expect(storeResult.totalNodes).to.be.greaterThan(0);
+					expect(Object.keys(storeResult.nodeCountByType!).length).to.be.greaterThan(0);
+				});
+
+				it('should not run array grid child finding code unless explicitly requested', async () => {
+					for (const nodeTree of storeResult.flatTree) {
+						expect(nodeTree.subtype).to.not.equal('RowListItem')
+					}
+				});
+			});
+
+			describe('arrayGridChildren', function () {
+				before(async () => {
+					storeResult = await odc.storeNodeReferences({
+						includeArrayGridChildren: true
+					});
+				});
+
+				it('should include ArrayGrid children if requested', async () => {
+					let arrayGridChildrenCount = 0;
+					for (const nodeTree of storeResult.flatTree) {
+						if (nodeTree.subtype === 'RowListItem') {
+							arrayGridChildrenCount++;
+						}
+					}
+					expect(arrayGridChildrenCount).to.be.greaterThan(0);
+				});
 			});
 		});
 

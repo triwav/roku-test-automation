@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="RowListItemComponent" extends="Group">
+	<interface>
+		<field id="width" type="float" alias="rect.width" />
+		<field id="height" type="float" alias="rect.height" />
+		<field id="rowListHasFocus" type="boolean" />
+		<field id="gridHasFocus" type="boolean" />
+		<field id="focusPercent" type="float" />
+		<field id="rowFocusPercent" type="float" />
+	</interface>
+	<children>
+		<Rectangle id="rect" color="#FF0000" />
+	</children>
+</component>

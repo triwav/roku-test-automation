@@ -13,5 +13,22 @@
 			<Group id="child3" />
 		</Group>
 		<Poster id="poster" />
+		<TestRowList
+			itemComponentName="RowListItemComponent"
+			itemSize="[1920, 300]"
+			numRows="3"
+			rowItemSpacing="[[30, 0]]"
+			rowItemSize="[[930, 300]]"
+			translation="[150, 600]">
+			<!-- Note must have enough content to have at least 2 items "off screen" to be able to find the nodes parent :( -->
+			<ContentNode role="content">
+				<ContentNode>
+					<ContentNode />
+					<ContentNode />
+					<ContentNode />
+					<ContentNode />
+				</ContentNode>
+			</ContentNode>
+		</TestRowList>
 	</children>
 </component>

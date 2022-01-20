@@ -7,3 +7,4 @@ ui_resolutions=fhd
 splash_color=#000000
 
 bs_const=ENABLE_RTA=false
+rsg_version=1.2

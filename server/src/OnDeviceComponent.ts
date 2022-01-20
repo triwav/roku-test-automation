@@ -165,16 +165,12 @@ export class OnDeviceComponent {
 		const body = result.body as {
 			flatTree: ODC.NodeTree[];
 			rootTree: ODC.NodeTree[];
+			totalNodes?: number;
+			nodeCountByType?: {[key: string]: number}
 		} & ODC.ReturnTimeTaken;
 
 		const rootTree = [] as ODC.NodeTree[];
 		for (const tree of body.flatTree) {
-			// Add in global as we only return true for the single global node to minimize payload size so need to add false for all the other nodes
-			if (!tree.global) {
-				tree.global = false;
-			}
-
-			// parent or the child node can come first so have to check in both cases if children array already exists
 			if (!tree.children) {
 				tree.children = [];
 			}
@@ -184,11 +180,6 @@ export class OnDeviceComponent {
 				continue;
 			}
 			const parentTree = body.flatTree[tree.parentRef];
-
-			// parent or the child node can come first so have to check in both cases if children array already exists
-			if (!parentTree.children) {
-				parentTree.children = [];
-			}
 			parentTree.children.push(tree);
 		}
 		body.rootTree = rootTree;

@@ -83,6 +83,12 @@ export namespace ODC {
 	export interface StoreNodeReferences {
 		/** Key that we will store the node references on. If one isn't provided we use the automatically generated one */
 		key?: string;
+
+		/** We can get ArrayGrid(RowList,MarkupGrid,etc) children but this has an extra overhead so is disabled by default */
+		includeArrayGridChildren?: boolean;
+
+		/** We can get total and type based count info but again this has some overhead so is disabled by default */
+		includeNodeCountInfo?: boolean;
 	}
 
 	export interface GetNodeReferences {
@@ -210,10 +216,10 @@ export namespace ODC {
 		/** Same as ref but for the parent  */
 		parentRef: number;
 
-		children: NodeTree[];
+		/** Used to determine the position of this node in its parent if applicable */
+		position: number;
 
-		/** Let's us distinguish global node as it's own separate node from the Scene */
-		global: boolean;
+		children: NodeTree[];
 	}
 
 	export interface ReturnTimeTaken {
