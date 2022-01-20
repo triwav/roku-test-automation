@@ -1,0 +1,62 @@
+{
+  "name": "player",
+  "value": "",
+  "attributes": {
+    "error": "false",
+    "state": "play"
+  },
+  "children": [
+    {
+      "name": "plugin",
+      "value": "",
+      "attributes": {
+        "bandwidth": "19111730 bps",
+        "id": "dev",
+        "name": "App name"
+      },
+      "children": []
+    },
+    {
+      "name": "format",
+      "value": "",
+      "attributes": {
+        "audio": "aac_adts",
+        "captions": "webvtt",
+        "container": "hls",
+        "drm": "none",
+        "video": "mpeg4_10b"
+      },
+      "children": []
+    },
+    {
+      "name": "buffering",
+      "value": "",
+      "attributes": {
+        "current": "1000",
+        "max": "1000",
+        "target": "0"
+      },
+      "children": []
+    },
+    {
+      "name": "new_stream",
+      "value": "",
+      "attributes": {
+        "speed": "128000 bps"
+      },
+      "children": []
+    },
+    {
+      "name": "duration",
+      "value": "8551626 ms",
+      "attributes": {},
+      "children": []
+    },
+    {
+      "name": "is_live",
+      "value": "false",
+      "attributes": {},
+      "children": []
+    }
+  ]
+}

@@ -57,6 +57,9 @@ export namespace ODC {
 
 		/** List of input arguments that need to be passed to the function. */
 		funcParams?: any[];
+
+		/** Specifies whether it should be allowed to call the function interface without any arguments  */
+		allowWithoutArgs?: boolean;
 	}
 
 	export interface GetFocusedNodeArgs extends MaxChildDepth {

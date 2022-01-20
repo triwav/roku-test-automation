@@ -1,14 +1,13 @@
 {
 	"scripts": {
 		"automatedTests:compile": "tsc",
-		"automatedTests": "npm run automatedTests:compile && mocha ./dist/automatedTests/**/*.js"
+		"automatedTests": "npm run automatedTests:compile && mocha './dist/automatedTests/**/*.js'"
 	},
 	"dependencies": {
 		"chai": "^4.2.0",
 		"mocha": "7.2.0",
-		"roku-test-automation": "file:../release/roku-test-automation-1.0.52.tgz",
+		"roku-test-automation": "^1.1.2",
 		"source-map-support": "^0.5.19",
-		"tslint": "^6.1.3",
 		"typescript": "^3.9.7"
 	},
 	"devDependencies": {
