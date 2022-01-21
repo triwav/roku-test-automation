@@ -193,7 +193,6 @@ export class OnDeviceComponent {
 		return result.body as {
 			nodes: {
 				[key: string]: {
-					"id": string;
 					"subtype": string;
 					"fields": {
 						[key: string]: {
@@ -326,7 +325,7 @@ export class OnDeviceComponent {
 		try {
 			return await utils.promiseTimeout(promise, timeout);
 		} catch(e) {
-			if (e.name === 'Timeout') {
+			if ((e as Error).name === 'Timeout') {
 				let message = `${request.type} request timed out after ${timeout}ms`
 
 				if (!this.getConfig()?.disableCallOriginationLine) {

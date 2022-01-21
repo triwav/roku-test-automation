@@ -38,11 +38,20 @@ class Utils {
 	}
 
 	/** Helper for setting up process.env from a config */
-	public setupEnvironmentFromConfigFile(configFilePath: string = 'rta-config.json', deviceSelector: {} | number = 0) {
+	public setupEnvironmentFromConfigFile(configFilePath: string = 'rta-config.json', deviceSelector: {} | number | undefined = undefined) {
 		const config: ConfigOptions = this.parseJsonFile(configFilePath);
+
+
 		if (!config.RokuDevice) {
 			console.log('Config did not contain RokuDevice object!!!');
-		} else if (typeof deviceSelector === 'number') {
+			return
+		}
+
+		if (deviceSelector === undefined) {
+			deviceSelector = config.RokuDevice.deviceIndex ?? 0;
+		}
+
+		if (typeof deviceSelector === 'number') {
 			config.RokuDevice.deviceIndex = deviceSelector;
 		} else {
 			const matchingDevices = this.getMatchingDevices(config, deviceSelector);

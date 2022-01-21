@@ -1,6 +1,6 @@
 import { utils } from '../utils';
 import { proxy, odc } from '../';
-utils.setupEnvironmentFromConfigFile(undefined, 0);
+utils.setupEnvironmentFromConfigFile();
 // const wtf = require('wtfnode');
 
 process.on('unhandledRejection', (reason) => {

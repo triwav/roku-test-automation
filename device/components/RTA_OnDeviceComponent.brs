@@ -532,27 +532,29 @@ function processGetNodeReferencesRequest(args as Object) as Object
 	for each index in indexes
 		node = nodeReferences[index]
 
-		fields = {}
-		fieldTypes = node.getFieldTypes()
-		for each key in node.getFieldTypes()
-			value = node[key]
-			fields[key] = {
-				"fieldType": fieldTypes[key]
-				"type": type(value)
-				"value": value
-			}
-		end for
-
 		requestedNodes[index.toStr()] = {
-			"id": node.id
 			"subtype": node.subtype()
-			"fields": fields
+			"fields": getNodeFieldsWithInfo(node)
 		}
 	end for
 
 	return {
 		nodes: requestedNodes
 	}
+end function
+
+function getNodeFieldsWithInfo(node as Object) as Object
+	fields = {}
+	fieldTypes = node.getFieldTypes()
+	for each key in node.getFieldTypes()
+		value = node[key]
+		fields[key] = {
+			"fieldType": fieldTypes[key]
+			"type": type(value)
+			"value": value
+		}
+	end for
+	return fields
 end function
 
 function processDeleteNodeReferencesRequest(args as Object) as Object

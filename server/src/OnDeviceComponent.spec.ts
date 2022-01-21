@@ -103,12 +103,13 @@ describe('OnDeviceComponent', function () {
 				storeResult = await odc.storeNodeReferences();
 			});
 
-			it('should get only the requested to nodes with the right return types', async () => {
+			it('should get only the requested number of nodes with the right return types', async () => {
 				const indexes = [] as number[];
 				for (const index in storeResult.flatTree) {
 					if (index === '12') break;
 					indexes.push(+index);
 				}
+
 				const getResult = await odc.getNodeReferences({
 					indexes: indexes
 				});
@@ -116,7 +117,7 @@ describe('OnDeviceComponent', function () {
 				for (const index of indexes) {
 					const node = getResult.nodes[index];
 					expect(node).to.be.ok;
-					expect(node.id).to.equal(storeResult.flatTree[index].id);
+					expect(node.fields.id.value).to.equal(storeResult.flatTree[index].id);
 					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
 				}
 			});
@@ -130,7 +131,7 @@ describe('OnDeviceComponent', function () {
 					const node = getResult.nodes[index];
 
 					expect(node).to.be.ok;
-					expect(node.id).to.equal(storeResult.flatTree[index].id);
+					expect(node.fields.id.value).to.equal(storeResult.flatTree[index].id);
 					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
 				}
 			});
