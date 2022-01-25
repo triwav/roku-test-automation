@@ -21,7 +21,7 @@ sub runTaskThread()
 		"callFunc": {}
 		"deleteNodeReferences": {}
 		"getFocusedNode": {}
-		"getNodeReferences": {}
+		"getNodesInfoAtKeyPaths": {}
 		"getValueAtKeyPath": {}
 		"getValuesAtKeyPaths": {}
 		"hasFocus": {}

@@ -6,7 +6,7 @@ export namespace ODC {
 		deleteNodeReferences,
 		deleteRegistrySections,
 		getFocusedNode,
-		getNodeReferences,
+		getNodesInfoAtKeyPaths,
 		getServerHost,
 		getValueAtKeyPath,
 		getValuesAtKeyPaths,
@@ -79,6 +79,8 @@ export namespace ODC {
 		};
 	}
 
+	export interface GetNodesInfoAtKeyPathsArgs extends GetValuesAtKeyPathsArgs {}
+
 	export interface HasFocusArgs extends BaseKeyPath {}
 
 	export interface IsInFocusChainArgs extends BaseKeyPath {}
@@ -92,14 +94,6 @@ export namespace ODC {
 
 		/** We can get total and type based count info but again this has some overhead so is disabled by default */
 		includeNodeCountInfo?: boolean;
-	}
-
-	export interface GetNodeReferences {
-		/** Key that the references were stored on. If one isn't provided we use the automatically generated one */
-		key?: string;
-
-		/** indexes in the array of which nodes we want to retrieve */
-		indexes: number[]
 	}
 
 	export interface DeleteNodeReferences {

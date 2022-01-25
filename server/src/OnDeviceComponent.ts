@@ -39,6 +39,7 @@ export class OnDeviceComponent {
 
 	//#region requests run on render thread
 	public async callFunc(args: ODC.CallFuncArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('callFunc', args, options);
@@ -58,45 +59,76 @@ export class OnDeviceComponent {
 	}
 
 	public async getValueAtKeyPath(args: ODC.GetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('getValueAtKeyPath', args, options);
 		return result.body as {
 			found: boolean;
-			value: any;
+			value?: any;
 		} & ODC.ReturnTimeTaken;
 	}
 
 	public async getValuesAtKeyPaths(args: ODC.GetValuesAtKeyPathsArgs, options: ODC.RequestOptions = {}) {
 		for (const key in args.requests) {
 			const requestArgs = args.requests[key];
+			this.conditionallyAddDefaultBase(requestArgs);
 			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
 		}
 
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
 		return result.body as {
-			[key: string]: any;
-			found: boolean;
+			results: {
+				[key: string]: {
+					found: boolean;
+					value?: any;
+				}
+			}
+		} & ODC.ReturnTimeTaken;
+	}
+
+	public async getNodesInfoAtKeyPaths(args: ODC.GetNodesInfoAtKeyPathsArgs, options: ODC.RequestOptions = {}) {
+		for (const key in args.requests) {
+			const requestArgs = args.requests[key];
+			this.conditionallyAddDefaultBase(requestArgs);
+			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
+		}
+
+		const result = await this.sendRequest('getNodesInfoAtKeyPaths', args, options);
+		return result.body as {
+			results: {
+				[key: string]: {
+					"subtype": string;
+					"fields": {
+						[key: string]: {
+							"fieldType": string;
+							"type": string;
+							"value": any;
+						}
+					}
+				}
+			}
 		} & ODC.ReturnTimeTaken;
 	}
 
 	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		args.convertResponseToJsonCompatible = false;
-		const result = await this.sendRequest('hasFocus', args, options);
+		const result = await this.sendRequest('hasFocus', {...args, convertResponseToJsonCompatible: false}, options);
 		return result.body.hasFocus as boolean;
 	}
 
 	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		args.convertResponseToJsonCompatible = false;
-		const result = await this.sendRequest('isInFocusChain', args, options);
+		const result = await this.sendRequest('isInFocusChain', {...args, convertResponseToJsonCompatible: false}, options);
 		return result.body.isInFocusChain as boolean;
 	}
 
 	public async observeField(args: ODC.ObserveFieldArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		let match = args.match;
@@ -139,11 +171,19 @@ export class OnDeviceComponent {
 	}
 
 	public async setValueAtKeyPath(args: ODC.SetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		args.convertResponseToJsonCompatible = false;
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
 		return result.body as ODC.ReturnTimeTaken;
+	}
+
+	private conditionallyAddDefaultBase(args: ODC.BaseArgs) {
+		if (!args.base) {
+			// IMPROVEMENT: Could probably allow users to change this to a different default in their config
+			args.base = 'global';
+		}
 	}
 
 	private conditionallyAddDefaultNodeReferenceKey(args: ODC.BaseArgs) {
@@ -159,9 +199,7 @@ export class OnDeviceComponent {
 
 	public async storeNodeReferences(args: ODC.StoreNodeReferences = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
-
-		(args as any).convertResponseToJsonCompatible = false;
-		const result = await this.sendRequest('storeNodeReferences', args, options);
+		const result = await this.sendRequest('storeNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
 		const body = result.body as {
 			flatTree: ODC.NodeTree[];
 			rootTree: ODC.NodeTree[];
@@ -186,39 +224,17 @@ export class OnDeviceComponent {
 		return body;
 	}
 
-	public async getNodeReferences(args: ODC.GetNodeReferences, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultNodeReferenceKey(args);
-
-		const result = await this.sendRequest('getNodeReferences', args, options);
-		return result.body as {
-			nodes: {
-				[key: string]: {
-					"subtype": string;
-					"fields": {
-						[key: string]: {
-							"fieldType": string;
-							"type": string;
-							"value": any;
-						}
-					}
-				}
-			}
-		} & ODC.ReturnTimeTaken;
-	}
-
 	public async deleteNodeReferences(args: ODC.DeleteNodeReferences = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		(args as any).convertResponseToJsonCompatible = false;
-		const result = await this.sendRequest('deleteNodeReferences', args, options);
+		const result = await this.sendRequest('deleteNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
 		return result.body as ODC.ReturnTimeTaken;
 	}
 	//#endregion
 
 	//#region requests run on task thread
 	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}) {
-		(args as any).convertResponseToJsonCompatible = false;
-		const result = await this.sendRequest('readRegistry', args, options);
+		const result = await this.sendRequest('readRegistry', {...args, convertResponseToJsonCompatible: false}, options);
 		return result.body as {
 			values: {
 				[section: string]: {[sectionItemKey: string]: string}

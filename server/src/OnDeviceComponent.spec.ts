@@ -97,55 +97,68 @@ describe('OnDeviceComponent', function () {
 			});
 		});
 
-		describe('getNodeReferences', function () {
+		describe('getNodesInfoAtKeyPaths', function () {
 			let storeResult: Unwrap<typeof odc.storeNodeReferences>;
 			before(async () => {
 				storeResult = await odc.storeNodeReferences();
 			});
 
 			it('should get only the requested number of nodes with the right return types', async () => {
-				const indexes = [] as number[];
+				const requests = {} as {
+					[key: string]: ODC.GetValueAtKeyPathArgs
+				};
 				for (const index in storeResult.flatTree) {
 					if (index === '12') break;
-					indexes.push(+index);
+					requests[index] = {
+						base: 'nodeRef',
+						keyPath: index
+					}
 				}
 
-				const getResult = await odc.getNodeReferences({
-					indexes: indexes
+				const {results} = await odc.getNodesInfoAtKeyPaths({
+					requests: requests
 				});
-				expect(Object.keys(getResult.nodes).length).to.equal(indexes.length);
-				for (const index of indexes) {
-					const node = getResult.nodes[index];
+				expect(Object.keys(results).length).to.equal(Object.keys(requests).length);
+				for (const key in results) {
+					const node = results[key];
 					expect(node).to.be.ok;
-					expect(node.fields.id.value).to.equal(storeResult.flatTree[index].id);
-					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
-				}
-			});
-
-			it('should return all values if we did not provided a list of indexes', async () => {
-				const getResult = await odc.getNodeReferences({
-					indexes: []
-				});
-				expect(Object.keys(getResult.nodes).length).to.equal(storeResult.flatTree.length);
-				for (const index in storeResult.flatTree) {
-					const node = getResult.nodes[index];
-
-					expect(node).to.be.ok;
-					expect(node.fields.id.value).to.equal(storeResult.flatTree[index].id);
-					expect(node.subtype).to.equal(storeResult.flatTree[index].subtype);
+					expect(node.fields.id.value).to.equal(storeResult.flatTree[key].id);
+					expect(node.subtype).to.equal(storeResult.flatTree[key].subtype);
 				}
 			});
 
 			it('should include fields in the response', async () => {
-				const getResult = await odc.getNodeReferences({
-					indexes: [0]
+				const {results} = await odc.getNodesInfoAtKeyPaths({
+					requests: {
+						firstItem: {
+							base: 'nodeRef',
+							keyPath: '0'
+						}
+					}
 				});
 
-				const node = getResult.nodes[0];
-				expect(node.subtype).to.equal("MainScene");
-				expect(node.fields.visible.fieldType).to.equal("boolean");
-				expect(node.fields.visible.type).to.equal("roBoolean");
+				const node = results.firstItem;
+				expect(node.subtype).to.equal('MainScene');
+				expect(node.fields.visible.fieldType).to.equal('boolean');
+				expect(node.fields.visible.type).to.equal('roBoolean');
 				expect(node.fields.visible.value).to.equal(true);
+			});
+
+			it('should fail if we try to access a non-node keyPath', async () => {
+				try {
+					await odc.getNodesInfoAtKeyPaths({
+						requests: {
+							firstItem: {
+								base: 'global',
+								keyPath: 'booleanValue'
+							}
+						}
+					});
+				} catch (e) {
+					// failed as expected
+					return;
+				}
+				assert.fail('Should have thrown an exception getting boolean value');
 			});
 		});
 
@@ -154,14 +167,18 @@ describe('OnDeviceComponent', function () {
 				await odc.storeNodeReferences();
 				await odc.deleteNodeReferences();
 				try {
-					await odc.getNodeReferences({
-						indexes: []
+					await odc.getNodesInfoAtKeyPaths({
+						requests: {
+							firstItem: {
+								keyPath: '0'
+							}
+						}
 					});
 				} catch (e) {
 					// failed as expected
 					return;
 				}
-				assert.fail('Should have thrown an exception on the getNodeReferences if the references were removed');
+				assert.fail('Should have thrown an exception on the getNodesInfoAtKeyPaths if the references were removed');
 			});
 		});
 	});
@@ -251,13 +268,13 @@ describe('OnDeviceComponent', function () {
 
 	describe('getValuesAtKeyPaths', function () {
 		it('should work with multiple values and should return the timeTaken value', async () => {
-			const {subchild1, subchild2, timeTaken} = await odc.getValuesAtKeyPaths({requests: {
+			const {results, timeTaken} = await odc.getValuesAtKeyPaths({requests: {
 					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
 					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
 				}
 			});
-			expect(subchild1.id).to.eq('subchild1');
-			expect(subchild2.id).to.eq('subchild2');
+			expect(results.subchild1.value.id).to.eq('subchild1');
+			expect(results.subchild2.value.id).to.eq('subchild2');
 			expect(timeTaken).to.be.a('number');
 		});
 	});

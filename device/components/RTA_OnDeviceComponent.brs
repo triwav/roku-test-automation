@@ -37,8 +37,8 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processSetValueAtKeyPathRequest(args)
 	else if requestType = "storeNodeReferences" then
 		response = processStoreNodeReferencesRequest(args)
-	else if requestType = "getNodeReferences" then
-		response = processGetNodeReferencesRequest(args)
+	else if requestType = "getNodesInfoAtKeyPaths" then
+		response = processGetNodesInfoAtKeyPathsRequest(args)
 	else if requestType = "deleteNodeReferences" then
 		response = processDeleteNodeReferencesRequest(args)
 	else
@@ -135,13 +135,9 @@ function processGetFocusedNodeRequest(args as Object) as Object
 end function
 
 function processGetValueAtKeyPathRequest(args as Object) as Object
-	if NOT isNonEmptyString(args.base) then
-		args.base = "global"
-	end if
-
 	base = getBaseObject(args)
-	if base = Invalid then
-		return buildErrorResponseObject("Could not handle base type of '" + args.base + "'")
+	if isErrorObject(base) then
+		return base
 	end if
 
 	keyPath = getStringAtKeyPath(args, "keyPath")
@@ -165,15 +161,58 @@ function processGetValuesAtKeyPathsRequest(args as Object) as Object
 	if NOT isNonEmptyAA(requests) then
 		return buildErrorResponseObject("getValuesAtKeyPaths did not have have any requests")
 	end if
-	response = {}
+	results = {}
 	for each key in requests
 		result = processGetValueAtKeyPathRequest(requests[key])
-		if result.value = Invalid then
-			return buildErrorResponseObject(result.error.message)
+		if isErrorObject(result) then
+			return result
 		end if
-		response[key] = result.value
+		results[key] = result
 	end for
-	return response
+	return {
+		"results": results
+	}
+end function
+
+function processGetNodesInfoAtKeyPathsRequest(args as Object) as Object
+	requests = args.requests
+	if NOT isNonEmptyAA(requests) then
+		return buildErrorResponseObject("getNodesInfoAtKeyPaths did not have have any requests")
+	end if
+
+	results = {}
+	for each key in requests
+		requestArgs = requests[key]
+		result = processGetValueAtKeyPathRequest(requestArgs)
+		if isErrorObject(result) then
+			return result
+		end if
+
+		node = result.value
+		if NOT result.found OR NOT isNode(node) then
+			return buildErrorResponseObject("Node not found at keypath '" + requestArgs.keyPath + "'")
+		end if
+
+		fields = {}
+		fieldTypes = node.getFieldTypes()
+		for each fieldKey in node.getFieldTypes()
+			value = node[fieldKey]
+			fields[fieldKey] = {
+				"fieldType": fieldTypes[fieldKey]
+				"type": type(value)
+				"value": value
+			}
+		end for
+
+		results[key] = {
+			"subtype": node.subtype()
+			"fields": fields
+		}
+	end for
+
+	return {
+		results: results
+	}
 end function
 
 function processHasFocusRequest(args as Object) as Object
@@ -509,54 +548,6 @@ sub buildTree(storedNodes as Object, flatTree as Object, node as Object, searchF
 	end for
 end sub
 
-function processGetNodeReferencesRequest(args as Object) as Object
-	nodeReferencesKey = args.key
-	if NOT isNonEmptyString(nodeReferencesKey) then
-		return buildErrorResponseObject("Invalid value supplied for 'key' param")
-	end if
-
-	nodeReferences = m.nodeReferences[nodeReferencesKey]
-	if NOT isArray(nodeReferences) then
-		return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
-	end if
-
-	requestedNodes = {}
-	indexes = getArrayAtKeyPath(args, "indexes")
-	if indexes.isEmpty() then
-		' Note in bigger apps getting all nodes can create a very large response
-		for index = 0 to getLastIndex(nodeReferences)
-			indexes.push(index)
-		end for
-	end if
-
-	for each index in indexes
-		node = nodeReferences[index]
-
-		requestedNodes[index.toStr()] = {
-			"subtype": node.subtype()
-			"fields": getNodeFieldsWithInfo(node)
-		}
-	end for
-
-	return {
-		nodes: requestedNodes
-	}
-end function
-
-function getNodeFieldsWithInfo(node as Object) as Object
-	fields = {}
-	fieldTypes = node.getFieldTypes()
-	for each key in node.getFieldTypes()
-		value = node[key]
-		fields[key] = {
-			"fieldType": fieldTypes[key]
-			"type": type(value)
-			"value": value
-		}
-	end for
-	return fields
-end function
-
 function processDeleteNodeReferencesRequest(args as Object) as Object
 	nodeReferencesKey = args.key
 	if NOT isString(nodeReferencesKey) then
@@ -572,9 +563,15 @@ function getBaseObject(args as Object) as Dynamic
 	if baseType = "global" then return m.global
 	if baseType = "scene" then return m.top.getScene()
 	if baseType = "nodeRef" then
-		return m.nodeReferences[getStringAtKeyPath(args, "key")]
+		nodeReferencesKey = getStringAtKeyPath(args, "key")
+		base = m.nodeReferences[nodeReferencesKey]
+		if base = Invalid then
+			return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
+		else
+			return base
+		end if
 	end if
-	return Invalid
+	return buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
 end function
 
 sub sendBackResponse(request as Object, response as Object)
