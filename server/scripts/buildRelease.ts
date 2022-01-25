@@ -48,7 +48,11 @@ if (argv[2] === '--dev') {
 		encoding: 'utf8'
 	});
 } else {
-	output = execSync(`npm publish ${outputFolder}`, {
+	let options = '';
+	if (argv[2] === '--beta') {
+		options = '--tag beta';
+	}
+	output = execSync(`npm publish ${options} ${outputFolder}`, {
 		encoding: 'utf8'
 	});
 }
