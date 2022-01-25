@@ -11,6 +11,13 @@ function buildErrorResponseObject(message as String) as Object
 	}
 end function
 
+function isErrorObject(value as Dynamic) as Boolean
+	if isAA(value) AND isAA(value.error) then
+		return true
+	end if
+	return false
+end function
+
 '*************************************************************************
 '#endregion *** RTA HELPERS
 '*************************************************************************
