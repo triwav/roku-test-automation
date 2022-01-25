@@ -1,6 +1,6 @@
 {
     "name": "roku-test-automation",
-    "version": "1.2.0",
+    "version": "2.0.0-beta.0",
     "description": "Helps with automating functional tests",
     "main": "server/dist/index.js",
     "typings": "server/dist/index.d.ts",
