@@ -14,7 +14,10 @@ type Unwrap<T> = T extends Promise<infer U> ? U : T extends (...args: any) => Pr
 
 describe('OnDeviceComponent', function () {
 	before(async () => {
-		await device.deploy({rootDir: '../testProject'}, {preventMultipleDeployments: true});
+		await device.deploy({
+			rootDir: '../testProject',
+			preventMultipleDeployments: true
+		});
 
 		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});

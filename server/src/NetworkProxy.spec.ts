@@ -7,7 +7,10 @@ import { ecp, odc, device, proxy } from '.';
 
 describe('NetworkProxy', function () {
 	before(async () => {
-		await device.deploy({rootDir: '../testProject'}, {preventMultipleDeployments: true});
+		await device.deploy({
+			rootDir: '../testProject',
+			preventMultipleDeployments: true
+		});
 		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});
 

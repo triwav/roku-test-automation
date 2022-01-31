@@ -52,7 +52,12 @@ end sub
 
 function processCallFuncRequest(args as Object) as Object
 	keyPath = getStringAtKeyPath(args, "keyPath")
-	node = processGetValueAtKeyPathRequest(args).value
+	result = processGetValueAtKeyPathRequest(args)
+	if isErrorObject(result) then
+		return result
+	end if
+
+	node = result.value
 	if NOT isNode(node) then
 		return buildErrorResponseObject("Node not found at key path '" + keyPath + "'")
 	end if
@@ -218,6 +223,9 @@ end function
 function processHasFocusRequest(args as Object) as Object
 	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
+	if isErrorObject(result) then
+		return result
+	end if
 
 	if result.found <> true then
 		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
@@ -236,6 +244,9 @@ end function
 function processIsInFocusChainRequest(args as Object) as Object
 	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
+	if isErrorObject(result) then
+		return result
+	end if
 
 	if result.found <> true then
 		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
@@ -256,6 +267,10 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	requestId = request.id
 	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
+	if isErrorObject(result) then
+		return result
+	end if
+
 	node = result.value
 	field = args.field
 
@@ -314,7 +329,12 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	' If match was provided, check to see if it already matches the expected value
 	match = args.match
 	if isAA(match) then
+		match.key = args.key
 		result = processGetValueAtKeyPathRequest(match)
+		if isErrorObject(result) then
+			return result
+		end if
+
 		if result.found <> true then
 			return buildErrorResponseObject("Match was requested and key path was not valid")
 		end if
@@ -357,6 +377,11 @@ sub observeFieldCallback(event as Object)
 			match = args.match
 			if isAA(match) then
 				result = processGetValueAtKeyPathRequest(match)
+				if isErrorObject(result) then
+					sendBackResponse(request, result)
+					return
+				end if
+
 				if result.found <> true then
 					logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
 					node.unobserveFieldScoped(field)
@@ -386,6 +411,10 @@ end sub
 function processSetValueAtKeyPathRequest(args as Object) as Object
 	keyPath = getStringAtKeyPath(args, "keyPath")
 	result = processGetValueAtKeyPathRequest(args)
+	if isErrorObject(result) then
+		return result
+	end if
+
 
 	if result.found <> true then
 		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
