@@ -1,6 +1,6 @@
 {
 	"scripts": {
-		"automatedTests:compile": "tsc",
+		"automatedTests:compile": "rimraf dist && tsc",
 		"automatedTests": "npm run automatedTests:compile && mocha './dist/automatedTests/**/*.js'"
 	},
 	"dependencies": {
