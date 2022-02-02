@@ -107,6 +107,11 @@ RTA contains most of the standard ECP commands including:
 - Getting the current active app
 - Getting the media player
 
+In addition, with the coming requirement for login and logout scripts, the following methods have been added:  
+`startRaspFileCreation`  
+`finishRaspFileCreation`  
+and a copy of [`utils.sleep`](#sleep) that also includes a pause in your rasp file.
+
 ---
 
 ### `OnDeviceComponent`
@@ -171,7 +176,6 @@ Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-p
 
 -   `funcName: string` the name of the interface function that you want to run
 -   `funcParams?: any[]` an array of params to pass to the function.
--   `allowWithoutArgs?: boolean` if `true` and no `funcParams` are passed, the function will be called without injecting the placeholder `Invalid` argument.
 
 ```ts
 odc.callFunc({

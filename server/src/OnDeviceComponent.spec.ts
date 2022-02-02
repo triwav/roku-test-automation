@@ -518,10 +518,10 @@ describe('OnDeviceComponent', function () {
 			expect(value).to.be.true;
 		});
 
-		it(`should work with funcs that don't take any arguments when allowWithoutArgs param is set to true`, async () => {
+		it(`should work with funcs that don't take any arguments`, async () => {
 			const args = {keyPath: 'AuthManager.isLoggedIn'};
 			await setAndVerifyValue({...args, value: false});
-			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUserNoArgs', allowWithoutArgs: true});
+			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUserNoArgs'});
 			const {value} = await odc.getValueAtKeyPath(args);
 			expect(value).to.be.true;
 		});

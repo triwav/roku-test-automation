@@ -1,6 +1,9 @@
 import * as needle from 'needle';
+import * as fsExtra from 'fs-extra';
 import * as assert from 'assert';
 import * as chai from 'chai';
+const assertArrays = require('chai-arrays');
+chai.use(assertArrays);
 import * as sinonImport from 'sinon';
 const sinon = sinonImport.createSandbox();
 const expect = chai.expect;
@@ -40,6 +43,15 @@ describe('ECP', function () {
 			const text = 'love my life';
 			await ecp.sendText(text);
 			expect(stub.callCount).to.equal(text.length);
+		});
+
+		it('uses_raspTemplateVariable_if_provided_instead_of_text_for_rasp_output', async () => {
+			ecp.startRaspFileCreation();
+			const raspFileSteps = (ecp as any).raspFileSteps as string[];
+			await ecp.sendText('bob@hotmail.com', undefined, 'script-login');
+			expect(raspFileSteps[0]).to.contain('script-login');
+			await ecp.sendText('123456', undefined, 'script-password');
+			expect(raspFileSteps[1]).to.contain('script-password');
 		});
 	});
 
@@ -353,6 +365,66 @@ describe('ECP', function () {
 			expect(result.duration?.value).to.equal('8551626 ms');
 
 			expect(result.is_live?.value).to.equal('false');
+		});
+	});
+
+	describe('startRaspFileCreation', function () {
+		it('creates_empty_array_for_raspFileSteps_when_run', async () => {
+			expect((ecp as any).raspFileSteps).to.be.undefined;
+			ecp.startRaspFileCreation();
+			expect((ecp as any).raspFileSteps).to.be.array();
+		});
+	});
+
+	describe('finishRaspFileCreation', function () {
+		const outputPath = 'test-path.rasp';
+
+		it('outputs_file_at_path_specified_with_correct_contents', async () => {
+			config.ECP = {
+				default: {
+					keyPressDelay: 1500
+				}
+			};
+
+			ecp.startRaspFileCreation();
+			ecp.sendKeyPress(ecp.Key.UP);
+			ecp.sendKeyPress(ecp.Key.UP);
+			ecp.sendKeyPress(ecp.Key.DOWN);
+			ecp.sendKeyPress(ecp.Key.DOWN);
+			ecp.sendKeyPress(ecp.Key.LEFT);
+			ecp.sendKeyPress(ecp.Key.RIGHT);
+			ecp.sendKeyPress(ecp.Key.LEFT);
+			ecp.sendKeyPress(ecp.Key.RIGHT);
+			ecp.sleep(100);
+			ecp.sendKeyPress(ecp.Key.OK);
+			ecp.finishRaspFileCreation(outputPath);
+			const expectedContents =
+`params:
+    rasp_version: 1
+    default_keypress_wait: 1.5
+steps:
+    - press: up
+    - press: up
+    - press: down
+    - press: down
+    - press: left
+    - press: right
+    - press: left
+    - press: right
+    - pause: 0.1
+    - press: ok`;
+			expect(fsExtra.readFileSync(outputPath, 'utf8')).to.equal(expectedContents);
+		});
+
+		it('cleans_up_array_when_done', async () => {
+			ecp.startRaspFileCreation();
+			expect((ecp as any).raspFileSteps).to.be.array();
+
+			ecp.finishRaspFileCreation(outputPath);
+			expect((ecp as any).raspFileSteps).to.be.undefined;
+		});
+		after(() => {
+			fsExtra.removeSync(outputPath);
 		});
 	});
 });

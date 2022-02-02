@@ -73,12 +73,8 @@ function processCallFuncRequest(args as Object) as Object
 	paramsCount = p.count()
 
 	if paramsCount = 0 then
-		if args.allowWithoutArgs <> Invalid and args.allowWithoutArgs then
-			result = node.callFunc(funcName)
-		else
-			' callFunc could fail on certain devices if no param was passed
-			result = node.callFunc(funcName, [Invalid])
-		end if
+		' callFunc could fail on certain devices in the past if no param was passed. Leaving this up to the user of library as of 2.0 release
+		result = node.callFunc(funcName)
 	else if paramsCount = 1 then
 		result = node.callFunc(funcName, p[0])
 	else if paramsCount = 2 then

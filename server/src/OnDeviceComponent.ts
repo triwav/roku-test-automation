@@ -367,7 +367,7 @@ export class OnDeviceComponent {
 			return;
 		}
 
-		let callbackListenPort = this.getConfig()?.callbackListenPort
+		let callbackListenPort = this.getConfig()?.callbackListenPort;
 		if (!callbackListenPort) {
 			callbackListenPort = await portfinder.getPortPromise();
 		}
