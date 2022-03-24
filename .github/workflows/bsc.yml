@@ -22,8 +22,8 @@ jobs:
     - name: Switch to server directory
       run: cd server
 
-    - name: Install Dependencies
-      run: npm install
-
     - name: Check source code for issues with bsc
-      run: npx bsc --project server/bsconfig.json --create-package false --copy-to-staging false
+      run: |
+        cd server
+        npm install
+        npx bsc --project bsconfig.json --create-package false --copy-to-staging false
