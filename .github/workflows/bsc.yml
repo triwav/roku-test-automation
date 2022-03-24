@@ -19,11 +19,15 @@ jobs:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
 
-    - name: Switch to server directory
-      run: cd server
+    - name: Setup ReviewDog
+      uses: "reviewdog/action-setup@v1"
+      with:
+        reviewdog_version: latest #Optional. [latest,nightly,v.X.Y.Z]
 
     - name: Check source code for issues with bsc
+      env:
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         cd server
         npm install
-        npx bsc --project bsconfig.json --create-package false --copy-to-staging false
+        npx bsc --project bsconfig.json --create-package false --copy-to-staging false | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review
