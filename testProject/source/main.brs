@@ -1,7 +1,6 @@
 sub main()
 	screen = createObject("roSGScreen")
-	scene = screen.createScene("MainScene")
-	port = createObject("roMessagePort")
+	screen.createScene("MainScene")
 	screen.show()
 
 	' Write a test registry value we can check against
