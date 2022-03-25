@@ -30,4 +30,4 @@ jobs:
       run: |
         npm -prefix server install
         echo "testy testy"
-        npx -prefix server bsc --project bsconfig.json --create-package false --copy-to-staging false --emit-full-paths | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review -tee
+        npx -prefix server bsc --project bsconfig.json --create-package false --copy-to-staging false | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review -tee
