@@ -30,4 +30,5 @@ jobs:
       run: |
         cd server
         npm install
+        echo "why you no work?"
         npx bsc --project bsconfig.json --create-package false --copy-to-staging false --emit-full-paths | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review -tee
