@@ -12,7 +12,7 @@ function buildErrorResponseObject(message as String) as Object
 end function
 
 function isErrorObject(value as Dynamic) as Boolean
-	if isAA(value) AND doesNotExit(value.error) then
+	if isAA(value) AND isAA(value.error) then
 		return true
 	end if
 	return false
@@ -65,6 +65,7 @@ function isNumber(obj as Dynamic) as Boolean
 	if isInteger(obj) then return true
 	if isFloat(obj) then return true
 	if isDouble(obj) then return true
+	if isUnicorn(obj) then return true
 	return false
 end function
 
