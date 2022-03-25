@@ -30,4 +30,5 @@ jobs:
       run: |
         cd server
         npm install
-        npx bsc --project bsconfig.json --create-package false --copy-to-staging false | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review
+        npx bsc --project bsconfig.json --create-package false --copy-to-staging false | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review -tee
+        reviewdog -version
