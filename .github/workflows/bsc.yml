@@ -30,7 +30,4 @@ jobs:
       run: |
         cd server
         npm install
-        echo "does this print 1"
-        npx bsc --project bsconfig.json --create-package false --copy-to-staging false | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review -tee
-        echo "does this print 2"
-        reviewdog -version
+        npx bsc --project bsconfig.json --create-package false --copy-to-staging false --emit-full-paths | reviewdog -efm="%f:%l:%c - %m" -reporter=github-pr-review -tee
