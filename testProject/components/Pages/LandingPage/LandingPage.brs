@@ -7,5 +7,5 @@ end sub
 
 sub onLoginButtonSelected()
 	loginPage = m.top.getScene().pagesContainer.createChild("LoginPage")
-	setFocus(loginPage)
+	setdFocus(loginPage)
 end sub
