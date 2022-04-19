@@ -22,167 +22,186 @@ describe('OnDeviceComponent', function () {
 		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});
 
-	describe('nodeReferences', function () {
-		describe('storeNodeReferences', function () {
-			let storeResult: Unwrap<typeof odc.storeNodeReferences>;
+	describe('storeNodeReferences', function () {
+		let storeResult: Unwrap<typeof odc.storeNodeReferences>;
+		before(async () => {
+			storeResult = await odc.storeNodeReferences();
+		});
+
+		it('should have the correct fields for flatTree', async () => {
+			expect(storeResult.flatTree).to.be.an('array');
+			for (const tree of storeResult.flatTree) {
+				expect(tree.id).to.be.string;
+				expect(tree.subtype).to.be.string
+				expect(tree.ref).to.be.a('number');
+				expect(tree.parentRef).to.be.a('number');
+			}
+		});
+
+		it('should have the correct fields for rootTree', async () => {
+			expect(storeResult.rootTree).to.be.an('array');
+			for (const tree of storeResult.rootTree) {
+				expect(tree.id).to.be.string;
+				expect(tree.subtype).to.be.string
+				expect(tree.ref).to.be.a('number');
+				expect(tree.parentRef).to.be.a('number');
+				expect(tree.children).to.be.an('array');
+			}
+		});
+
+		it('each tree should have a children array field', async () => {
+			expect(storeResult.rootTree).to.be.array();
+			for (const tree of storeResult.flatTree) {
+				expect(tree.children).to.be.array();
+			}
+		});
+
+		it('should not include node count info by default', async () => {
+			expect(storeResult.totalNodes).to.not.be.ok;
+			expect(storeResult.nodeCountByType).to.not.be.ok;
+		});
+
+		describe('nodeCountInfo', function () {
 			before(async () => {
-				storeResult = await odc.storeNodeReferences();
+				storeResult = await odc.storeNodeReferences({
+					includeNodeCountInfo: true
+				});
 			});
 
-			it('should have the correct fields for flatTree', async () => {
-				expect(storeResult.flatTree).to.be.an('array');
-				for (const tree of storeResult.flatTree) {
-					expect(tree.id).to.be.string;
-					expect(tree.subtype).to.be.string
-					expect(tree.ref).to.be.a('number');
-					expect(tree.parentRef).to.be.a('number');
+			it('should include node count info if requested', async () => {
+				expect(storeResult.totalNodes).to.be.greaterThan(0);
+				expect(Object.keys(storeResult.nodeCountByType!).length).to.be.greaterThan(0);
+			});
+
+			it('should not run array grid child finding code unless explicitly requested', async () => {
+				for (const nodeTree of storeResult.flatTree) {
+					expect(nodeTree.subtype).to.not.equal('RowListItem')
 				}
-			});
-
-			it('should have the correct fields for rootTree', async () => {
-				expect(storeResult.rootTree).to.be.an('array');
-				for (const tree of storeResult.rootTree) {
-					expect(tree.id).to.be.string;
-					expect(tree.subtype).to.be.string
-					expect(tree.ref).to.be.a('number');
-					expect(tree.parentRef).to.be.a('number');
-					expect(tree.children).to.be.an('array');
-				}
-			});
-
-			it('each tree should have a children array field', async () => {
-				expect(storeResult.rootTree).to.be.array();
-				for (const tree of storeResult.flatTree) {
-					expect(tree.children).to.be.array();
-				}
-			});
-
-			it('should not include node count info by default', async () => {
-				expect(storeResult.totalNodes).to.not.be.ok;
-				expect(storeResult.nodeCountByType).to.not.be.ok;
-			});
-
-			describe('nodeCountInfo', function () {
-				before(async () => {
-					storeResult = await odc.storeNodeReferences({
-						includeNodeCountInfo: true
-					});
-				});
-
-				it('should include node count info if requested', async () => {
-					expect(storeResult.totalNodes).to.be.greaterThan(0);
-					expect(Object.keys(storeResult.nodeCountByType!).length).to.be.greaterThan(0);
-				});
-
-				it('should not run array grid child finding code unless explicitly requested', async () => {
-					for (const nodeTree of storeResult.flatTree) {
-						expect(nodeTree.subtype).to.not.equal('RowListItem')
-					}
-				});
-			});
-
-			describe('arrayGridChildren', function () {
-				before(async () => {
-					storeResult = await odc.storeNodeReferences({
-						includeArrayGridChildren: true
-					});
-				});
-
-				it('should include ArrayGrid children if requested', async () => {
-					let arrayGridChildrenCount = 0;
-					for (const nodeTree of storeResult.flatTree) {
-						if (nodeTree.subtype === 'RowListItem') {
-							arrayGridChildrenCount++;
-						}
-					}
-					expect(arrayGridChildrenCount).to.be.greaterThan(0);
-				});
 			});
 		});
 
-		describe('getNodesInfoAtKeyPaths', function () {
-			let storeResult: Unwrap<typeof odc.storeNodeReferences>;
+		describe('arrayGridChildren', function () {
 			before(async () => {
-				storeResult = await odc.storeNodeReferences();
+				storeResult = await odc.storeNodeReferences({
+					includeArrayGridChildren: true
+				});
 			});
 
-			it('should get only the requested number of nodes with the right return types', async () => {
-				const requests = {} as {
-					[key: string]: ODC.GetValueAtKeyPathArgs
-				};
-				for (const index in storeResult.flatTree) {
-					if (index === '12') break;
-					requests[index] = {
-						base: 'nodeRef',
-						keyPath: index
+			it('should include ArrayGrid children if requested', async () => {
+				let arrayGridChildrenCount = 0;
+				for (const nodeTree of storeResult.flatTree) {
+					if (nodeTree.subtype === 'RowListItem') {
+						arrayGridChildrenCount++;
 					}
 				}
+				expect(arrayGridChildrenCount).to.be.greaterThan(0);
+			});
+		});
+	});
 
-				const {results} = await odc.getNodesInfoAtKeyPaths({
-					requests: requests
-				});
-				expect(Object.keys(results).length).to.equal(Object.keys(requests).length);
-				for (const key in results) {
-					const node = results[key];
-					expect(node).to.be.ok;
-					expect(node.fields.id.value).to.equal(storeResult.flatTree[key].id);
-					expect(node.subtype).to.equal(storeResult.flatTree[key].subtype);
+	describe('getNodesInfoAtKeyPaths', function () {
+		let storeResult: Unwrap<typeof odc.storeNodeReferences>;
+		before(async () => {
+			storeResult = await odc.storeNodeReferences();
+		});
+
+		it('should get only the requested number of nodes with the right return types', async () => {
+			const requests = {} as {
+				[key: string]: ODC.GetValueAtKeyPathArgs
+			};
+			for (const index in storeResult.flatTree) {
+				if (index === '12') break;
+				requests[index] = {
+					base: 'nodeRef',
+					keyPath: index
+				}
+			}
+
+			const {results} = await odc.getNodesInfoAtKeyPaths({
+				requests: requests
+			});
+			expect(Object.keys(results).length).to.equal(Object.keys(requests).length);
+			for (const key in results) {
+				const node = results[key];
+				expect(node).to.be.ok;
+				expect(node.fields.id.value).to.equal(storeResult.flatTree[key].id);
+				expect(node.subtype).to.equal(storeResult.flatTree[key].subtype);
+			}
+		});
+
+		it('should include fields in the response', async () => {
+			const {results} = await odc.getNodesInfoAtKeyPaths({
+				requests: {
+					firstItem: {
+						base: 'nodeRef',
+						keyPath: '0'
+					}
 				}
 			});
 
-			it('should include fields in the response', async () => {
-				const {results} = await odc.getNodesInfoAtKeyPaths({
+			const node = results.firstItem;
+			expect(node.subtype).to.equal('MainScene');
+			expect(node.fields.visible.fieldType).to.equal('boolean');
+			expect(node.fields.visible.type).to.equal('roBoolean');
+			expect(node.fields.visible.value).to.equal(true);
+		});
+
+		it('should include children array with each child node subtype', async () => {
+			const {results} = await odc.getNodesInfoAtKeyPaths({
+				requests: {
+					firstItem: {
+						base: 'nodeRef',
+						keyPath: '0'
+					}
+				}
+			});
+
+			const node = results.firstItem;
+			const expectedSubtypes = [
+				'Poster',
+				'Poster',
+				'Group'
+			];
+			for (const child of node.children) {
+				expect(child.subtype).to.equal(expectedSubtypes.shift())
+			}
+		});
+
+		it('should fail if we try to access a non-node keyPath', async () => {
+			try {
+				await odc.getNodesInfoAtKeyPaths({
 					requests: {
 						firstItem: {
-							base: 'nodeRef',
+							base: 'global',
+							keyPath: 'booleanValue'
+						}
+					}
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception getting boolean value');
+		});
+	});
+
+	describe('deleteNodeReferences', function () {
+		it('should successfully delete the node references for the default key', async () => {
+			await odc.storeNodeReferences();
+			await odc.deleteNodeReferences();
+			try {
+				await odc.getNodesInfoAtKeyPaths({
+					requests: {
+						firstItem: {
 							keyPath: '0'
 						}
 					}
 				});
-
-				const node = results.firstItem;
-				expect(node.subtype).to.equal('MainScene');
-				expect(node.fields.visible.fieldType).to.equal('boolean');
-				expect(node.fields.visible.type).to.equal('roBoolean');
-				expect(node.fields.visible.value).to.equal(true);
-			});
-
-			it('should fail if we try to access a non-node keyPath', async () => {
-				try {
-					await odc.getNodesInfoAtKeyPaths({
-						requests: {
-							firstItem: {
-								base: 'global',
-								keyPath: 'booleanValue'
-							}
-						}
-					});
-				} catch (e) {
-					// failed as expected
-					return;
-				}
-				assert.fail('Should have thrown an exception getting boolean value');
-			});
-		});
-
-		describe('deleteNodeReferences', function () {
-			it('should successfully delete the node references for the default key', async () => {
-				await odc.storeNodeReferences();
-				await odc.deleteNodeReferences();
-				try {
-					await odc.getNodesInfoAtKeyPaths({
-						requests: {
-							firstItem: {
-								keyPath: '0'
-							}
-						}
-					});
-				} catch (e) {
-					// failed as expected
-					return;
-				}
-				assert.fail('Should have thrown an exception on the getNodesInfoAtKeyPaths if the references were removed');
-			});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception on the getNodesInfoAtKeyPaths if the references were removed');
 		});
 	});
 

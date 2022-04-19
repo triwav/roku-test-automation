@@ -9,7 +9,7 @@ import { ecp, device } from './';
 
 describe('RokuDevice', function () {
 	before(async () => {
-		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
+		await ecp.sendLaunchChannel();
 	});
 
 	afterEach(() => {

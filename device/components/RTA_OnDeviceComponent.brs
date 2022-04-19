@@ -196,7 +196,7 @@ function processGetNodesInfoAtKeyPathsRequest(args as Object) as Object
 
 		fields = {}
 		fieldTypes = node.getFieldTypes()
-		for each fieldKey in node.getFieldTypes()
+		for each fieldKey in fieldTypes
 			value = node[fieldKey]
 			fields[fieldKey] = {
 				"fieldType": fieldTypes[fieldKey]
@@ -205,14 +205,22 @@ function processGetNodesInfoAtKeyPathsRequest(args as Object) as Object
 			}
 		end for
 
+		children = []
+		for each child in node.getChildren(-1, 0)
+			children.push({
+				"subtype": child.subtype()
+			})
+		end for
+
 		results[key] = {
 			"subtype": node.subtype()
 			"fields": fields
+			"children": children
 		}
 	end for
 
 	return {
-		results: results
+		"results": results
 	}
 end function
 

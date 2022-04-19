@@ -105,7 +105,10 @@ export class OnDeviceComponent {
 							"type": string;
 							"value": any;
 						}
-					}
+					};
+					"children": {
+						"subtype": string;
+					}[]
 				}
 			}
 		} & ODC.ReturnTimeTaken;
