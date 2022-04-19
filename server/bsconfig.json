@@ -1,0 +1,7 @@
+{
+	"rootDir": "../device",
+	"files": [
+		"components/**/*.+(xml|brs)",
+		"source/**/*.+(brs)"
+	]
+}

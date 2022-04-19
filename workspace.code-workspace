@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "device"
+		},
+		{
+			"path": "testProject"
+		},
+		{
+			"path": "server"
+		},
+		{
+			"path": ".github"
+		}
+	],
+	"settings": {}
+}
