@@ -42,7 +42,7 @@ export interface DeviceConfigOptions {
 	timeoutMultiplier?: number;
 
 	/** User defined list of properties for this device (name, isLowEnd, etc) */
-	properties?: {};
+	properties?: Record<string, any>;
 
 	/** Devices default to jpg but if you've changed to png you'll need so supply this */
 	screenshotFormat?: 'png' | 'jpg';

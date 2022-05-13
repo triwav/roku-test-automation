@@ -43,7 +43,7 @@ export class RokuDevice {
 		if (options?.preventMultipleDeployments !== false) {
 			if (this.deployed) return;
 		}
-		const injectTestingFiles = options?.injectTestingFiles !== false
+		const injectTestingFiles = options?.injectTestingFiles !== false;
 
 		const deviceConfig = this.getCurrentDeviceConfig();
 		options = rokuDeploy.getOptions(options);
@@ -97,12 +97,12 @@ export class RokuDevice {
 	}
 
 	public async getTelnetLog() {
-		return new Promise(async (resolve, reject) => {
+		return new Promise((resolve, reject) => {
 			const socket = net.createConnection(8085, this.getCurrentDeviceConfig().host);
 
 			let content = '';
 			let timeout;
-			socket.on("data", (data) => {
+			socket.on('data', (data) => {
 				content += String(data);
 
 				// Cancel any previous timeout
@@ -131,7 +131,7 @@ export class RokuDevice {
 
 	private processTelnetLog(content: string) {
 		const lines = content.split('\n');
-		let splitContents = [] as string[];
+		const splitContents = [] as string[];
 		for (const line of lines.reverse()) {
 			splitContents.unshift(line);
 			if (/------\s+compiling.*------/i.exec(line)) {
@@ -159,14 +159,14 @@ export class RokuDevice {
 		const ext = `.${deviceConfig.screenshotFormat ?? 'jpg'}`;
 		options.output = outputFilePath + ext;
 		const url = `http://${deviceConfig.host}/pkgs/dev${ext}`;
-		let result = await this.needle('get', url, options);
+		const result = await this.needle('get', url, options);
 		if (result.statusCode !== 200) {
 			throw new Error(`Could not download screenshot at ${url}. Make sure you have the correct screenshot format in your config`);
 		}
 		return options.output;
 	}
 
-	private getOptions(requiresAuth: boolean = false) {
+	private getOptions(requiresAuth = false) {
 		const options: needle.NeedleOptions = {};
 		if (requiresAuth) {
 			options.username = 'rokudev';

@@ -57,7 +57,7 @@ export class ECP {
 
 	// This method simply runs utils.sleep. Added here to allow adding a pause in rasp file commands
 	public sleep(milliseconds: number) {
-		this.addRaspFileStep(`pause: ${milliseconds / 1000}`)
+		this.addRaspFileStep(`pause: ${milliseconds / 1000}`);
 		return this.utils.sleep(milliseconds);
 	}
 
@@ -144,8 +144,8 @@ export class ECP {
 		const children = result.body?.children;
 		if (!children) throw utils.makeError('getActiveAppInvalidResponse', 'Received invalid active-app response from device');
 
-		let response: ActiveAppResponse = {};
-		for (let child of children) {
+		const response: ActiveAppResponse = {};
+		for (const child of children) {
 			response[child.name] = {
 				...child.attributes,
 				title: child.value
@@ -164,7 +164,7 @@ export class ECP {
 			error: player.attributes.error === 'true',
 		};
 
-		for (let child of player.children) {
+		for (const child of player.children) {
 			response[child.name] = {
 				...child.attributes,
 				value: child.value

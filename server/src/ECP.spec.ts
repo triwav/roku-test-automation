@@ -2,6 +2,7 @@ import * as needle from 'needle';
 import * as fsExtra from 'fs-extra';
 import * as assert from 'assert';
 import * as chai from 'chai';
+// TODO remove this
 const assertArrays = require('chai-arrays');
 chai.use(assertArrays);
 import * as sinonImport from 'sinon';
@@ -387,16 +388,16 @@ describe('ECP', function () {
 			};
 
 			ecp.startRaspFileCreation();
-			ecp.sendKeyPress(ecp.Key.UP);
-			ecp.sendKeyPress(ecp.Key.UP);
-			ecp.sendKeyPress(ecp.Key.DOWN);
-			ecp.sendKeyPress(ecp.Key.DOWN);
-			ecp.sendKeyPress(ecp.Key.LEFT);
-			ecp.sendKeyPress(ecp.Key.RIGHT);
-			ecp.sendKeyPress(ecp.Key.LEFT);
-			ecp.sendKeyPress(ecp.Key.RIGHT);
-			ecp.sleep(100);
-			ecp.sendKeyPress(ecp.Key.OK);
+			await ecp.sendKeyPress(ecp.Key.UP);
+			await ecp.sendKeyPress(ecp.Key.UP);
+			await ecp.sendKeyPress(ecp.Key.DOWN);
+			await ecp.sendKeyPress(ecp.Key.DOWN);
+			await ecp.sendKeyPress(ecp.Key.LEFT);
+			await ecp.sendKeyPress(ecp.Key.RIGHT);
+			await ecp.sendKeyPress(ecp.Key.LEFT);
+			await ecp.sendKeyPress(ecp.Key.RIGHT);
+			await ecp.sleep(100);
+			await ecp.sendKeyPress(ecp.Key.OK);
 			ecp.finishRaspFileCreation(outputPath);
 			const expectedContents =
 `params:

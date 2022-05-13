@@ -1,17 +1,29 @@
 {
 	"folders": [
 		{
+			"name": "device",
 			"path": "device"
 		},
 		{
+			"name": "testProject",
 			"path": "testProject"
 		},
 		{
+			"name": "server",
 			"path": "server"
 		},
 		{
+			"name": ".github",
 			"path": ".github"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"search.exclude": {
+			"**/dist": true,
+			"**/node_modules": true,
+			"**/coverage": true,
+			"**/release": true
+		},
+		"typescript.preferences.quoteStyle": "single"
+	}
 }

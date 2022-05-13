@@ -16,10 +16,13 @@ export class OnDeviceComponent {
 	private static readonly version = '1.0.0';
 	private defaultTimeout = 10000;
 	private callbackListenPort?: number;
-	private storedDeviceRegistry?: {};
+	private storedDeviceRegistry?: {
+		[section: string]: {[sectionItemKey: string]: string}
+	};
 	private config?: ConfigOptions;
 	private sentRequests: { [key: string]: ODC.Request } = {};
 	private app = this.setupExpress();
+	private callbackListenPortSetupPromise?: Promise<number>;
 	private server?: http.Server;
 	private defaultNodeReferencesKey = '';
 
@@ -55,7 +58,7 @@ export class OnDeviceComponent {
 		return result.body as {
 			node: ODC.NodeRepresentation;
 			ref?: number;
-		}
+		};
 	}
 
 	public async getValueAtKeyPath(args: ODC.GetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
@@ -98,16 +101,16 @@ export class OnDeviceComponent {
 		return result.body as {
 			results: {
 				[key: string]: {
-					"subtype": string;
-					"fields": {
+					subtype: string;
+					fields: {
 						[key: string]: {
-							"fieldType": string;
-							"type": string;
-							"value": any;
+							fieldType: string;
+							type: string;
+							value: any;
 						}
 					};
-					"children": {
-						"subtype": string;
+					children: {
+						subtype: string;
 					}[]
 				}
 			}
@@ -134,10 +137,13 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		let match = args.match;
+		const match = args.match;
 		if (match !== undefined) {
 			// Check if it's an object. Also have to check constructor as array is also an instanceof Object, make sure it has the keyPath key
-			if (!((match instanceof Object) && (match.constructor.name === 'Object') && ('keyPath' in match))) {
+			if (((match instanceof Object) && (match.constructor.name === 'Object') && ('keyPath' in match))) {
+				this.conditionallyAddDefaultBase(match);
+			} else {
+				// If it's not we take base and keyPath from the base and keyPath args
 				args.match = {
 					base: args.base,
 					keyPath: args.keyPath,
@@ -200,7 +206,7 @@ export class OnDeviceComponent {
 		}
 	}
 
-	public async storeNodeReferences(args: ODC.StoreNodeReferences = {}, options: ODC.RequestOptions = {}) {
+	public async storeNodeReferences(args: ODC.StoreNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest('storeNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
 		const body = result.body as {
@@ -227,10 +233,15 @@ export class OnDeviceComponent {
 		return body;
 	}
 
-	public async deleteNodeReferences(args: ODC.DeleteNodeReferences = {}, options: ODC.RequestOptions = {}) {
+	public async deleteNodeReferences(args: ODC.DeleteNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('deleteNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
+		return result.body as ODC.ReturnTimeTaken;
+	}
+
+	public async disableScreenSaver(args: ODC.DisableScreensaverArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('disableScreenSaver', args, options);
 		return result.body as ODC.ReturnTimeTaken;
 	}
 	//#endregion
@@ -247,12 +258,12 @@ export class OnDeviceComponent {
 
 	public async writeRegistry(args: ODC.WriteRegistryArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('writeRegistry', args, options);
-		return result.body as {};
+		return result.body;
 	}
 
 	public async deleteRegistrySections(args: ODC.DeleteRegistrySectionsArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('deleteRegistrySections', args, options);
-		return result.body as {};
+		return result.body;
 	}
 
 	public async deleteEntireRegistry(args: ODC.DeleteEntireRegistrySectionsArgs = {}, options: ODC.RequestOptions = {}) {
@@ -260,7 +271,7 @@ export class OnDeviceComponent {
 			sections: [],
 			allowEntireRegistryDelete: true
 		};
-		return await this.deleteRegistrySections(deleteSectionsArgs, options) as {};
+		return await this.deleteRegistrySections(deleteSectionsArgs, options);
 	}
 
 	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
@@ -287,6 +298,8 @@ export class OnDeviceComponent {
 		const requestId = utils.randomStringGenerator();
 		const request: ODC.Request = {
 			id: requestId,
+			// Guaranteed to be there by startServer
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 			callbackPort: this.callbackListenPort!,
 			type: type,
 			args: args,
@@ -314,7 +327,7 @@ export class OnDeviceComponent {
 
 			client.on('message', (message) => {
 				const json = JSON.parse(message.toString());
-				let receivedId = json.id;
+				const receivedId = json.id;
 				if (receivedId !== requestId) {
 					const rejectMessage = `Received id '${receivedId}' did not match request id '${requestId}'`;
 					this.debugLog(rejectMessage);
@@ -345,7 +358,7 @@ export class OnDeviceComponent {
 			return await utils.promiseTimeout(promise, timeout);
 		} catch(e) {
 			if ((e as Error).name === 'Timeout') {
-				let message = `${request.type} request timed out after ${timeout}ms`
+				let message = `${request.type} request timed out after ${timeout}ms`;
 
 				if (!this.getConfig()?.disableCallOriginationLine) {
 					message += `${this.getCaller(stackTrace)}\n`;
@@ -366,13 +379,19 @@ export class OnDeviceComponent {
 
 	// Starts up express server
 	private async startServer() {
+		// startServer can be called multiple times. Sometimes before server has even been set so have to wait until ready to proceed
+		if (this.callbackListenPortSetupPromise) {
+			await this.callbackListenPortSetupPromise;
+		}
+
 		if (this.server) {
 			return;
 		}
 
 		let callbackListenPort = this.getConfig()?.callbackListenPort;
 		if (!callbackListenPort) {
-			callbackListenPort = await portfinder.getPortPromise();
+			this.callbackListenPortSetupPromise = portfinder.getPortPromise();
+			callbackListenPort = await this.callbackListenPortSetupPromise;
 		}
 
 		this.debugLog('Starting callback server');
@@ -388,9 +407,11 @@ export class OnDeviceComponent {
 		}
 	}
 
-	public async shutdown(waitForServerShutdown: boolean = false) {
+	public async shutdown(waitForServerShutdown = false) {
 		this.debugLog(`Shutting down`);
 
+		// TODO need to investigate how to handle
+		// eslint-disable-next-line no-async-promise-executor
 		return new Promise(async (resolve) => {
 			if (!this.server) {
 				resolve(undefined);

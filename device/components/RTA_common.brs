@@ -252,6 +252,87 @@ end function
 '*************************************************************************
 
 ' /**
+' * @description Helper for getValueAtKeyPath to break out
+' * @param {Object} key - Key of the function the user is asking us to call
+' * @param {Dynamic} level - The variable we are calling the function call on
+' */
+function callBrightscriptInterfaceFunction(functionName as string, callOn as Dynamic) as Dynamic
+	if functionName = "getParent()" then
+		if isNode(callOn) then
+			return callOn.getParent()
+		else
+			logWarn("tried to call getParent() on non node of type " + type(functionName))
+		end if
+	else if functionName = "count()" then
+		if isArray(callOn) OR isKeyedValueType(callOn) then
+			return callOn.count()
+		else
+			logWarn("tried to call count() on non AA or array of type " + type(functionName))
+		end if
+	else if functionName = "keys()" then
+		if isNode(callOn) then
+			return callOn.keys().toArray() ' keys() returns an roList when called on a node. We have to convert to array as all of our array checks are specifically looking for an array
+		else if isAA(callOn) then
+			return callOn.keys()
+		else
+			logWarn("tried to call keys() on non keyed value of type " + type(functionName))
+		end if
+	else if functionName = "len()" then
+		if isString(callOn) then
+			return callOn.len()
+		else
+			logWarn("tried to call len() on non string of type " + type(functionName))
+		end if
+	else if functionName = "getChildCount()" then
+		if isNode(callOn) then
+			return callOn.getChildCount()
+		else
+			logWarn("tried to call getChildCount() on non node of type " + type(functionName))
+		end if
+	else if functionName = "threadinfo()" then
+		if isNode(callOn) then
+			return callOn.threadinfo()
+		else
+			logWarn("tried to call threadinfo() on non node of type " + type(functionName))
+		end if
+	else if functionName = "getFieldTypes()" then
+		if isNode(callOn) then
+			return callOn.getFieldTypes()
+		else
+			logWarn("tried to call getFieldTypes() on non node of type " + type(functionName))
+		end if
+	else if functionName = "subtype()" then
+		if isNode(callOn) then
+			return callOn.subtype()
+		else
+			logWarn("tried to call subtype() on non node of type " + type(functionName))
+		end if
+	else if functionName = "boundingRect()" then
+		if isNode(callOn) then
+			return callOn.boundingRect()
+		else
+			logWarn("tried to call boundingRect() on non node of type " + type(functionName))
+		end if
+	else if functionName = "localBoundingRect()" then
+		if isNode(callOn) then
+			return callOn.localBoundingRect()
+		else
+			logWarn("tried to call localBoundingRect() on non node of type " + type(functionName))
+		end if
+	else if functionName = "sceneBoundingRect()" then
+		if isNode(callOn) then
+			return callOn.sceneBoundingRect()
+		else
+			logWarn("tried to call sceneBoundingRect() on non node of type " + type(functionName))
+		end if
+	else
+		logWarn("tried to call unknown function" + functionName)
+	end if
+
+	return Invalid
+end function
+
+' /**
 ' * @description Used to find a nested value in an object
 ' * @param {Object} base - Object to drill down into.
 ' * @param {String} keyPath - A dot notation based string to the expected value.
@@ -268,7 +349,10 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 
 	while NOT keys.isEmpty()
 		key = keys.shift()
-		if isKeyedValueType(level) then
+		' Check for any Brightscript interface function calls
+		if key.Instr("()") > 0 then
+			level = callBrightscriptInterfaceFunction(key, level)
+		else if isKeyedValueType(level) then
 			nextLevel = level[key]
 			if nextLevel = Invalid and isNode(level) then
 				index = key.toInt()

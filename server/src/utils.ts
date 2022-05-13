@@ -21,7 +21,7 @@ class Utils {
 		return JSON.parse(fsExtra.readFileSync(filePath, 'utf-8'));
 	}
 
-	public getMatchingDevices(config: ConfigOptions, deviceSelector: {}): { [key: string]: DeviceConfigOptions} {
+	public getMatchingDevices(config: ConfigOptions, deviceSelector: Record<string, any>): { [key: string]: DeviceConfigOptions} {
 		const matchingDevices = {};
 		config.RokuDevice.devices.forEach((device, index) => {
 			for (const key in deviceSelector) {
@@ -38,13 +38,13 @@ class Utils {
 	}
 
 	/** Helper for setting up process.env from a config */
-	public setupEnvironmentFromConfigFile(configFilePath: string = 'rta-config.json', deviceSelector: {} | number | undefined = undefined) {
+	public setupEnvironmentFromConfigFile(configFilePath = 'rta-config.json', deviceSelector: Record<string, any> | number | undefined = undefined) {
 		const config: ConfigOptions = this.parseJsonFile(configFilePath);
 
 
 		if (!config.RokuDevice) {
 			console.log('Config did not contain RokuDevice object!!!');
-			return
+			return;
 		}
 
 		if (deviceSelector === undefined) {
@@ -147,12 +147,12 @@ class Utils {
 		await fsExtra.ensureDir(path.dirname(filePath));
 	}
 
-	public randomStringGenerator(length: number = 7) {
+	public randomStringGenerator(length = 7) {
 		const p = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 		return [...Array(length)].reduce((a) => a + p[~~(Math.random() * p.length)], '');
 	}
 
-	public addRandomPostfix(message: string, length: number = 2) {
+	public addRandomPostfix(message: string, length = 2) {
 		return `${message}-${this.randomStringGenerator(length)}`;
 	}
 }

@@ -13,7 +13,8 @@
 			<Group id="child3" />
 		</Group>
 		<Poster id="poster" />
-		<TestRowList
+		<RowList
+			id="rowList"
 			itemComponentName="RowListItemComponent"
 			itemSize="[1920, 300]"
 			numRows="3"
@@ -29,6 +30,6 @@
 					<ContentNode />
 				</ContentNode>
 			</ContentNode>
-		</TestRowList>
+		</RowList>
 	</children>
 </component>

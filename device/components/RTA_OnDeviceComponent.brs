@@ -41,6 +41,8 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processGetNodesInfoAtKeyPathsRequest(args)
 	else if requestType = "deleteNodeReferences" then
 		response = processDeleteNodeReferencesRequest(args)
+	else if requestType = "disableScreenSaver"
+		response = processDisableScreenSaverRequest(args)
 	else
 		response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
 	end if
@@ -588,6 +590,21 @@ function processDeleteNodeReferencesRequest(args as Object) as Object
 	end if
 	m.nodeReferences.delete(nodeReferencesKey)
 
+	return {}
+end function
+
+function processDisableScreenSaverRequest(args as Object) as Object
+	if args.disableScreenSaver then
+		if m.videoNode = Invalid then
+			m.videoNode = m.top.createChild("Video")
+			m.videoNode.disableScreenSaver = true
+		end if
+	else
+		if m.videoNode <> Invalid then
+			m.top.removeChild(m.videoNode)
+			m.videoNode = Invalid
+		end if
+	end if
 	return {}
 end function
 

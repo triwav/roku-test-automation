@@ -5,6 +5,7 @@ export namespace ODC {
 		callFunc,
 		deleteNodeReferences,
 		deleteRegistrySections,
+		disableScreenSaver,
 		getFocusedNode,
 		getNodesInfoAtKeyPaths,
 		getServerHost,
@@ -82,7 +83,7 @@ export namespace ODC {
 
 	export interface IsInFocusChainArgs extends BaseKeyPath {}
 
-	export interface StoreNodeReferences {
+	export interface StoreNodeReferencesArgs {
 		/** Key that we will store the node references on. If one isn't provided we use the automatically generated one */
 		key?: string;
 
@@ -93,9 +94,14 @@ export namespace ODC {
 		includeNodeCountInfo?: boolean;
 	}
 
-	export interface DeleteNodeReferences {
+	export interface DeleteNodeReferencesArgs {
 		/** Key that the references were stored on */
 		key?: string;
+	}
+
+	export interface DisableScreensaverArgs {
+		/** Set to true to disable screensaver from starting, false to allow screensaver to start at the appropriate time */
+		disableScreensaver?: boolean;
 	}
 
 	// TODO build out to support more complicated types
@@ -144,10 +150,8 @@ export namespace ODC {
 		allowEntireRegistryDelete?: boolean;
 	}
 
-	// tslint:disable-next-line: no-empty-interface
 	export interface DeleteEntireRegistrySectionsArgs {}
 
-	// tslint:disable-next-line: no-empty-interface
 	export interface GetServerHostArgs {}
 
 	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueAtKeyPathArgs | GetValuesAtKeyPathsArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueAtKeyPathArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs;

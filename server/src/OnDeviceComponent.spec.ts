@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 const chai = require('chai');
 const assertArrays = require('chai-arrays');
 chai.use(assertArrays);
@@ -32,7 +33,7 @@ describe('OnDeviceComponent', function () {
 			expect(storeResult.flatTree).to.be.an('array');
 			for (const tree of storeResult.flatTree) {
 				expect(tree.id).to.be.string;
-				expect(tree.subtype).to.be.string
+				expect(tree.subtype).to.be.string;
 				expect(tree.ref).to.be.a('number');
 				expect(tree.parentRef).to.be.a('number');
 			}
@@ -42,7 +43,7 @@ describe('OnDeviceComponent', function () {
 			expect(storeResult.rootTree).to.be.an('array');
 			for (const tree of storeResult.rootTree) {
 				expect(tree.id).to.be.string;
-				expect(tree.subtype).to.be.string
+				expect(tree.subtype).to.be.string;
 				expect(tree.ref).to.be.a('number');
 				expect(tree.parentRef).to.be.a('number');
 				expect(tree.children).to.be.an('array');
@@ -75,7 +76,7 @@ describe('OnDeviceComponent', function () {
 
 			it('should not run array grid child finding code unless explicitly requested', async () => {
 				for (const nodeTree of storeResult.flatTree) {
-					expect(nodeTree.subtype).to.not.equal('RowListItem')
+					expect(nodeTree.subtype).to.not.equal('RowListItem');
 				}
 			});
 		});
@@ -114,7 +115,7 @@ describe('OnDeviceComponent', function () {
 				requests[index] = {
 					base: 'nodeRef',
 					keyPath: index
-				}
+				};
 			}
 
 			const {results} = await odc.getNodesInfoAtKeyPaths({
@@ -163,7 +164,7 @@ describe('OnDeviceComponent', function () {
 				'Group'
 			];
 			for (const child of node.children) {
-				expect(child.subtype).to.equal(expectedSubtypes.shift())
+				expect(child.subtype).to.equal(expectedSubtypes.shift());
 			}
 		});
 
@@ -202,6 +203,16 @@ describe('OnDeviceComponent', function () {
 				return;
 			}
 			assert.fail('Should have thrown an exception on the getNodesInfoAtKeyPaths if the references were removed');
+		});
+	});
+
+	describe('disableScreenSaver', function () {
+		it('should work disabling', async () => {
+			await odc.disableScreenSaver({disableScreensaver: true});
+		});
+
+		it('should work reenabling', async () => {
+			await odc.disableScreenSaver({disableScreensaver: false});
 		});
 	});
 
@@ -285,6 +296,200 @@ describe('OnDeviceComponent', function () {
 			const {value} = await odc.getValueAtKeyPath({base: 'nodeRef', keyPath: `${key}`});
 			expect(value.id).to.equal(storeNode.id);
 			expect(value.subtype).to.equal(storeNode.subtype);
+		});
+
+		describe('Brightscript interface function calls', function () {
+			describe('getParent()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'poster.getParent()'});
+					expect(value.subtype).to.equal('MainScene');
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.getParent()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('count()', async () => {
+				it('should work on array item', async () => {
+					const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.count()'});
+					expect(value).to.equal(3);
+				});
+
+				it('should work on AA item', async () => {
+					const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.0.count()'});
+					expect(value).to.equal(1);
+				});
+
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.count()'});
+					expect(value).to.equal(6);
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.count()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('keys()', async () => {
+				it('should work on AA item', async () => {
+					const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.0.keys()'});
+					expect(value).to.be.instanceof(Array);
+					expect(value[0]).to.equal('name');
+				});
+
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.keys()'});
+					expect(value).to.be.instanceof(Array);
+					expect(value[0]).to.equal('change');
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.keys()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('len()', async () => {
+				it('should work on string item', async () => {
+					const {value} = await odc.getValueAtKeyPath({keyPath: 'stringValue.len()'});
+					expect(value).to.equal(11);
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.len()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('getChildCount()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'getChildCount()'});
+					expect(value).to.equal(3);
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.getChildCount()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('threadinfo()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'threadinfo()'});
+					const currentThread = value.currentThread;
+					expect(currentThread.name).to.equal('MainScene');
+					expect(currentThread.type).to.equal('Render');
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.threadinfo()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('getFieldTypes()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'getFieldTypes()'});
+					const expectedValues = {
+						allowBackgroundTask:'boolean',
+						backExitsScene:'boolean',
+						backgroundColor:'color',
+						backgroundUri:'uri',
+						change:'string',
+						childRenderOrder:'string',
+						clippingRect:'rect2d',
+						currentDesignResolution:'std::shared_ptr<std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::any, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::any> > > >',
+						dialog:'std::shared_ptr<Roku::SceneGraph::DialogBase>',
+						enableRenderTracking:'boolean',
+						focusable:'boolean',
+						focusedChild:'node',
+						id:'string',
+						inheritParentOpacity:'boolean',
+						inheritParentTransform:'boolean',
+						limitBackgroundToUIResolution:'boolean',
+						muteAudioGuide:'boolean',
+						opacity:'float',
+						pagesContainer:'node',
+						palette:'std::shared_ptr<Roku::SceneGraph::RSGPalette>',
+						renderPass:'integer',
+						renderTracking:'string',
+						rotation:'float',
+						scale:'vector2d',
+						scaleRotateCenter:'vector2d',
+						translation:'vector2d',
+						visible:'boolean'
+					};
+					expect(Object.keys(value).length).to.equal(Object.keys(expectedValues).length);
+					for (const key in expectedValues) {
+						expect(value[key]).to.equal(expectedValues[key]);
+					}
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.getFieldTypes()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('subtype()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.subtype()'});
+					expect(value).to.equal('RowList');
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.subtype()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('boundingRect()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.boundingRect()'});
+					expect(value.height).to.equal(338);
+					expect(value.width).to.equal(1958);
+					expect(value.x).to.equal(131);
+					expect(value.y).to.equal(581);
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.boundingRect()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('localBoundingRect()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.localBoundingRect()'});
+					expect(value.height).to.equal(338);
+					expect(value.width).to.equal(1958);
+					expect(value.x).to.equal(-19);
+					expect(value.y).to.equal(-19);
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.localBoundingRect()'});
+					expect(found).to.false;
+				});
+			});
+
+			describe('sceneBoundingRect()', async () => {
+				it('should work on node item', async () => {
+					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.sceneBoundingRect()'});
+					expect(value.height).to.equal(338);
+					expect(value.width).to.equal(1958);
+					expect(value.x).to.equal(131);
+					expect(value.y).to.equal(581);
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.sceneBoundingRect()'});
+					expect(found).to.false;
+				});
+			});
 		});
 	});
 
@@ -527,14 +732,6 @@ describe('OnDeviceComponent', function () {
 				return;
 			}
 			assert.fail('Should have thrown an exception');
-		});
-
-		it(`should inject an placeholder param to the function if no funcParams are passed`, async () => {
-			const args = {keyPath: 'AuthManager.isLoggedIn'};
-			await setAndVerifyValue({...args, value: false});
-			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUser'});
-			const {value} = await odc.getValueAtKeyPath(args);
-			expect(value).to.be.true;
 		});
 
 		it(`should work with funcs that don't take any arguments`, async () => {

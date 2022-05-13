@@ -29,6 +29,7 @@ sub runTaskThread()
 		"observeField": {}
 		"setValueAtKeyPath": {}
 		"storeNodeReferences": {}
+		"disableScreensaver": {}
 		"readRegistry": {
 			"handler": processReadRegistryRequest
 		}
