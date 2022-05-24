@@ -99,18 +99,9 @@ function processCallFuncRequest(args as Object) as Object
 end function
 
 function processGetFocusedNodeRequest(args as Object) as Object
-	node = m.top.getScene()
-	while true
-		child = node.focusedChild
-		if child <> Invalid AND NOT node.isSameNode(child) then
-			node = child
-		else
-			exit while
-		end if
-	end while
-
+	focusedNode = getFocusedNode()
 	result = {
-		"node": node
+		"node": focusedNode
 	}
 
 	if getBooleanAtKeyPath(args, "includeRef") then
@@ -127,7 +118,7 @@ function processGetFocusedNodeRequest(args as Object) as Object
 
 		for i = 0 to getLastIndex(nodeReferences)
 			nodeReference = nodeReferences[i]
-			if node.isSameNode(nodeReference) then
+			if focusedNode.isSameNode(nodeReference) then
 				result.ref = i
 				exit for
 			end if
@@ -612,6 +603,7 @@ function getBaseObject(args as Object) as Dynamic
 	baseType = args.base
 	if baseType = "global" then return m.global
 	if baseType = "scene" then return m.top.getScene()
+	if baseType = "focusedNode" then return getFocusedNode()
 	if baseType = "nodeRef" then
 		nodeReferencesKey = getStringAtKeyPath(args, "key")
 		base = m.nodeReferences[nodeReferencesKey]

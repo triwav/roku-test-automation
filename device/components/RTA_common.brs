@@ -221,6 +221,19 @@ function getNodeParentIndex(node as Object) as Integer
 	return -1
 end function
 
+function getFocusedNode() as Dynamic
+	node = m.top.getScene()
+	while true
+		child = node.focusedChild
+		if child <> Invalid AND NOT node.isSameNode(child) then
+			node = child
+		else
+			exit while
+		end if
+	end while
+	return node
+end function
+
 '*************************************************************************
 '#endregion *** SG NODE UTILITIES
 '*************************************************************************

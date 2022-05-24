@@ -25,7 +25,8 @@ export namespace ODC {
 	export enum BaseEnum {
 		global,
 		scene,
-		nodeRef
+		nodeRef,
+		focusedNode
 	}
 	export type BaseTypes = keyof typeof BaseEnum;
 
