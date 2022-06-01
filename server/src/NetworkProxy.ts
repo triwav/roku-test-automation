@@ -7,7 +7,14 @@ export class NetworkProxy {
 	private odc: OnDeviceComponent;
 
 	constructor(odc: OnDeviceComponent, config?: ConfigOptions) {
+		if (config) {
+			this.setConfig(config);
+		}
 		this.odc = odc;
+	}
+
+	public setConfig(config: ConfigOptions) {
+		utils.validateRTAConfigSchema(config);
 		this.config = config;
 	}
 

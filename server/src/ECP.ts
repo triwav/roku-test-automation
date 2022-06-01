@@ -19,8 +19,15 @@ export class ECP {
 	public readonly Key = ECP.Key;
 
 	constructor(config?: ConfigOptions) {
-		this.config = config;
+		if (config) {
+			this.setConfig(config);
+		}
 		this.device = new RokuDevice(config);
+	}
+
+	public setConfig(config: ConfigOptions) {
+		utils.validateRTAConfigSchema(config);
+		this.config = config;
 	}
 
 	public getConfig() {

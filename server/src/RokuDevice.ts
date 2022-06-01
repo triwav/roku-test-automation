@@ -14,6 +14,13 @@ export class RokuDevice {
 	private needle = needle;
 
 	constructor(config?: ConfigOptions) {
+		if (config) {
+			this.setConfig(config);
+		}
+	}
+
+	public setConfig(config: ConfigOptions) {
+		utils.validateRTAConfigSchema(config);
 		this.config = config;
 	}
 

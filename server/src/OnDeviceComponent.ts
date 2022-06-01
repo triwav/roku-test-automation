@@ -27,8 +27,16 @@ export class OnDeviceComponent {
 	private defaultNodeReferencesKey = '';
 
 	constructor(device: RokuDevice, config?: ConfigOptions) {
-		this.config = config;
+		if (config) {
+			this.setConfig(config);
+		}
 		this.device = device;
+	}
+
+	public setConfig(config: ConfigOptions) {
+		utils.validateRTAConfigSchema(config);
+		this.config = config;
+		this.device.setConfig(config);
 	}
 
 	public getConfig() {
