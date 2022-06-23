@@ -19,6 +19,7 @@
 			- [`deleteRegistrySections`](#deleteregistrysections)
 			- [`deleteEntireRegistry`](#deleteentireregistry)
 		- [`RokuDevice`](#rokudevice)
+			- [Testing Direct Playback commands (Input deeplinks)](#Testing%20Direct%20Playback%20commands%20%28Input%20deeplinks%29)
 		- [`NetworkProxy`](#networkproxy)
 		- [`utils`](#utils)
 			- [`setupEnvironmentFromConfigFile`](#setupenvironmentfromconfigfile)
@@ -273,6 +274,26 @@ Provides a way to clear out all sections in registry. Uses `deleteRegistrySectio
 ### `RokuDevice`
 
 Serves as the middle man for ECP requests and provides access to some of the capabilities provided by the Roku's built in web server. Currently creates and retrieves a screenshot as well as provides a helper for deploying.
+
+#### **Testing Direct Playback commands (Input deeplinks)**
+
+[Section 5.2](https://developer.roku.com/docs/developer-program/certification/certification.md#5-deep-linking) of the certification criteria require your app to support the [Direct to Play](https://developer.roku.com/es-pe/docs/developer-program/discovery/direct-to-play.md) feature. This involves sending a `roInputEvent` deeplink. To do so, you can implement something like this
+
+```ts
+import { device } from 'roku-test-automation';
+
+it('Receives an input deeplink', async function () {
+	await device.sendECP('input', {
+		contentId: 'YourContentId',
+		mediaType: 'shortFormVideo'
+	}, '');
+
+	// Test that the video loaded
+	// ...
+});
+```
+
+The third parameter of `sendECP(path: string, params?: object, body?: needle.BodyData)` must not be empty for an `input` event, because it's used by the `RokuDevice` class to send a `POST` request.
 
 ---
 
