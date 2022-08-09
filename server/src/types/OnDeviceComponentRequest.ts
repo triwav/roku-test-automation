@@ -96,7 +96,7 @@ export namespace ODC {
 	}
 
 	export interface DeleteNodeReferencesArgs {
-		/** Key that the references were stored on */
+		/** Key that the references were stored on. If one isn't provided we use the automatically generated one */
 		key?: string;
 	}
 
