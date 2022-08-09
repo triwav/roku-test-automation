@@ -59,16 +59,6 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async getFocusedNode(args: ODC.GetFocusedNodeArgs = {}, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultNodeReferenceKey(args);
-
-		const result = await this.sendRequest('getFocusedNode', args, options);
-		return result.body as {
-			node: ODC.NodeRepresentation;
-			ref?: number;
-		};
-	}
-
 	public async getValueAtKeyPath(args: ODC.GetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
@@ -123,6 +113,16 @@ export class OnDeviceComponent {
 				}
 			}
 		} & ODC.ReturnTimeTaken;
+	}
+
+	public async getFocusedNode(args: ODC.GetFocusedNodeArgs = {}, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		const result = await this.sendRequest('getFocusedNode', args, options);
+		return result.body as {
+			node: ODC.NodeRepresentation;
+			ref?: number;
+		};
 	}
 
 	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}) {

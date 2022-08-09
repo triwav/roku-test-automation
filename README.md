@@ -30,6 +30,15 @@
 
 Roku Test Automation (RTA from here on out) helps with automating functional tests for Roku devices. It has quite a bit more capabilities than [Roku's first party option](https://developer.roku.com/docs/developer-program/dev-tools/automated-channel-testing/automated-testing-overview.md) and does not require a Go server in the middle to convert ECP commands.
 
+## v2.0 Changes
+
+Some minor incompatibility changes were made in v2.0. These include:
+
+- `getFocusedNode()` now returns an object like all the ODC commands other than `hasFocus()` and `isInFocusChain()`
+- While never documented or designed to be used externally, the `getNodeReferences()` function was removed and replaced with `getNodesInfoAtKeyPaths`
+- `callFunc()` will no longer automatically inject an `invalid` param if a `params` array was not provided.
+- `getValuesAtKeyPaths()` now returns each result inside a `results` object to avoid potential variable collission
+
 ## Integration
 
 In your project go ahead and install the npm module:
@@ -107,7 +116,7 @@ RTA contains most of the standard ECP commands including:
 - Getting the current active app
 - Getting the media player
 
-In addition, with the coming requirement for login and logout scripts, the following methods have been added:  
+In addition, with the recent requirement for login and logout scripts, the following methods have been added:  
 `startRaspFileCreation`  
 `finishRaspFileCreation`  
 and a copy of [`utils.sleep`](#sleep) that also includes a pause in your rasp file.
@@ -122,7 +131,7 @@ The core piece of RTA is the OnDeviceComponent. It functions similarly to [Roku'
 m.odc = createObject("RTA_OnDeviceComponent")
 ```
 
-Once setup you can send requests to the device to either kick off an event or check whether the expected outcome occurred or both. The following is list of all current request types:
+Once setup you can send requests to the device to either kick off an event or check whether the expected outcome occurred or both. The following is a list of all current request types:
 
 #### `getValueAtKeyPath`
 
@@ -130,8 +139,8 @@ Once setup you can send requests to the device to either kick off an event or ch
 
 At the heart of almost all requests internally is `getValueAtKeyPath`. It serves as your entry point from which you execute other requests but can also be used by itself to return a requested value. `args` takes two properties:
 
--   `base?: string` can be either `global` or `scene`. If not supplied it defaults to `global`
--   `keyPath: string` builds off of the base and supplies the path to what you are interested in getting the value for. A simple example might be something like `AuthManager.isLoggedIn` which would let you check if a user is logged in or not. It can operate on much more than just keyed type fields though.
+- `base?: string` can be either `global`, `scene`, `nodeRef` or `focusedNode`. If not supplied it defaults to `global`
+- `keyPath: string` builds off of the base and supplies the path to what you are interested in getting the value for. A simple example might be something like `AuthManager.isLoggedIn` which would let you check if a user is logged in or not. It can operate on much more than just keyed type fields though.
 
 Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.idOfChildNodeToInspect`. The [`getValueAtKeyPath` unit tests](https://github.com/triwav/roku-test-automation/blob/master/server/src/OnDeviceComponent.spec.ts#L14) provide a full list of what is possible for a key path.
 
@@ -142,23 +151,46 @@ odc.getValueAtKeyPath({
 });
 ```
 
+**NOTE** as of v2.0 `keyPath` can also call a number of the Roku Brightscript interface functions on the appropriately typed objects. Currently these include:
+
+- getParent()
+- count()
+- keys()
+- len()
+- getChildCount()
+- threadinfo()
+- getFieldTypes()
+- subtype()
+- boundingRect()
+- localBoundingRect()
+- sceneBoundingRect()
+
+as an example:
+
+```ts
+odc.getValueAtKeyPath({
+	base: 'scene',
+	keyPath: 'rowList.boundingRect()',
+});
+```
+
 #### `getValuesAtKeyPaths`
 
-> getValuesAtKeyPaths(args: [ODCGetValuesAtKeyPathsArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L40), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {[key: string], found: boolean}
+> getValuesAtKeyPaths(args: [ODCGetValuesAtKeyPathsArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L40), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {results: {[key: string]: {found: boolean; value?: any; }}, timeTaken: number}
 
 `getValuesAtKeyPaths` allows you to retrieve multiple values with a single request. It takes one property for `args`:
 
--   `requests`: `object` A list of the individual `getValueAtKeyPath` args with a user supplied key that will be returned as the same key for the output object.
+- `requests`: `object` A list of the individual `getValueAtKeyPath` args with a user supplied key that will be returned as the same key for the output results object.
 
 The [`getValuesAtKeyPaths` unit test](https://github.com/triwav/roku-test-automation/blob/master/server/src/OnDeviceComponent.spec.ts#L70) provides an example of its usage
 
 #### `setValueAtKeyPath`
 
-> setValueAtKeyPath(args: [ODCSetValueAtKeyPathArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L76), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {}
+> setValueAtKeyPath(args: [ODCSetValueAtKeyPathArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L76), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {timeTaken: number}
 
 Allows you to set a value at a key path. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
--   `value: any` The value you want to set at the supplied `keyPath`. Setting is always done through [`update(value, true)`](https://developer.roku.com/docs/references/brightscript/interfaces/ifsgnodechildren.md#updatefields-as-roassociativearray-as-void) so anything you can do there should be possible here as well.
+- `value: any` The value you want to set at the supplied `keyPath`. Setting is always done through [`update(value, true)`](https://developer.roku.com/en-ca/docs/references/brightscript/interfaces/ifsgnodechildren.md#updatefields-as-roassociativearray-addfields-as-boolean-as-void) so anything you can do there should be possible here as well.
 
 ```ts
 odc.setValueAtKeyPath({
@@ -170,12 +202,12 @@ odc.setValueAtKeyPath({
 
 #### `callFunc`
 
-> callFunc(args: [ODCCallFuncArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L25), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {value}
+> callFunc(args: [ODCCallFuncArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L25), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {value: any, timeTaken: number}
 
 Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-program/core-concepts/handling-application-events.md#functional-fields) on a node. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
--   `funcName: string` the name of the interface function that you want to run
--   `funcParams?: any[]` an array of params to pass to the function.
+- `funcName: string` the name of the interface function that you want to run
+- `funcParams?: any[]` an array of params to pass to the function.
 
 ```ts
 odc.callFunc({
@@ -188,9 +220,12 @@ odc.callFunc({
 
 #### `getFocusedNode`
 
-> getFocusedNode(args: [ODCGetFocusedNodeArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L33), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): ODCNodeRepresentation
+> getFocusedNode(args: [ODCGetFocusedNodeArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L33), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {node: NodeRepresentation, ref?: number, timeTaken: number}
 
-Gets the currently focused node. `args` is currently empty but is still included for standardization and future expansion options.
+Gets the currently focused node. `args` includes the following:
+
+- `includeRef?: boolean` returns `ref` field in response that can be matched up with `storeNodeReferences` response for determining where we are in the node tree. Be sure to call storeNodeReferences first.
+- `key: string` Key that the references were stored on. If one isn't provided we use the automatically generated one
 
 ```ts
 let focusedNode = await odc.getFocusedNode();
@@ -221,7 +256,7 @@ const isBtnInFocusChain = await odc.isInFocusChain({
 
 Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use observeField to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
--   `match?: any | {base, keyPath, value}`
+- `match?: any | {base, keyPath, value}`
 
 Sometimes when you are observing a field you don't just want the first change. You're looking for a specific value. In this case you can pass the value you're looking for the match like:
 
@@ -284,11 +319,11 @@ Serves as the middle man for ECP requests and provides access to some of the cap
 
 This class serves as a wrapper around the [http-network-proxy](https://www.npmjs.com/package/http-network-proxy) npm module. It is still in active development and will change some as testing shows necessary changes. At it's core the idea is to be able to take a [Charles](https://www.charlesproxy.com/) config file and use those same rules in your tests. The following methods are exposed:
 
--   `start(configFilePath: string = 'charlesRewrite.xml')` - sets up the proxy, loads the provided config in and writes to the device's registry to get it ready to proxy requests.
--   `stop()` - Used to shutdown the proxy port when you no longer want to proxy. Also sends an ODC request to the device
--   `reloadConfig(configFilePath: string = 'charlesRewrite.xml')` - Gives the ability to reload the config without having to stop and restart the entire proxy
--   `addBreakPointListener(onProxyRequestCallback: OnProxyRequestCallback)` - Allows you add a callback that will be called for every breakpoint Charles would have run into
--   `observeRequest(url: string, onProxyResponseCallback: OnProxyResponseCallback)` - Provides a simplified way of receiving a callback when a url is accessed without needing to create a Charles config file for that case.
+- `start(configFilePath: string = 'charlesRewrite.xml')` - sets up the proxy, loads the provided config in and writes to the device's registry to get it ready to proxy requests.
+- `stop()` - Used to shutdown the proxy port when you no longer want to proxy. Also sends an ODC request to the device
+- `reloadConfig(configFilePath: string = 'charlesRewrite.xml')` - Gives the ability to reload the config without having to stop and restart the entire proxy
+- `addBreakPointListener(onProxyRequestCallback: OnProxyRequestCallback)` - Allows you add a callback that will be called for every breakpoint Charles would have run into
+- `observeRequest(url: string, onProxyResponseCallback: OnProxyResponseCallback)` - Provides a simplified way of receiving a callback when a url is accessed without needing to create a Charles config file for that case.
 
 ---
 
