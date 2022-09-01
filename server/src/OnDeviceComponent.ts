@@ -1,7 +1,4 @@
-import * as http from 'http';
-import * as udp from 'dgram';
-import * as express from 'express';
-import * as portfinder from 'portfinder';
+import * as net from 'net';
 
 import { getStackTrace } from 'get-stack-trace';
 
@@ -12,19 +9,16 @@ import { ODC } from '.';
 
 export class OnDeviceComponent {
 	public device: RokuDevice;
-	// TODO pull from package.json
-	private static readonly version = '1.0.0';
 	private defaultTimeout = 10000;
-	private callbackListenPort?: number;
+	private requestHeaderSize = 8;
 	private storedDeviceRegistry?: {
 		[section: string]: {[sectionItemKey: string]: string}
 	};
 	private config?: ConfigOptions;
-	private sentRequests: { [key: string]: ODC.Request } = {};
-	private app = this.setupExpress();
-	private callbackListenPortSetupPromise?: Promise<number>;
-	private server?: http.Server;
-	private defaultNodeReferencesKey = '';
+	private activeRequests: { [key: string]: ODC.Request } = {};
+	private receivingRequestResponse?: ODC.RequestResponse;
+	private clientSocket?: net.Socket;
+	private defaultNodeReferencesKey = utils.randomStringGenerator();
 
 	constructor(device: RokuDevice, config?: ConfigOptions) {
 		if (config) {
@@ -54,7 +48,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('callFunc', args, options);
-		return result.body as {
+		return result.json as {
 			value: any
 		} & ODC.ReturnTimeTaken;
 	}
@@ -64,7 +58,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('getValueAtKeyPath', args, options);
-		return result.body as {
+		return result.json as {
 			found: boolean;
 			value?: any;
 		} & ODC.ReturnTimeTaken;
@@ -78,7 +72,7 @@ export class OnDeviceComponent {
 		}
 
 		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
-		return result.body as {
+		return result.json as {
 			results: {
 				[key: string]: {
 					found: boolean;
@@ -96,7 +90,7 @@ export class OnDeviceComponent {
 		}
 
 		const result = await this.sendRequest('getNodesInfoAtKeyPaths', args, options);
-		return result.body as {
+		return result.json as {
 			results: {
 				[key: string]: {
 					subtype: string;
@@ -119,7 +113,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('getFocusedNode', args, options);
-		return result.body as {
+		return result.json as {
 			node: ODC.NodeRepresentation;
 			ref?: number;
 		};
@@ -130,7 +124,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('hasFocus', {...args, convertResponseToJsonCompatible: false}, options);
-		return result.body.hasFocus as boolean;
+		return result.json.hasFocus as boolean;
 	}
 
 	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}) {
@@ -138,7 +132,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('isInFocusChain', {...args, convertResponseToJsonCompatible: false}, options);
-		return result.body.isInFocusChain as boolean;
+		return result.json.isInFocusChain as boolean;
 	}
 
 	public async observeField(args: ODC.ObserveFieldArgs, options: ODC.RequestOptions = {}) {
@@ -180,7 +174,7 @@ export class OnDeviceComponent {
 		args.retryTimeout = retryTimeout;
 
 		const result = await this.sendRequest('observeField', this.breakOutFieldFromKeyPath(args), options);
-		return result.body as {
+		return result.json as {
 			/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not */
 			observerFired: boolean;
 			value: any;
@@ -193,7 +187,7 @@ export class OnDeviceComponent {
 
 		args.convertResponseToJsonCompatible = false;
 		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
-		return result.body as ODC.ReturnTimeTaken;
+		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	private conditionallyAddDefaultBase(args: ODC.BaseArgs) {
@@ -205,10 +199,8 @@ export class OnDeviceComponent {
 
 	private conditionallyAddDefaultNodeReferenceKey(args: ODC.BaseArgs) {
 		if (!args.key) {
+			// TODO test if we need to add if no base provided
 			if (!args.base || args.base === 'nodeRef') {
-				if(!this.defaultNodeReferencesKey) {
-					this.defaultNodeReferencesKey = utils.randomStringGenerator();
-				}
 				args.key = this.defaultNodeReferencesKey;
 			}
 		}
@@ -217,7 +209,7 @@ export class OnDeviceComponent {
 	public async storeNodeReferences(args: ODC.StoreNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest('storeNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
-		const body = result.body as {
+		const body = result.json as {
 			flatTree: ODC.NodeTree[];
 			rootTree: ODC.NodeTree[];
 			totalNodes?: number;
@@ -245,19 +237,24 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		const result = await this.sendRequest('deleteNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
-		return result.body as ODC.ReturnTimeTaken;
+		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async disableScreenSaver(args: ODC.DisableScreensaverArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('disableScreenSaver', args, options);
-		return result.body as ODC.ReturnTimeTaken;
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async focusNodeAtKeyPath(args: ODC.FocusNodeAtKeyPathArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('focusNodeAtKeyPath', args, options);
+		return result.json as ODC.ReturnTimeTaken;
 	}
 	//#endregion
 
 	//#region requests run on task thread
 	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('readRegistry', {...args, convertResponseToJsonCompatible: false}, options);
-		return result.body as {
+		return result.json as {
 			values: {
 				[section: string]: {[sectionItemKey: string]: string}
 			}
@@ -266,12 +263,12 @@ export class OnDeviceComponent {
 
 	public async writeRegistry(args: ODC.WriteRegistryArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('writeRegistry', args, options);
-		return result.body;
+		return result.json;
 	}
 
 	public async deleteRegistrySections(args: ODC.DeleteRegistrySectionsArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('deleteRegistrySections', args, options);
-		return result.body;
+		return result.json;
 	}
 
 	public async deleteEntireRegistry(args: ODC.DeleteEntireRegistrySectionsArgs = {}, options: ODC.RequestOptions = {}) {
@@ -282,9 +279,80 @@ export class OnDeviceComponent {
 		return await this.deleteRegistrySections(deleteSectionsArgs, options);
 	}
 
+	public async fileSystemGetVolumeList(args: ODC.FileSystemGetVolumeListArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('fileSystemGetVolumeList', args, options);
+		return result.json as {
+			list: string[]
+		} & ODC.ReturnTimeTaken;
+	}
+
+	public async fileSystemGetDirectoryListing(args: ODC.FileSystemGetDirectoryListingArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('fileSystemGetDirectoryListing', args, options);
+		return result.json as {
+			list: string[]
+		} & ODC.ReturnTimeTaken;
+	}
+
+	public async fileSystemStat(args: ODC.FileSystemStatArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('fileSystemStat', args, options);
+		const body = result.json;
+		// Convert timestamps for easier usage
+		body.ctime = new Date(body.ctime * 1000);
+		body.mtime = new Date(body.mtime * 1000);
+		return body as {
+			ctime: Date
+			hidden: boolean
+			mtime: Date
+			permissions: 'rw' | 'r'
+			size: number
+			sizeex: number
+			type: 'file' | 'directory'
+		} & ODC.ReturnTimeTaken;
+	}
+
+	public async fileSystemGetVolumeInfo(args: ODC.FileSystemGetVolumeInfoArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('fileSystemGetVolumeInfo', args, options);
+		return result.json as {
+			blocksize: number
+			blocks: number
+			'free-blocks': number
+			usedblocks: number
+			label: string
+			mounttime: number
+		} & ODC.ReturnTimeTaken;
+	}
+
+	public async fileSystemCreateDirectory(args: ODC.FileSystemCreateDirectoryArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('fileSystemCreateDirectory', args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async fileSystemDelete(args: ODC.FileSystemDeleteArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('fileSystemDelete', args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async fileSystemRename(args: ODC.FileSystemRenameArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('fileSystemRename', args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async readFile(args: ODC.ReadFileArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('readFile', args, options);
+		return result as {
+			json: ODC.ReturnTimeTaken;
+			binaryPayload: Buffer;
+		};
+	}
+
+	public async writeFile(args: ODC.WriteFileArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('writeFile', args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
 	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('getServerHost', args, options);
-		return result.body as {
+		return result.json as {
 			host: string
 		};
 	}
@@ -296,66 +364,140 @@ export class OnDeviceComponent {
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}
 
-	private async sendRequest(type: ODC.RequestTypes, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
-		let stackTrace;
-		if (!this.getConfig()?.disableCallOriginationLine) {
-			stackTrace = await getStackTrace();
-		}
-		await this.startServer();
+	private setupClientSocket() {
+		return new Promise<net.Socket>((resolve, reject) => {
+			const socket = new net.Socket();
+			socket.on('error', function(e) {
+				// if ((e as any).code === 'ECONNREFUSED') {
+				// 	console.log('Retrying connection');
+				// } else {
+					console.log('socket error', e);
+					reject(e);
+				// }
+			});
 
+			socket.on('timeout', () => {
+				console.log('socket time out');
+			});
+
+			socket.on('drop', () => {
+				console.log('socket drop');
+			});
+
+			socket.on('close', () => {
+				this.clientSocket = undefined;
+			});
+
+			socket.on('data', (data) => {
+				let offset = 0;
+				if (!this.receivingRequestResponse) {
+					offset = this.requestHeaderSize;
+					this.receivingRequestResponse = {
+						json: {},
+						stringLength: data.readInt32LE(0),
+						binaryLength: data.readInt32LE(4),
+						stringPayload: '',
+						binaryPayload: Buffer.alloc(0)
+					};
+				}
+
+				// Check if we're still receiving the string payload
+				const remainingStringPayload = this.receivingRequestResponse.stringLength - this.receivingRequestResponse.stringPayload.length;
+				if (remainingStringPayload > 0) {
+					const remainingBufferBytes = data.length - offset;
+					if (remainingBufferBytes < remainingStringPayload) {
+						this.receivingRequestResponse.stringPayload += data.toString('utf-8', offset, remainingBufferBytes + offset);
+						return;
+					} else {
+						this.receivingRequestResponse.stringPayload += data.toString('utf-8', offset, remainingStringPayload + offset);
+						offset += remainingStringPayload;
+					}
+				}
+
+				const binaryPayload = this.receivingRequestResponse.binaryPayload;
+				const remainingBinaryPayload = this.receivingRequestResponse.binaryLength - binaryPayload.length;
+				if (remainingBinaryPayload > 0) {
+					const remainingBufferBytes = data.length - offset;
+					if (remainingBufferBytes < remainingBinaryPayload) {
+						const additionalBinaryPayload = data.slice(offset, remainingBufferBytes + offset);
+						this.receivingRequestResponse.binaryPayload = Buffer.concat([binaryPayload, additionalBinaryPayload]);
+						return;
+					} else {
+						const additionalBinaryPayload = data.slice(offset, remainingBinaryPayload + offset);
+						this.receivingRequestResponse.binaryPayload = Buffer.concat([binaryPayload, additionalBinaryPayload]);
+					}
+				}
+
+				const receivingRequestResponse = this.receivingRequestResponse;
+				this.receivingRequestResponse = undefined;
+				const json = JSON.parse(receivingRequestResponse.stringPayload);
+				receivingRequestResponse.json = json;
+				if (json.id && this.activeRequests[json.id]) {
+					const request = this.activeRequests[json.id];
+					const callback = request.callback;
+					if (callback) {
+						callback(receivingRequestResponse);
+					}
+					delete this.activeRequests[json.id];
+				}
+			});
+
+			socket.connect(9000, this.device.getCurrentDeviceConfig().host, () => {
+				resolve(socket);
+			});
+		});
+	}
+
+	private async sendRequest(type: ODC.RequestTypes, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
 		const requestId = utils.randomStringGenerator();
 		const request: ODC.Request = {
 			id: requestId,
-			// Guaranteed to be there by startServer
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			callbackPort: this.callbackListenPort!,
 			type: type,
 			args: args,
 			settings: { logLevel: this.getConfig()?.logLevel ?? 'info' },
-			version: OnDeviceComponent.version
 		};
-		const body = JSON.stringify(request);
 
-		let client: udp.Socket | undefined;
-		let retryInterval;
-		const promise = new Promise<express.Request>((resolve, reject) => {
-			request.callback = (req) => {
-				const json = req.body;
+		let stackTracePromise;
+		if (!this.getConfig()?.disableCallOriginationLine) {
+			stackTracePromise = getStackTrace();
+		}
+
+		this.activeRequests[requestId] = request;
+
+		const stringPayload = JSON.stringify(request);
+
+		let binaryBuffer: Buffer | undefined;
+
+		// Build our header buffer with the lengths so we know on the receiving how much data we're expecting for the message before it is considered complete
+		const headerBuffer = Buffer.alloc(8);
+		headerBuffer.writeInt32LE(stringPayload.length, 0); // Write string payload length
+
+		const requestBuffers = [headerBuffer, Buffer.from(stringPayload, 'utf-8')];
+		if (binaryBuffer) {
+			headerBuffer.writeInt32LE(binaryBuffer.length, 4); // Write binary payload length
+			requestBuffers.push(binaryBuffer);
+		}
+
+		if (!this.clientSocket) {
+			this.clientSocket = await this.setupClientSocket();
+		}
+
+		this.debugLog('Sending request:', stringPayload);
+		// Combining into one buffer as it sends separately if we do multiple writes which with TCP could potentially introduce extra latency
+		this.clientSocket.write(Buffer.concat(requestBuffers));
+
+		// eslint-disable-next-line no-async-promise-executor
+		const promise = new Promise<ODC.RequestResponse>(async (resolve, reject) => {
+			request.callback = async (response) => {
+				const json = response.json;
+				this.debugLog('Received response:', response.json);
 				if (json?.success) {
-					resolve(req);
+					resolve(response);
 				} else {
-					const errorMessage = `${json?.error?.message} ${this.getCaller(stackTrace)}`;
+					const errorMessage = `${json?.error?.message} ${this.getCaller(await stackTracePromise)}`;
 					reject(new Error(errorMessage));
 				}
 			};
-
-			client = udp.createSocket('udp4');
-			const host = this.device.getCurrentDeviceConfig().host;
-			this.debugLog(`Sending request to ${host} with body: ${body}`);
-
-			client.on('message', (message) => {
-				const json = JSON.parse(message.toString());
-				const receivedId = json.id;
-				if (receivedId !== requestId) {
-					const rejectMessage = `Received id '${receivedId}' did not match request id '${requestId}'`;
-					this.debugLog(rejectMessage);
-					reject(rejectMessage);
-				} else {
-					this.debugLog(`Roku acknowledged requested id '${requestId}'`);
-				}
-				clearInterval(retryInterval);
-				client?.close();
-				client = undefined;
-			});
-
-			this.sentRequests[requestId] = request;
-			const _sendRequest = () => {
-				client?.send(body, 9000, host, async (err) => {
-					if (err) reject(err);
-				});
-			};
-			retryInterval = setInterval(_sendRequest, 300);
-			_sendRequest();
 		});
 
 		const deviceConfig = this.device.getCurrentDeviceConfig();
@@ -369,7 +511,7 @@ export class OnDeviceComponent {
 				let message = `${request.type} request timed out after ${timeout}ms`;
 
 				if (!this.getConfig()?.disableCallOriginationLine) {
-					message += `${this.getCaller(stackTrace)}\n`;
+					message += `${this.getCaller(await stackTracePromise)}\n`;
 				}
 
 				if (!this.getConfig()?.disableTelnet) {
@@ -379,35 +521,12 @@ export class OnDeviceComponent {
 				e = new Error(message);
 			}
 			throw e;
-		} finally {
-			clearInterval(retryInterval);
-			client?.close();
 		}
 	}
 
 	// Starts up express server
 	private async startServer() {
-		// startServer can be called multiple times. Sometimes before server has even been set so have to wait until ready to proceed
-		if (this.callbackListenPortSetupPromise) {
-			await this.callbackListenPortSetupPromise;
-		}
-
-		if (this.server) {
-			return;
-		}
-
-		let callbackListenPort = this.getConfig()?.callbackListenPort;
-		if (!callbackListenPort) {
-			this.callbackListenPortSetupPromise = portfinder.getPortPromise();
-			callbackListenPort = await this.callbackListenPortSetupPromise;
-		}
-
-		this.debugLog('Starting callback server');
-		this.server = this.app.listen(callbackListenPort, () => {
-			this.debugLog(`Listening for callbacks on ${callbackListenPort}`);
-		});
-		this.callbackListenPort = callbackListenPort;
-
+		// FIXME need to add back in registry restore some how
 		if (this.getConfig()?.restoreRegistry) {
 			this.debugLog('Storing original device registry state');
 			const result = await this.readRegistry();
@@ -418,54 +537,15 @@ export class OnDeviceComponent {
 	public async shutdown(waitForServerShutdown = false) {
 		this.debugLog(`Shutting down`);
 
-		// TODO need to investigate how to handle
-		// eslint-disable-next-line no-async-promise-executor
-		return new Promise(async (resolve) => {
-			if (!this.server) {
-				resolve(undefined);
-				return;
-			}
-
-			if (this.storedDeviceRegistry) {
-				this.debugLog(`Restoring device registry to original state`);
-				await this.writeRegistry({
-					values: this.storedDeviceRegistry
-				});
-			}
-
-			this.server.close((e) => {
-				this.debugLog(`Server shutdown`);
-				if (waitForServerShutdown) {
-					resolve(e);
-				}
+		if (this.storedDeviceRegistry) {
+			this.debugLog(`Restoring device registry to original state`);
+			await this.writeRegistry({
+				values: this.storedDeviceRegistry
 			});
+		}
+		this.clientSocket?.destroy();
+		this.clientSocket = undefined;
 
-			this.server = undefined;
-			if (!waitForServerShutdown) {
-				resolve(undefined);
-			}
-		});
-	}
-
-	private setupExpress() {
-		const app = express();
-
-		app.use(express.json({limit: '16MB'}));
-
-		app.post('/callback/:id', (req, res) => {
-			const id = req.params.id;
-			const request = this.sentRequests[id];
-			if (request) {
-				this.debugLog(`Server received response`, req.body);
-				request.callback?.(req);
-				res.send('OK');
-				delete this.sentRequests[id];
-			} else {
-				res.statusCode = 404;
-				res.send(`Request ${id} not found`);
-			}
-		});
-		return app;
 	}
 
 	private getCaller(stackTrace?: any[]) {

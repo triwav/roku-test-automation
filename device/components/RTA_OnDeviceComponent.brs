@@ -41,14 +41,16 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processGetNodesInfoAtKeyPathsRequest(args)
 	else if requestType = "deleteNodeReferences" then
 		response = processDeleteNodeReferencesRequest(args)
-	else if requestType = "disableScreenSaver"
+	else if requestType = "disableScreenSaver" then
 		response = processDisableScreenSaverRequest(args)
+	else if requestType = "focusNodeAtKeyPath" then
+		response = processFocusNodeAtKeyPathRequest(args)
 	else
 		response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
 	end if
 
 	if response <> Invalid then
-		sendBackResponse(request, response)
+		renderThreadSendBackResponse(request, response)
 	end if
 end sub
 
@@ -317,7 +319,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 		logWarn(errorMessage)
 
 		m.activeObserveFieldRequests.delete(requestId)
-		sendBackResponse(request, buildErrorResponseObject(errorMessage))
+		renderThreadSendBackResponse(request, buildErrorResponseObject(errorMessage))
 
 		' Might be called asyncronous and we already handled so returning Invalid
 		return Invalid
@@ -375,7 +377,7 @@ sub observeFieldCallback(event as Object)
 			if isAA(match) then
 				result = processGetValueAtKeyPathRequest(match)
 				if isErrorObject(result) then
-					sendBackResponse(request, result)
+					renderThreadSendBackResponse(request, result)
 					return
 				end if
 
@@ -383,7 +385,7 @@ sub observeFieldCallback(event as Object)
 					logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
 					node.unobserveFieldScoped(field)
 					m.activeObserveFieldRequests.delete(requestId)
-					sendBackResponse(request, buildErrorResponseObject("Match was requested and key path was not valid"))
+					renderThreadSendBackResponse(request, buildErrorResponseObject("Match was requested and key path was not valid"))
 					return
 				end if
 
@@ -395,7 +397,7 @@ sub observeFieldCallback(event as Object)
 			logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
 			node.unobserveFieldScoped(field)
 			m.activeObserveFieldRequests.delete(requestId)
-			sendBackResponse(request, {
+			renderThreadSendBackResponse(request, {
 				"value": data
 				"observerFired": true
 			})
@@ -479,8 +481,8 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 		"flatTree": flatTree
 	}
 
+	arrayGridComponents = {}
 	if includeArrayGridChildren then
-		arrayGridComponents = {}
 		for each key in arrayGridNodes
 			node = arrayGridNodes[key]
 			componentName = node.itemComponentName
@@ -537,7 +539,7 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 		for each arrayGridTopChild in arrayGridTopChildren
 			for each arrayGridNodeRefString in arrayGridNodes
 				arrayGridNode = arrayGridNodes[arrayGridNodeRefString]
-				if arrayGridNode.isSameNode(arrayGridTopChild.getParent())
+				if arrayGridNode.isSameNode(arrayGridTopChild.getParent()) then
 					buildTree(storedNodes, flatTree, arrayGridTopChild, false, {}, strToI(arrayGridNodeRefString))
 				end if
 			end for
@@ -599,6 +601,28 @@ function processDisableScreenSaverRequest(args as Object) as Object
 	return {}
 end function
 
+function processFocusNodeAtKeyPathRequest(args as Object) as Object
+	result = processGetValueAtKeyPathRequest(args)
+	if isErrorObject(result) then
+		return result
+	end if
+
+	if result.found <> true then
+		keyPath = getStringAtKeyPath(args, "keyPath")
+		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+	end if
+
+	node = result.value
+	if NOT isNode(node) then
+		keyPath = getStringAtKeyPath(args, "keyPath")
+		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	end if
+
+	node.setFocus(getBooleanAtKeyPath(args, "on", true))
+
+	return {}
+end function
+
 function getBaseObject(args as Object) as Dynamic
 	baseType = args.base
 	if baseType = "global" then return m.global
@@ -616,7 +640,7 @@ function getBaseObject(args as Object) as Dynamic
 	return buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
 end function
 
-sub sendBackResponse(request as Object, response as Object)
+sub renderThreadSendBackResponse(request as Object, response as Object)
 	if getBooleanAtKeyPath(request, "args.convertResponseToJsonCompatible", true) then
 		response = recursivelyConvertValueToJsonCompatible(response, getNumberAtKeyPath(request, "args.responseMaxChildDepth"))
 	end if

@@ -576,6 +576,25 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('focusNodeAtKeyPath', function () {
+		it('should successfully set focus on the requested node', async () => {
+			const args: ODC.FocusNodeAtKeyPathArgs = {base: 'scene', keyPath: 'pagesContainer'};
+			await odc.focusNodeAtKeyPath(args);
+			const hasFocus = await odc.hasFocus(args);
+			expect(hasFocus).to.be.true;
+		});
+
+		it('should return an error when keypath does not point to a node', async () => {
+			try {
+				await odc.focusNodeAtKeyPath({base: 'scene', keyPath: 'stringValue'});
+			} catch(e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+	});
+
 	describe('setValueAtKeyPath', function () {
 		it('should be able to set a key on global', async () => {
 			await setAndVerifyValue({
@@ -651,7 +670,7 @@ describe('OnDeviceComponent', function () {
 		it('should succeed if given a valid node for its parent keyPath and should return timeTaken value', async () => {
 			const args = {keyPath: 'AuthManager.isLoggedIn'};
 			await setAndVerifyValue({...args, value: false});
-			const observePromise = odc.observeField(args);
+			const observePromise = odc.observeField({...args});
 			await setAndVerifyValue({...args, value: true});
 			const {value, observerFired, timeTaken} = await observePromise;
 			expect(value).to.be.true;
@@ -715,7 +734,11 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should still work after a restart of the application', async () => {
-			await ecp.sendLaunchChannel({skipIfAlreadyRunning: false, launchParameters: {contentId: 'deeplink'}});
+			await ecp.sendLaunchChannel({
+				skipIfAlreadyRunning: false,
+				launchParameters: {contentId: 'deeplink'},
+				verifyLaunch: false
+			});
 			const {observerFired} = await odc.observeField({
 				keyPath: 'launchComplete'
 			});
@@ -905,6 +928,143 @@ describe('OnDeviceComponent', function () {
 			});
 		});
 	});
+
+	describe('fileSystem', function () {
+		const standardVolumes = ['cachefs:', 'common:', 'pkg:', 'tmp:'];
+
+		describe('getVolumeList', function () {
+			it('should contain the standard list of volumes expected', async () => {
+				const {list} = await odc.fileSystemGetVolumeList();
+				console.log('list', list);
+
+				for (const volume of standardVolumes) {
+					expect(list.includes(volume), `list did not contain '${volume}'`).to.be.true;
+				}
+			});
+		});
+
+		describe('getDirectoryListing', function () {
+			it('should return a list of files for the selected directories', async () => {
+				let pathsReturned = 0;
+				for (const volume of standardVolumes) {
+					const {list} = await odc.fileSystemGetDirectoryListing({
+						path: volume + '/'
+					});
+					pathsReturned += list.length;
+				}
+				expect(pathsReturned).to.be.greaterThan(0);
+			});
+		});
+
+		describe('stat', function () {
+			it('should return correct info for a directory', async () => {
+				const fileInfo = await odc.fileSystemStat({
+					path: 'common:/certs'
+				});
+				expect(fileInfo.type).to.equal('directory');
+				expect(fileInfo.hidden).to.be.false;
+				expect(fileInfo.size).to.be.undefined;
+				expect(fileInfo.permissions).to.equal('rw');
+			});
+
+			it('should return correct info for a file', async () => {
+				const fileInfo = await odc.fileSystemStat({
+					path: 'common:/certs/ca-bundle.crt'
+				});
+				expect(fileInfo.type).to.equal('file');
+				expect(fileInfo.hidden).to.be.false;
+				expect(fileInfo.size).to.be.greaterThan(0);
+				expect(fileInfo.permissions).to.equal('rw');
+			});
+
+			it('should throw an error for a file that does not exist', async () => {
+				try {
+					await odc.fileSystemStat({
+						path: 'common:/does_not_exist'
+					});
+				} catch (e) {
+					// failed as expected
+					return;
+				}
+				assert.fail('Should have thrown an exception');
+			});
+		});
+
+		describe('getVolumeInfo', function () {
+			it('should return correct info for a directory', async () => {
+				const fileInfo = await odc.fileSystemGetVolumeInfo({
+					path: 'tmp:'
+				});
+				console.log('fileInfo', fileInfo);
+
+			});
+		});
+
+		describe('createDirectory', function () {
+			it('should successfully make a directory if on a writable volume', async () => {
+				const path = 'tmp:/super_secret';
+				await odc.fileSystemCreateDirectory({
+					path: path
+				});
+				const {type} = await odc.fileSystemStat({
+					path: path
+				});
+				expect(type).to.equal('directory');
+			});
+
+			it('should error out if we try to make a directory on a read only volume', async () => {
+				try {
+					await odc.fileSystemCreateDirectory({
+						path: 'common:/super_secret'
+					});
+				} catch (e) {
+					// failed as expected
+					return;
+				}
+				assert.fail('Should have thrown an exception');
+			});
+		});
+
+		describe('delete', function () {
+			it('should successfully make a directory if on a writable volume', async () => {
+				try {
+					await odc.fileSystemDelete({
+						path: 'common:/certs/ca-bundle.crt'
+					});
+				} catch (e) {
+					// failed as expected
+					return;
+				}
+				assert.fail('Should have thrown an exception');
+			});
+		});
+	});
+
+	describe('readFile', function () {
+		// it.only('should successfully make a directory if on a writable volume', async () => {
+		// 	await utils.sleep(2000);
+		// 	const {base64} = await odc.readFile({
+		// 		path: 'common:/certs/ca-bundle.crt'
+		// 	});
+		// });
+	});
+
+	describe('readFile', function () {
+		// it('should successfully make a directory if on a writable volume', async () => {
+		// 	const {binaryPayload: originalBinaryPayload} = await odc.readFile({
+		// 		path: 'common:/certs/ca-bundle.crt'
+		// 	});
+		// 	await odc.writeFile({
+		// 		path: 'tmp:/ca-bundle.crt',
+		// 		binaryPayload: originalBinaryPayload
+		// 	});
+		// 	const {binaryPayload} = await odc.readFile({
+		// 		path: 'tmp:/ca-bundle.crt'
+		// 	});
+		// 	expect(originalBinaryPayload).to.equal(binaryPayload);
+		// });
+	});
+
 
 	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODC.SetValueAtKeyPathArgs) {
 		if (args.expectedStartingValue !== undefined) {

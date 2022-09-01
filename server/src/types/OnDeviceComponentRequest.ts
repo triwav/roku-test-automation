@@ -6,9 +6,9 @@ export namespace ODC {
 		deleteNodeReferences,
 		deleteRegistrySections,
 		disableScreenSaver,
+		focusNodeAtKeyPath,
 		getFocusedNode,
 		getNodesInfoAtKeyPaths,
-		getServerHost,
 		getValueAtKeyPath,
 		getValuesAtKeyPaths,
 		handshake,
@@ -19,6 +19,16 @@ export namespace ODC {
 		setValueAtKeyPath,
 		storeNodeReferences,
 		writeRegistry,
+		fileSystemGetVolumeList,
+		fileSystemGetDirectoryListing,
+		fileSystemStat,
+		fileSystemGetVolumeInfo,
+		fileSystemCreateDirectory,
+		fileSystemDelete,
+		fileSystemRename,
+		readFile,
+		writeFile,
+		getServerHost,
 	}
 	export type RequestTypes = keyof typeof RequestEnum;
 
@@ -105,7 +115,39 @@ export namespace ODC {
 		disableScreensaver?: boolean;
 	}
 
-	// TODO build out to support more complicated types
+	export interface FocusNodeAtKeyPathArgs extends BaseKeyPath {
+		/** Set to false to take away focus from the node. Defaults to true */
+		on?: boolean;
+	}
+
+	export interface FileSystemGetVolumeListArgs {}
+
+	export interface Path {
+		path: string
+	}
+
+	export interface FileSystemGetDirectoryListingArgs extends Path {}
+
+	export interface FileSystemStatArgs extends Path {}
+
+	export interface FileSystemGetVolumeInfoArgs extends Path {}
+
+	export interface FileSystemCreateDirectoryArgs extends Path {}
+
+	export interface FileSystemDeleteArgs extends Path {}
+
+	export interface FileSystemRenameArgs {
+		fromPath: string
+		toPath: string
+	}
+
+	export interface ReadFileArgs extends Path {}
+
+	export interface WriteFileArgs extends Path {
+		binaryPayload: Buffer
+	}
+
+	// IMPROVEMENT build out to support more complicated types
 	export type ObserveFieldMatchValueTypes = string | number | boolean;
 
 	interface MatchObject extends BaseKeyPath {
@@ -155,6 +197,7 @@ export namespace ODC {
 
 	export interface GetServerHostArgs {}
 
+	// TODO update
 	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueAtKeyPathArgs | GetValuesAtKeyPathsArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueAtKeyPathArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs;
 
 	export interface RequestOptions {
@@ -164,14 +207,21 @@ export namespace ODC {
 
 	export interface Request {
 		id: string;
-		callbackPort: number;
 		args: RequestArgs;
 		type: RequestTypes;
 		settings: {
 			logLevel: LogLevels
 		};
-		callback?: (req: express.Request) => void;
-		version: string;
+		binaryPayload?: Buffer;
+		callback?: (response: ODC.RequestResponse) => void;
+	}
+
+	export interface RequestResponse {
+		json: any;
+		stringLength: number;
+		binaryLength: number;
+		stringPayload: string;
+		binaryPayload: Buffer;
 	}
 
 	export interface NodeRepresentation {

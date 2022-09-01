@@ -519,11 +519,12 @@ function convertLogLevelStringToInteger(logLevel as String) as Integer
 	if logLevel = "error" then return 1
 	if logLevel = "off" then return 0
 	logWarn("Invalid logLevel passed in '" + logLevel + "'")
+	return 0
 end function
 
-function setLogLevel(logLevel as String)
+sub setLogLevel(logLevel as String)
 	m.logLevel = convertLogLevelStringToInteger(logLevel)
-end function
+end sub
 
 sub logVerbose(message as String, value = "nil" as Dynamic)
 	_log(5, message, value)
