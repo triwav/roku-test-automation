@@ -138,6 +138,8 @@ sub runTaskThread()
 							' FIXME temporary until we handle properly
 							m.i++
 							if m.i > 1000 then
+								' TODO test closing to to see how it responds
+								' possibility of storing sockets only on clientSockets and have key clientSockets that can be updated to work around broken connections
 								logInfo("Client closed connection")
 								clientSocket.close()
 								m.clientSockets.delete(messageSocketId)
