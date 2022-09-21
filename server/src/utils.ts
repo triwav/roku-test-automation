@@ -155,6 +155,15 @@ class Utils {
 	public addRandomPostfix(message: string, length = 2) {
 		return `${message}-${this.randomStringGenerator(length)}`;
 	}
+
+	public isObjectWithProperty<Y extends PropertyKey>
+    (obj: any, prop: Y): obj is Record<Y, unknown> {
+        if (obj === null || typeof obj !== 'object') {
+            return false;
+        }
+        // eslint-disable-next-line no-prototype-builtins
+        return obj.hasOwnProperty(prop);
+    }
 }
 
 const utils = new Utils();
