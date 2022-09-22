@@ -145,7 +145,6 @@ sub runTaskThread()
 				end if
 			else
 				logWarn(messageType + " type not handled")
-				stop
 			end if
 		end if
 	end while
