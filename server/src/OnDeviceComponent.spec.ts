@@ -935,7 +935,6 @@ describe('OnDeviceComponent', function () {
 		describe('getVolumeList', function () {
 			it('should contain the standard list of volumes expected', async () => {
 				const {list} = await odc.fileSystemGetVolumeList();
-				console.log('list', list);
 
 				for (const volume of standardVolumes) {
 					expect(list.includes(volume), `list did not contain '${volume}'`).to.be.true;
@@ -990,16 +989,6 @@ describe('OnDeviceComponent', function () {
 			});
 		});
 
-		describe('getVolumeInfo', function () {
-			it('should return correct info for a directory', async () => {
-				const fileInfo = await odc.fileSystemGetVolumeInfo({
-					path: 'tmp:'
-				});
-				console.log('fileInfo', fileInfo);
-
-			});
-		});
-
 		describe('createDirectory', function () {
 			it('should successfully make a directory if on a writable volume', async () => {
 				const path = 'tmp:/super_secret';
@@ -1041,28 +1030,57 @@ describe('OnDeviceComponent', function () {
 	});
 
 	describe('readFile', function () {
-		// it.only('should successfully make a directory if on a writable volume', async () => {
-		// 	await utils.sleep(2000);
-		// 	const {base64} = await odc.readFile({
-		// 		path: 'common:/certs/ca-bundle.crt'
-		// 	});
-		// });
+		it('successfully reads a known file', async () => {
+			const {binaryPayload} = await odc.readFile({
+				path: 'common:/certs/ca-bundle.crt'
+			});
+			expect(binaryPayload.length).to.be.greaterThan(0);
+		});
+
+		it('throws an error on non existant file', async () => {
+			try {
+				await odc.readFile({
+					path: 'common:/does_not_exist'
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception reading nonexistant file');
+		});
 	});
 
-	describe('readFile', function () {
-		// it('should successfully make a directory if on a writable volume', async () => {
-		// 	const {binaryPayload: originalBinaryPayload} = await odc.readFile({
-		// 		path: 'common:/certs/ca-bundle.crt'
-		// 	});
-		// 	await odc.writeFile({
-		// 		path: 'tmp:/ca-bundle.crt',
-		// 		binaryPayload: originalBinaryPayload
-		// 	});
-		// 	const {binaryPayload} = await odc.readFile({
-		// 		path: 'tmp:/ca-bundle.crt'
-		// 	});
-		// 	expect(originalBinaryPayload).to.equal(binaryPayload);
-		// });
+	describe.only('writeFile', function () {
+		it('successfully writes to a writable volume', async () => {
+			const writeFilePath = 'tmp:/test.txt';
+			const expectedBinaryPayload = Buffer.from(utils.randomStringGenerator(32));
+			await odc.writeFile({
+				path: writeFilePath,
+				binaryPayload: expectedBinaryPayload
+			});
+
+			const {binaryPayload: actualBinaryPayload} = await odc.readFile({
+				path: writeFilePath
+			});
+
+			expect(actualBinaryPayload.toString()).to.equal(expectedBinaryPayload.toString());
+		});
+
+		it('throws an error on read only volumes', async () => {
+			const writeFilePath = 'pkg:/sorry_read_only';
+			const expectedBinaryPayload = Buffer.from(utils.randomStringGenerator(32));
+
+			try {
+				await odc.writeFile({
+					path: writeFilePath,
+					binaryPayload: expectedBinaryPayload
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception trying to write to a read only volume');
+		});
 	});
 
 

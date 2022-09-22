@@ -310,18 +310,6 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async fileSystemGetVolumeInfo(args: ODC.FileSystemGetVolumeInfoArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('fileSystemGetVolumeInfo', args, options);
-		return result.json as {
-			blocksize: number
-			blocks: number
-			'free-blocks': number
-			usedblocks: number
-			label: string
-			mounttime: number
-		} & ODC.ReturnTimeTaken;
-	}
-
 	public async fileSystemCreateDirectory(args: ODC.FileSystemCreateDirectoryArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('fileSystemCreateDirectory', args, options);
 		return result.json as ODC.ReturnTimeTaken;
@@ -367,13 +355,25 @@ export class OnDeviceComponent {
 	private setupClientSocket() {
 		return new Promise<net.Socket>((resolve, reject) => {
 			const socket = new net.Socket();
-			socket.on('error', function(e) {
-				// if ((e as any).code === 'ECONNREFUSED') {
-				// 	console.log('Retrying connection');
-				// } else {
-					console.log('socket error', e);
+
+			const socketConnect = () => {
+				socket.connect(9000, this.device.getCurrentDeviceConfig().host);
+			};
+
+			socket.on('connect', () => {
+				resolve(socket);
+			});
+
+			socket.on('error', async (e) => {
+				const errorCode: string = (e as any).code;
+				if (errorCode === 'ECONNREFUSED' || errorCode === 'EPIPE') {
+					this.clientSocket = undefined;
+					await utils.sleep(50);
+					this.debugLog('Retrying connection due to: ' + errorCode);
+					socketConnect();
+				} else {
 					reject(e);
-				// }
+				}
 			});
 
 			socket.on('timeout', () => {
@@ -442,9 +442,7 @@ export class OnDeviceComponent {
 				}
 			});
 
-			socket.connect(9000, this.device.getCurrentDeviceConfig().host, () => {
-				resolve(socket);
-			});
+			socketConnect();
 		});
 	}
 
@@ -464,9 +462,14 @@ export class OnDeviceComponent {
 
 		this.activeRequests[requestId] = request;
 
-		const stringPayload = JSON.stringify(request);
-
+		// Have to move our binaryPayload out of the args that will be encoded into JSON
 		let binaryBuffer: Buffer | undefined;
+		if (utils.isObjectWithProperty(request.args, 'binaryPayload')) {
+			binaryBuffer = request.args.binaryPayload as Buffer;
+			delete request.args.binaryPayload;
+		}
+
+		const stringPayload = JSON.stringify(request);
 
 		// Build our header buffer with the lengths so we know on the receiving how much data we're expecting for the message before it is considered complete
 		const headerBuffer = Buffer.alloc(8);

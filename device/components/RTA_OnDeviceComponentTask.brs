@@ -40,9 +40,6 @@ sub setValidRequestTypes()
 		"fileSystemStat": {
 			"handler": processFileSystemStatRequest
 		}
-		"fileSystemGetVolumeInfo": {
-			"handler": processFileSystemGetVolumeInfoRequest
-		}
 		"fileSystemCreateDirectory": {
 			"handler": processFileSystemCreateDirectoryRequest
 		}
@@ -100,53 +97,40 @@ sub runTaskThread()
 					end if
 				else
 					clientSocket = m.clientSockets[messageSocketId]
-					if clientSocket = Invalid then
-						logWarn("Received roSocketEvent for unknown socket")
-						stop
-					else if clientSocket.isReadable() then
-						bufferLength = clientSocket.getCountRcvBuf()
-						if bufferLength > 0 then
-							receivingRequest = receivingRequests[messageSocketId]
-							if receivingRequest <> invalid then
-								' This is an existing request and we're now receiving more info for it
-								if receiveDataForRequest(receivingRequest, bufferLength) then
-									receivingRequests.delete(messageSocketId)
-									verifyAndHandleRequest(receivingRequest)
-								end if
-							else
-								ba = createObject("roByteArray")
-								ba[m.requestHeaderSize - 1] = 0
-
-								' Read our request header to know how big our request is
-								clientSocket.receive(ba, 0, m.requestHeaderSize)
-								bufferLength -= m.requestHeaderSize
-								receivingRequest = {
-									"stringLength": unpackInt32LE(ba, 0)
-									"binaryLength": unpackInt32LE(ba, 4)
-									"stringPayload": ""
-									"binaryPayload": createObject("roByteArray")
-									"socket": clientSocket
-								}
-								receivingRequests[messageSocketId] = receivingRequest
-
-								if bufferLength > 0 AND receiveDataForRequest(receivingRequest, bufferLength) then
-									receivingRequests.delete(messageSocketId)
-									verifyAndHandleRequest(receivingRequest)
-								end if
+					bufferLength = clientSocket.getCountRcvBuf()
+					if bufferLength > 0 then
+						receivingRequest = receivingRequests[messageSocketId]
+						if receivingRequest <> invalid then
+							' This is an existing request and we're now receiving more info for it
+							if receiveDataForRequest(receivingRequest, bufferLength) then
+								receivingRequests.delete(messageSocketId)
+								verifyAndHandleRequest(receivingRequest)
 							end if
 						else
-							' FIXME temporary until we handle properly
-							m.i++
-							if m.i > 1000 then
-								' TODO test closing to to see how it responds
-								' possibility of storing sockets only on clientSockets and have key clientSockets that can be updated to work around broken connections
-								logInfo("Client closed connection")
-								clientSocket.close()
-								m.clientSockets.delete(messageSocketId)
+							ba = createObject("roByteArray")
+							ba[m.requestHeaderSize - 1] = 0
+
+							' Read our request header to know how big our request is
+							clientSocket.receive(ba, 0, m.requestHeaderSize)
+							bufferLength -= m.requestHeaderSize
+							receivingRequest = {
+								"stringLength": unpackInt32LE(ba, 0)
+								"binaryLength": unpackInt32LE(ba, 4)
+								"stringPayload": ""
+								"binaryPayload": createObject("roByteArray")
+								"socket": clientSocket
+							}
+							receivingRequests[messageSocketId] = receivingRequest
+
+							if bufferLength > 0 AND receiveDataForRequest(receivingRequest, bufferLength) then
+								receivingRequests.delete(messageSocketId)
+								verifyAndHandleRequest(receivingRequest)
 							end if
 						end if
 					else
-						print "client socket not readable"
+						logInfo("Client closed connection")
+						clientSocket.close()
+						m.clientSockets.delete(messageSocketId)
 					end if
 				end if
 			else if messageType = "roSGNodeEvent" then
@@ -210,7 +194,7 @@ sub verifyAndHandleRequest(request)
 		return
 	end if
 
-	' TODO look into changing how we do this
+	' TODO look into changing how we do this to avoid overhead associated
 	setLogLevel(getStringAtKeyPath(json, "settings.logLevel"))
 
 	requestType = getStringAtKeyPath(json, "type")
@@ -369,12 +353,6 @@ sub processFileSystemStatRequest(request as Object)
 	end if
 end sub
 
-sub processFileSystemGetVolumeInfoRequest(request as Object)
-	args = request.json.args
-	path = getStringAtKeyPath(args, "path")
-	sendBackResponse(request, createObject("roFileSystem").getVolumeInfo(path))
-end sub
-
 sub processFileSystemCreateDirectoryRequest(request as Object)
 	args = request.json.args
 	path = getStringAtKeyPath(args, "path")
@@ -410,13 +388,19 @@ end sub
 
 sub processReadFileRequest(request as Object)
 	args = request.json.args
-	' TODO write me
+	path = getStringAtKeyPath(args, "path")
+	ba = createObject("roByteArray")
+	if ba.readFile(path) then
+		sendBackResponse(request, {}, ba)
+	else
+		sendBackError(request, "Failed reading file path: '" + path + "'")
+	end if
 end sub
 
-sub processWriteFileRequest(request as Object, binaryPayload as Object)
+sub processWriteFileRequest(request as Object)
 	args = request.json.args
 	path = getStringAtKeyPath(args, "path")
-	if binaryPayload.writeFile(path) then
+	if request.binaryPayload.writeFile(path) then
 		sendBackResponse(request, {})
 	else
 		sendBackError(request, "Failed writing file path: '" + path + "'")
@@ -445,7 +429,6 @@ sub sendBackResponse(request as Object, response as Object, binaryPayloadByteArr
 	response["requestType"] = json.type  ' TODO See if we can't work around sending this for performance
 	stringPayload = formatJson(response)
 	logDebug("Sending back response: " + stringPayload)
-	' logDebug("Sending response: ", stringPayload)
 
 	ba = createObject("roByteArray")
 	ba[m.requestHeaderSize - 1] = 0
@@ -464,12 +447,14 @@ sub sendBackResponse(request as Object, response as Object, binaryPayloadByteArr
 
 	socket = request.socket
 	bytesRemaining = ba.count()
+	currentIndex = 0
 	while bytesRemaining > 0
-		bytesSent = socket.send(ba, 0, bytesRemaining)
-		if bytesSent = 0 then
-			stop
+		bytesSent = socket.send(ba, currentIndex, bytesRemaining)
+		if bytesSent = -1 then
+			sleep(1)
 		else
 			bytesRemaining -= bytesSent
+			currentIndex += bytesSent
 		end if
 	end while
 end sub

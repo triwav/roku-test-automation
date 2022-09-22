@@ -22,7 +22,6 @@ export namespace ODC {
 		fileSystemGetVolumeList,
 		fileSystemGetDirectoryListing,
 		fileSystemStat,
-		fileSystemGetVolumeInfo,
 		fileSystemCreateDirectory,
 		fileSystemDelete,
 		fileSystemRename,
@@ -130,8 +129,6 @@ export namespace ODC {
 
 	export interface FileSystemStatArgs extends Path {}
 
-	export interface FileSystemGetVolumeInfoArgs extends Path {}
-
 	export interface FileSystemCreateDirectoryArgs extends Path {}
 
 	export interface FileSystemDeleteArgs extends Path {}
@@ -211,7 +208,6 @@ export namespace ODC {
 		settings: {
 			logLevel: LogLevels
 		};
-		binaryPayload?: Buffer;
 		callback?: (response: ODC.RequestResponse) => void;
 	}
 
