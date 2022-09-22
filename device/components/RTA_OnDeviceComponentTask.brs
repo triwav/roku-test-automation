@@ -204,7 +204,7 @@ sub verifyAndHandleRequest(request)
 
 	requestTypeConfig = m.validRequestTypes[requestType]
 	if requestTypeConfig <> Invalid then
-		' If there is a handler this request type is handled on the task thread
+		' If there is a handler, this request type is handled on the task thread
 		handler = requestTypeConfig.handler
 		if isFunction(handler) then
 			handler(request)
