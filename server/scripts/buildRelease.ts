@@ -33,7 +33,7 @@ const resourcesToCopy = [
 ];
 
 for (const resourceMapping of resourcesToCopy) {
-	let outputPath = path.join(outputFolder, resourceMapping[1]);
+	const outputPath = path.join(outputFolder, resourceMapping[1]);
 	fsExtra.copySync(resourceMapping[0], outputPath, {
 		filter: (path) => {
 			if(path.indexOf('.spec.') > -1) return false;
