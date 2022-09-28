@@ -787,6 +787,7 @@ describe('OnDeviceComponent', function () {
 		let fourthKeyValue: string;
 
 		beforeEach(async function () {
+			await odc.deleteEntireRegistry();
 			firstKeyValue = utils.addRandomPostfix('firstKeyValue');
 			secondKeyValue = utils.addRandomPostfix('secondKeyValue');
 			thirdKeyValue = utils.addRandomPostfix('thirdKeyValue');
@@ -925,6 +926,21 @@ describe('OnDeviceComponent', function () {
 				const secondSection = values[secondSectionName];
 				expect(secondSection[thirdKey]).to.be.undefined;
 				expect(secondSection[fourthKey]).to.be.undefined;
+			});
+		});
+
+		describe.only('restoreRegistry', function () {
+			it('should properly restore if configured to do so', async () => {
+				(odc as any).config.OnDeviceComponent.restoreRegistry = true;
+				// This also triggers storing of the current values first
+				await odc.deleteEntireRegistry();
+				await odc.shutdown();
+				(odc as any).config.OnDeviceComponent.restoreRegistry = false;
+				const {values} = await odc.readRegistry();
+				expect(values.rtaFirstSectionName.firstItem).to.equal(firstKeyValue);
+				expect(values.rtaFirstSectionName.secondItem).to.equal(secondKeyValue);
+				expect(values.rtaSecondSectionName.thirdItem).to.equal(thirdKeyValue);
+				expect(values.rtaSecondSectionName.fourthItem).to.equal(fourthKeyValue);
 			});
 		});
 	});
@@ -1082,7 +1098,6 @@ describe('OnDeviceComponent', function () {
 			assert.fail('Should have thrown an exception trying to write to a read only volume');
 		});
 	});
-
 
 	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODC.SetValueArgs) {
 		if (args.expectedStartingValue !== undefined) {

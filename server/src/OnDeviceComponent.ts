@@ -485,6 +485,14 @@ export class OnDeviceComponent {
 			this.clientSocket = await this.setupClientSocket();
 		}
 
+		if (this.getConfig()?.restoreRegistry && !this.storedDeviceRegistry) {
+			this.debugLog('Storing original device registry state');
+			// Have to set a temporary value or else it will loop indefinitely
+			this.storedDeviceRegistry = {};
+			const result = await this.readRegistry();
+			this.storedDeviceRegistry = result.values;
+		}
+
 		this.debugLog('Sending request:', stringPayload);
 		// Combining into one buffer as it sends separately if we do multiple writes which with TCP could potentially introduce extra latency
 		this.clientSocket.write(Buffer.concat(requestBuffers));
@@ -527,17 +535,7 @@ export class OnDeviceComponent {
 		}
 	}
 
-	// Starts up express server
-	private async startServer() {
-		// FIXME need to add back in registry restore some how
-		if (this.getConfig()?.restoreRegistry) {
-			this.debugLog('Storing original device registry state');
-			const result = await this.readRegistry();
-			this.storedDeviceRegistry = result.values;
-		}
-	}
-
-	public async shutdown(waitForServerShutdown = false) {
+	public async shutdown() {
 		this.debugLog(`Shutting down`);
 
 		if (this.storedDeviceRegistry) {
@@ -548,7 +546,6 @@ export class OnDeviceComponent {
 		}
 		this.clientSocket?.destroy();
 		this.clientSocket = undefined;
-
 	}
 
 	private getCaller(stackTrace?: any[]) {
