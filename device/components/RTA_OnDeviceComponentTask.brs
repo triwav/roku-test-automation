@@ -12,16 +12,16 @@ sub setValidRequestTypes()
 		"callFunc": {}
 		"deleteNodeReferences": {}
 		"getFocusedNode": {}
-		"getNodesInfoAtKeyPaths": {}
-		"getValueAtKeyPath": {}
-		"getValuesAtKeyPaths": {}
+		"getNodesInfo": {}
+		"getValue": {}
+		"getValues": {}
 		"hasFocus": {}
 		"isInFocusChain": {}
 		"observeField": {}
-		"setValueAtKeyPath": {}
+		"setValue": {}
 		"storeNodeReferences": {}
 		"disableScreensaver": {}
-		"focusNodeAtKeyPath": {}
+		"focusNode": {}
 		"readRegistry": {
 			"handler": processReadRegistryRequest
 		}
@@ -31,23 +31,23 @@ sub setValidRequestTypes()
 		"deleteRegistrySections": {
 			"handler": processDeleteRegistrySectionsRequest
 		}
-		"fileSystemGetVolumeList": {
-			"handler": processFileSystemGetVolumeListRequest
+		"getVolumeList": {
+			"handler": processGetVolumeListRequest
 		}
-		"fileSystemGetDirectoryListing": {
-			"handler": processFileSystemGetDirectoryListingRequest
+		"getDirectoryListing": {
+			"handler": processGetDirectoryListingRequest
 		}
-		"fileSystemStat": {
-			"handler": processFileSystemStatRequest
+		"statPath": {
+			"handler": processStatPathRequest
 		}
-		"fileSystemCreateDirectory": {
-			"handler": processFileSystemCreateDirectoryRequest
+		"createDirectory": {
+			"handler": processCreateDirectoryRequest
 		}
-		"fileSystemDelete": {
-			"handler": processFileSystemDeleteRequest
+		"deleteFile": {
+			"handler": processDeleteFileRequest
 		}
-		"fileSystemRename": {
-			"handler": processFileSystemRenameRequest
+		"renameFile": {
+			"handler": processRenameFileRequest
 		}
 		"readFile": {
 			"handler": processReadFileRequest
@@ -67,15 +67,15 @@ sub runTaskThread()
 	address = createObject("roSocketAddress")
 	address.setPort(9000)
 
-	listenSocket = createObject("roStreamSocket")
-	listenSocketId = listenSocket.getID().toStr()
-	listenSocket.setMessagePort(m.port)
-	listenSocket.setAddress(address)
-	listenSocket.notifyReadable(true)
-	listenSocket.listen(4)
+	m.listenSocket = createObject("roStreamSocket")
+	m.listenSocketId = m.listenSocket.getID().toStr()
+	m.listenSocket.setMessagePort(m.port)
+	m.listenSocket.setAddress(address)
+	m.listenSocket.notifyReadable(true)
+	m.listenSocket.listen(4)
 	m.clientSockets = {}
 
-	receivingRequests = {}
+	m.receivingRequests = {}
 	m.activeRequests = {}
 
 	while true
@@ -84,70 +84,84 @@ sub runTaskThread()
 		if message <> Invalid then
 			messageType = type(message)
 			if messageType = "roSocketEvent" then
-				messageSocketId = message.getSocketID().toStr()
-				if messageSocketId = listenSocketId then
-					if listenSocket.isReadable() then
-						clientSocket = listenSocket.accept()
-						if clientSocket = Invalid then
-							logError("Connection accept failed")
-						else
-							clientSocket.notifyReadable(true)
-							m.clientSockets[clientSocket.getID().toStr()] = clientSocket
-						end if
-					end if
-				else
-					clientSocket = m.clientSockets[messageSocketId]
-					bufferLength = clientSocket.getCountRcvBuf()
-					if bufferLength > 0 then
-						receivingRequest = receivingRequests[messageSocketId]
-						if receivingRequest <> invalid then
-							' This is an existing request and we're now receiving more info for it
-							if receiveDataForRequest(receivingRequest, bufferLength) then
-								receivingRequests.delete(messageSocketId)
-								verifyAndHandleRequest(receivingRequest)
-							end if
-						else
-							ba = createObject("roByteArray")
-							ba[m.requestHeaderSize - 1] = 0
-
-							' Read our request header to know how big our request is
-							clientSocket.receive(ba, 0, m.requestHeaderSize)
-							bufferLength -= m.requestHeaderSize
-							receivingRequest = {
-								"stringLength": unpackInt32LE(ba, 0)
-								"binaryLength": unpackInt32LE(ba, 4)
-								"stringPayload": ""
-								"binaryPayload": createObject("roByteArray")
-								"socket": clientSocket
-							}
-							receivingRequests[messageSocketId] = receivingRequest
-
-							if bufferLength > 0 AND receiveDataForRequest(receivingRequest, bufferLength) then
-								receivingRequests.delete(messageSocketId)
-								verifyAndHandleRequest(receivingRequest)
-							end if
-						end if
-					else
-						logInfo("Client closed connection")
-						clientSocket.close()
-						m.clientSockets.delete(messageSocketId)
-					end if
-				end if
+				handleSocketEvent(message)
 			else if messageType = "roSGNodeEvent" then
-				fieldName = message.getField()
-				if message.getField() = "renderThreadResponse" then
-					response = message.getData()
-					request = m.activeRequests[response.id]
-					m.activeRequests.delete(response.id)
-					sendBackResponse(request, response)
-				else
-					logWarn(fieldName + " not handled")
-				end if
+				handleNodeEvent(message)
 			else
 				logWarn(messageType + " type not handled")
 			end if
 		end if
 	end while
+end sub
+
+sub handleSocketEvent(message)
+	messageSocketId = message.getSocketID().toStr()
+	' If the socketId matches our listen socketId this is a new connection being established
+	if messageSocketId = m.listenSocketId then
+		if m.listenSocket.isReadable() then
+			clientSocket = m.listenSocket.accept()
+			if clientSocket = Invalid then
+				logError("Connection accept failed")
+			else
+				' We setup notification for when the new connection is readable
+				clientSocket.notifyReadable(true)
+				m.clientSockets[clientSocket.getID().toStr()] = clientSocket
+			end if
+		end if
+	else
+		handleClientSocketEvent(messageSocketId)
+	end if
+end sub
+
+sub handleClientSocketEvent(messageSocketId)
+	clientSocket = m.clientSockets[messageSocketId]
+	bufferLength = clientSocket.getCountRcvBuf()
+	if bufferLength > 0 then
+		receivingRequest = m.receivingRequests[messageSocketId]
+		if receivingRequest <> invalid then
+			' This is an existing request and we're now receiving more info for it
+			if receiveDataForRequest(receivingRequest, bufferLength) then
+				m.receivingRequests.delete(messageSocketId)
+				verifyAndHandleRequest(receivingRequest)
+			end if
+		else
+			ba = createObject("roByteArray")
+			ba[m.requestHeaderSize - 1] = 0
+
+			' Read our request header to know how big our request is
+			clientSocket.receive(ba, 0, m.requestHeaderSize)
+			bufferLength -= m.requestHeaderSize
+			receivingRequest = {
+				"stringLength": unpackInt32LE(ba, 0)
+				"binaryLength": unpackInt32LE(ba, 4)
+				"stringPayload": ""
+				"binaryPayload": createObject("roByteArray")
+				"socket": clientSocket
+			}
+			m.receivingRequests[messageSocketId] = receivingRequest
+
+			if bufferLength > 0 AND receiveDataForRequest(receivingRequest, bufferLength) then
+				m.receivingRequests.delete(messageSocketId)
+				verifyAndHandleRequest(receivingRequest)
+			end if
+		end if
+	else
+		logInfo("Client closed connection")
+		clientSocket.close()
+		m.clientSockets.delete(messageSocketId)
+	end if
+end sub
+
+sub handleNodeEvent(message)
+	fieldName = message.getField()
+	if message.getField() = "renderThreadResponse" then
+		response = message.getData()
+		request = m.activeRequests[response.id]
+		m.activeRequests.delete(response.id)
+		sendResponseToClient(request, response)
+	else
+		logWarn(fieldName + " not handled")
+	end if
 end sub
 
 function receiveDataForRequest(request as Object, bufferLength as Integer) as Boolean
@@ -164,7 +178,6 @@ function receiveDataForRequest(request as Object, bufferLength as Integer) as Bo
 		if request.binaryLength = request.binaryPayload.count() then
 			return true
 		end if
-		return false
 	else
 		' Figure out amount to pull from the buffer for string
 		if bufferLength > request.stringLength then
@@ -176,6 +189,7 @@ function receiveDataForRequest(request as Object, bufferLength as Integer) as Bo
 		bufferLength -= receiveLength
 		return receiveDataForRequest(request, bufferLength)
 	end if
+	return false
 end function
 
 
@@ -251,7 +265,7 @@ sub processReadRegistryRequest(request as Object)
 		outputValues[section] = sec.readMulti(sectionRequestedValues)
 	end for
 
-	sendBackResponse(request, {
+	sendResponseToClient(request, {
 		"values": outputValues
 	})
 end sub
@@ -288,7 +302,7 @@ sub processWriteRegistryRequest(request as Object)
 		return
 	end if
 
-	sendBackResponse(request, {})
+	sendResponseToClient(request, {})
 end sub
 
 sub processDeleteRegistrySectionsRequest(request as Object)
@@ -320,24 +334,24 @@ sub processDeleteRegistrySectionsRequest(request as Object)
 		return
 	end if
 
-	sendBackResponse(request, {})
+	sendResponseToClient(request, {})
 end sub
 
-sub processFileSystemGetVolumeListRequest(request as Object)
-	sendBackResponse(request, {
+sub processGetVolumeListRequest(request as Object)
+	sendResponseToClient(request, {
 		"list": createObject("roFileSystem").getVolumeList().toArray()
 	})
 end sub
 
-sub processFileSystemGetDirectoryListingRequest(request as Object)
+sub processGetDirectoryListingRequest(request as Object)
 	args = request.json.args
 	path = getStringAtKeyPath(args, "path")
-	sendBackResponse(request, {
+	sendResponseToClient(request, {
 		"list": createObject("roFileSystem").getDirectoryListing(path).toArray()
 	})
 end sub
 
-sub processFileSystemStatRequest(request as Object)
+sub processStatPathRequest(request as Object)
 	args = request.json.args
 	path = getStringAtKeyPath(args, "path")
 	fs = createObject("roFileSystem")
@@ -348,38 +362,38 @@ sub processFileSystemStatRequest(request as Object)
 		' Have to convert the roDateTime to be able to json encode
 		fileInfo.ctime = fileInfo.ctime.asSeconds()
 		fileInfo.mtime = fileInfo.mtime.asSeconds()
-		sendBackResponse(request, fileInfo)
+		sendResponseToClient(request, fileInfo)
 	end if
 end sub
 
-sub processFileSystemCreateDirectoryRequest(request as Object)
+sub processCreateDirectoryRequest(request as Object)
 	args = request.json.args
 	path = getStringAtKeyPath(args, "path")
 	if createObject("roFileSystem").createDirectory(path) then
-		sendBackResponse(request, {})
+		sendResponseToClient(request, {})
 	else
 		sendBackError(request, "Failed to create directory path: '" + path + "'")
 	end if
 end sub
 
-sub processFileSystemDeleteRequest(request as Object)
+sub processDeleteFileRequest(request as Object)
 	args = request.json.args
 	path = getStringAtKeyPath(args, "path")
 
 	path = getStringAtKeyPath(args, "path")
 	if createObject("roFileSystem").delete(path) then
-		sendBackResponse(request, {})
+		sendResponseToClient(request, {})
 	else
 		sendBackError(request, "Failed to delete path: '" + path + "'")
 	end if
 end sub
 
-sub processFileSystemRenameRequest(request as Object)
+sub processRenameFileRequest(request as Object)
 	args = request.json.args
 	fromPath = getStringAtKeyPath(args, "fromPath")
 	toPath = getStringAtKeyPath(args, "toPath")
 	if createObject("roFileSystem").rename(fromPath, toPath) then
-		sendBackResponse(request, {})
+		sendResponseToClient(request, {})
 	else
 		sendBackError(request, "Failed renaming fromPath: '" + fromPath + "' toPath: '" + toPath + "'")
 	end if
@@ -390,7 +404,7 @@ sub processReadFileRequest(request as Object)
 	path = getStringAtKeyPath(args, "path")
 	ba = createObject("roByteArray")
 	if ba.readFile(path) then
-		sendBackResponse(request, {}, ba)
+		sendResponseToClient(request, {}, ba)
 	else
 		sendBackError(request, "Failed reading file path: '" + path + "'")
 	end if
@@ -400,24 +414,24 @@ sub processWriteFileRequest(request as Object)
 	args = request.json.args
 	path = getStringAtKeyPath(args, "path")
 	if request.binaryPayload.writeFile(path) then
-		sendBackResponse(request, {})
+		sendResponseToClient(request, {})
 	else
 		sendBackError(request, "Failed writing file path: '" + path + "'")
 	end if
 end sub
 
 sub processGetServerHostRequest(request as Object)
-	sendBackResponse(request, {
+	sendResponseToClient(request, {
 		"host": request.socket.getReceivedFromAddress().getHostName()
 	})
 end sub
 
 sub sendBackError(request as Object, message as String)
 	logError(message)
-	sendBackResponse(request, buildErrorResponseObject(message))
+	sendResponseToClient(request, buildErrorResponseObject(message))
 end sub
 
-sub sendBackResponse(request as Object, response as Object, binaryPayloadByteArray = Invalid as Dynamic)
+sub sendResponseToClient(request as Object, response as Object, binaryPayloadByteArray = Invalid as Dynamic)
 	if NOT isBoolean(response.success) then response.success = true
 
 	json = request.json

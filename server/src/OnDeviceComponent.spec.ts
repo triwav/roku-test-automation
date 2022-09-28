@@ -100,7 +100,7 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe('getNodesInfoAtKeyPaths', function () {
+	describe('getNodesInfo', function () {
 		let storeResult: Unwrap<typeof odc.storeNodeReferences>;
 		before(async () => {
 			storeResult = await odc.storeNodeReferences();
@@ -108,7 +108,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should get only the requested number of nodes with the right return types', async () => {
 			const requests = {} as {
-				[key: string]: ODC.GetValueAtKeyPathArgs
+				[key: string]: ODC.GetValueArgs
 			};
 			for (const index in storeResult.flatTree) {
 				if (index === '12') break;
@@ -118,7 +118,7 @@ describe('OnDeviceComponent', function () {
 				};
 			}
 
-			const {results} = await odc.getNodesInfoAtKeyPaths({
+			const {results} = await odc.getNodesInfo({
 				requests: requests
 			});
 			expect(Object.keys(results).length).to.equal(Object.keys(requests).length);
@@ -131,7 +131,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should include fields in the response', async () => {
-			const {results} = await odc.getNodesInfoAtKeyPaths({
+			const {results} = await odc.getNodesInfo({
 				requests: {
 					firstItem: {
 						base: 'nodeRef',
@@ -148,7 +148,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should include children array with each child node subtype', async () => {
-			const {results} = await odc.getNodesInfoAtKeyPaths({
+			const {results} = await odc.getNodesInfo({
 				requests: {
 					firstItem: {
 						base: 'nodeRef',
@@ -170,7 +170,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should fail if we try to access a non-node keyPath', async () => {
 			try {
-				await odc.getNodesInfoAtKeyPaths({
+				await odc.getNodesInfo({
 					requests: {
 						firstItem: {
 							base: 'global',
@@ -191,7 +191,7 @@ describe('OnDeviceComponent', function () {
 			await odc.storeNodeReferences();
 			await odc.deleteNodeReferences();
 			try {
-				await odc.getNodesInfoAtKeyPaths({
+				await odc.getNodesInfo({
 					requests: {
 						firstItem: {
 							keyPath: '0'
@@ -202,7 +202,7 @@ describe('OnDeviceComponent', function () {
 				// failed as expected
 				return;
 			}
-			assert.fail('Should have thrown an exception on the getNodesInfoAtKeyPaths if the references were removed');
+			assert.fail('Should have thrown an exception on the getNodesInfo if the references were removed');
 		});
 	});
 
@@ -216,70 +216,70 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe('getValueAtKeyPath', function () {
+	describe('getValue', function () {
 		it('found should be true if key path was found and has timeTaken as a number', async () => {
-			const {found, timeTaken} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
+			const {found, timeTaken} = await odc.getValue({base: 'scene', keyPath: 'subchild3'});
 			expect(found).to.be.true;
 			expect(timeTaken).to.be.a('number');
 		});
 
 		it('found should be false if key path was not found', async () => {
-			const {found} = await odc.getValueAtKeyPath({keyPath: 'invalid'});
+			const {found} = await odc.getValue({keyPath: 'invalid'});
 			expect(found).to.be.false;
 		});
 
 		it('should work with findnode', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: 'subchild3'});
 			expect(value.id).to.eq('subchild3');
 		});
 
 		it('should not find a child if it is not beneath the parent node', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'subchild3.testTarget'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: 'subchild3.testTarget'});
 			expect(value.id).to.be.undefined;
 		});
 
 		it('should work with findNode.getChild', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.0'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.0'});
 			expect(value.id).to.eq('child1');
 		});
 
 		it('should work with findNode.getChild.getChild', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.1'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.1.1'});
 			expect(value.id).to.eq('subchild2');
 		});
 
 		it('should work with findNode.getChild.findNode', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'testTarget.1.subchild1'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.1.subchild1'});
 			expect(value.id).to.eq('subchild1');
 		});
 
 		it('should be able to get a value on a valid field', async () => {
-			const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.isLoggedIn'});
+			const {value} = await odc.getValue({keyPath: 'AuthManager.isLoggedIn'});
 			expect(value).to.be.false;
 		});
 
 		it('should work with array values', async () => {
-			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.0.name'});
+			const {value} = await odc.getValue({keyPath: 'arrayValue.0.name'});
 			expect(value).to.equal('firstItem');
 		});
 
 		it('should work with negative array values', async () => {
-			const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.-1.name'});
+			const {value} = await odc.getValue({keyPath: 'arrayValue.-1.name'});
 			expect(value).to.equal('lastItem');
 		});
 
 		it('should not include children by default', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: ''});
+			const {value} = await odc.getValue({base: 'scene', keyPath: ''});
 			expect(value.children).to.be.undefined;
 		});
 
 		it('should not include children if maxChildDepth set to zero', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', responseMaxChildDepth: 0});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '', responseMaxChildDepth: 0});
 			expect(value.children).to.be.undefined;
 		});
 
 		it('should include children to specified depth', async () => {
-			const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: '', responseMaxChildDepth: 2});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '', responseMaxChildDepth: 2});
 			expect(value.children).to.not.be.empty;
 			for (const child of value.children) {
 				for (const subchild of child.children) {
@@ -293,7 +293,7 @@ describe('OnDeviceComponent', function () {
 			const storeResult = await odc.storeNodeReferences();
 			const key = 10;
 			const storeNode = storeResult.flatTree[key];
-			const {value} = await odc.getValueAtKeyPath({base: 'nodeRef', keyPath: `${key}`});
+			const {value} = await odc.getValue({base: 'nodeRef', keyPath: `${key}`});
 			expect(value.id).to.equal(storeNode.id);
 			expect(value.subtype).to.equal(storeNode.subtype);
 		});
@@ -301,98 +301,98 @@ describe('OnDeviceComponent', function () {
 		describe('Brightscript interface function calls', function () {
 			describe('getParent()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'poster.getParent()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'poster.getParent()'});
 					expect(value.subtype).to.equal('MainScene');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.getParent()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.getParent()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('count()', async () => {
 				it('should work on array item', async () => {
-					const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.count()'});
+					const {value} = await odc.getValue({keyPath: 'arrayValue.count()'});
 					expect(value).to.equal(3);
 				});
 
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.0.count()'});
+					const {value} = await odc.getValue({keyPath: 'arrayValue.0.count()'});
 					expect(value).to.equal(1);
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.count()'});
+					const {value} = await odc.getValue({keyPath: 'AuthManager.count()'});
 					expect(value).to.equal(6);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.count()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.count()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('keys()', async () => {
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValueAtKeyPath({keyPath: 'arrayValue.0.keys()'});
+					const {value} = await odc.getValue({keyPath: 'arrayValue.0.keys()'});
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('name');
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({keyPath: 'AuthManager.keys()'});
+					const {value} = await odc.getValue({keyPath: 'AuthManager.keys()'});
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('change');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.keys()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.keys()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('len()', async () => {
 				it('should work on string item', async () => {
-					const {value} = await odc.getValueAtKeyPath({keyPath: 'stringValue.len()'});
+					const {value} = await odc.getValue({keyPath: 'stringValue.len()'});
 					expect(value).to.equal(11);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.len()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.len()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('getChildCount()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'getChildCount()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'getChildCount()'});
 					expect(value).to.equal(3);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.getChildCount()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.getChildCount()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('threadinfo()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'threadinfo()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'threadinfo()'});
 					const currentThread = value.currentThread;
 					expect(currentThread.name).to.equal('MainScene');
 					expect(currentThread.type).to.equal('Render');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.threadinfo()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.threadinfo()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('getFieldTypes()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'getFieldTypes()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'getFieldTypes()'});
 					const expectedValues = {
 						allowBackgroundTask:'boolean',
 						backExitsScene:'boolean',
@@ -429,26 +429,26 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.getFieldTypes()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.getFieldTypes()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('subtype()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.subtype()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.subtype()'});
 					expect(value).to.equal('RowList');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.subtype()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.subtype()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('boundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.boundingRect()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.boundingRect()'});
 					expect(value.height).to.equal(338);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
@@ -456,14 +456,14 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.boundingRect()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.boundingRect()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('localBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.localBoundingRect()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.localBoundingRect()'});
 					expect(value.height).to.equal(338);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(-19);
@@ -471,14 +471,14 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.localBoundingRect()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.localBoundingRect()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('sceneBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValueAtKeyPath({base: 'scene', keyPath: 'rowList.sceneBoundingRect()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.sceneBoundingRect()'});
 					expect(value.height).to.equal(338);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
@@ -486,16 +486,16 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValueAtKeyPath({keyPath: 'intValue.sceneBoundingRect()'});
+					const {found} = await odc.getValue({keyPath: 'intValue.sceneBoundingRect()'});
 					expect(found).to.false;
 				});
 			});
 		});
 	});
 
-	describe('getValuesAtKeyPaths', function () {
+	describe('getValues', function () {
 		it('should work with multiple values and should return the timeTaken value', async () => {
-			const {results, timeTaken} = await odc.getValuesAtKeyPaths({requests: {
+			const {results, timeTaken} = await odc.getValues({requests: {
 					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
 					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
 				}
@@ -576,17 +576,17 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe('focusNodeAtKeyPath', function () {
+	describe('focusNode', function () {
 		it('should successfully set focus on the requested node', async () => {
-			const args: ODC.FocusNodeAtKeyPathArgs = {base: 'scene', keyPath: 'pagesContainer'};
-			await odc.focusNodeAtKeyPath(args);
+			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer'};
+			await odc.focusNode(args);
 			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
 		});
 
 		it('should return an error when keypath does not point to a node', async () => {
 			try {
-				await odc.focusNodeAtKeyPath({base: 'scene', keyPath: 'stringValue'});
+				await odc.focusNode({base: 'scene', keyPath: 'stringValue'});
 			} catch(e) {
 				// failed as expected
 				return;
@@ -595,7 +595,7 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe('setValueAtKeyPath', function () {
+	describe('setValue', function () {
 		it('should be able to set a key on global', async () => {
 			await setAndVerifyValue({
 				keyPath: 'booleanValue',
@@ -638,12 +638,12 @@ describe('OnDeviceComponent', function () {
 				children: children
 			};
 
-			await odc.setValueAtKeyPath({
+			await odc.setValue({
 				keyPath: nodeKey,
 				value: updateValue
 			});
 
-			const {found, value} = await odc.getValueAtKeyPath({keyPath: nodeKey, responseMaxChildDepth: 1});
+			const {found, value} = await odc.getValue({keyPath: nodeKey, responseMaxChildDepth: 1});
 			expect(found).to.be.true;
 			const childrenResult = value.children;
 			expect(childrenResult.length).to.equal(children.length);
@@ -761,7 +761,7 @@ describe('OnDeviceComponent', function () {
 			const args = {keyPath: 'AuthManager.isLoggedIn'};
 			await setAndVerifyValue({...args, value: false});
 			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUserNoArgs'});
-			const {value} = await odc.getValueAtKeyPath(args);
+			const {value} = await odc.getValue(args);
 			expect(value).to.be.true;
 		});
 
@@ -934,7 +934,7 @@ describe('OnDeviceComponent', function () {
 
 		describe('getVolumeList', function () {
 			it('should contain the standard list of volumes expected', async () => {
-				const {list} = await odc.fileSystemGetVolumeList();
+				const {list} = await odc.getVolumeList();
 
 				for (const volume of standardVolumes) {
 					expect(list.includes(volume), `list did not contain '${volume}'`).to.be.true;
@@ -946,7 +946,7 @@ describe('OnDeviceComponent', function () {
 			it('should return a list of files for the selected directories', async () => {
 				let pathsReturned = 0;
 				for (const volume of standardVolumes) {
-					const {list} = await odc.fileSystemGetDirectoryListing({
+					const {list} = await odc.getDirectoryListing({
 						path: volume + '/'
 					});
 					pathsReturned += list.length;
@@ -957,7 +957,7 @@ describe('OnDeviceComponent', function () {
 
 		describe('stat', function () {
 			it('should return correct info for a directory', async () => {
-				const fileInfo = await odc.fileSystemStat({
+				const fileInfo = await odc.statPath({
 					path: 'common:/certs'
 				});
 				expect(fileInfo.type).to.equal('directory');
@@ -967,7 +967,7 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('should return correct info for a file', async () => {
-				const fileInfo = await odc.fileSystemStat({
+				const fileInfo = await odc.statPath({
 					path: 'common:/certs/ca-bundle.crt'
 				});
 				expect(fileInfo.type).to.equal('file');
@@ -978,7 +978,7 @@ describe('OnDeviceComponent', function () {
 
 			it('should throw an error for a file that does not exist', async () => {
 				try {
-					await odc.fileSystemStat({
+					await odc.statPath({
 						path: 'common:/does_not_exist'
 					});
 				} catch (e) {
@@ -992,10 +992,10 @@ describe('OnDeviceComponent', function () {
 		describe('createDirectory', function () {
 			it('should successfully make a directory if on a writable volume', async () => {
 				const path = 'tmp:/super_secret';
-				await odc.fileSystemCreateDirectory({
+				await odc.createDirectory({
 					path: path
 				});
-				const {type} = await odc.fileSystemStat({
+				const {type} = await odc.statPath({
 					path: path
 				});
 				expect(type).to.equal('directory');
@@ -1003,7 +1003,7 @@ describe('OnDeviceComponent', function () {
 
 			it('should error out if we try to make a directory on a read only volume', async () => {
 				try {
-					await odc.fileSystemCreateDirectory({
+					await odc.createDirectory({
 						path: 'common:/super_secret'
 					});
 				} catch (e) {
@@ -1017,7 +1017,7 @@ describe('OnDeviceComponent', function () {
 		describe('delete', function () {
 			it('should successfully make a directory if on a writable volume', async () => {
 				try {
-					await odc.fileSystemDelete({
+					await odc.deleteFile({
 						path: 'common:/certs/ca-bundle.crt'
 					});
 				} catch (e) {
@@ -1050,7 +1050,7 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe.only('writeFile', function () {
+	describe('writeFile', function () {
 		it('successfully writes to a writable volume', async () => {
 			const writeFilePath = 'tmp:/test.txt';
 			const expectedBinaryPayload = Buffer.from(utils.randomStringGenerator(32));
@@ -1084,14 +1084,14 @@ describe('OnDeviceComponent', function () {
 	});
 
 
-	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODC.SetValueAtKeyPathArgs) {
+	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODC.SetValueArgs) {
 		if (args.expectedStartingValue !== undefined) {
-			const {value: actualStartingValue} = await odc.getValueAtKeyPath(args);
+			const {value: actualStartingValue} = await odc.getValue(args);
 			expect(actualStartingValue).to.equal(args.expectedStartingValue, `${args.base}.${args.keyPath} did not match expected value before set`);
 		}
-		const { timeTaken } = await odc.setValueAtKeyPath(args);
-		const {value: actualValue} = await odc.getValueAtKeyPath(args);
+		const { timeTaken } = await odc.setValue(args);
+		const {value: actualValue} = await odc.getValue(args);
 		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
-		expect(timeTaken).to.be.a('number', 'timeTaken was not a number when returned from setValueAtKeyPath');
+		expect(timeTaken).to.be.a('number', 'timeTaken was not a number when returned from setValue');
 	}
 });

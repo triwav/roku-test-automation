@@ -6,25 +6,25 @@ export namespace ODC {
 		deleteNodeReferences,
 		deleteRegistrySections,
 		disableScreenSaver,
-		focusNodeAtKeyPath,
+		focusNode,
 		getFocusedNode,
-		getNodesInfoAtKeyPaths,
-		getValueAtKeyPath,
-		getValuesAtKeyPaths,
+		getNodesInfo,
+		getValue,
+		getValues,
 		handshake,
 		hasFocus,
 		isInFocusChain,
 		observeField,
 		readRegistry,
-		setValueAtKeyPath,
+		setValue,
 		storeNodeReferences,
 		writeRegistry,
-		fileSystemGetVolumeList,
-		fileSystemGetDirectoryListing,
-		fileSystemStat,
-		fileSystemCreateDirectory,
-		fileSystemDelete,
-		fileSystemRename,
+		getVolumeList,
+		getDirectoryListing,
+		statPath,
+		createDirectory,
+		deleteFile,
+		renameFile,
 		readFile,
 		writeFile,
 		getServerHost,
@@ -78,16 +78,16 @@ export namespace ODC {
 		key?: string;
 	}
 
-	export interface GetValueAtKeyPathArgs extends BaseKeyPath {}
+	export interface GetValueArgs extends BaseKeyPath {}
 
-	export interface GetValuesAtKeyPathsArgs {
-		/** Retrieve multiple values with a single request. A list of the individual getValueAtKeyPath args */
+	export interface GetValuesArgs {
+		/** Retrieve multiple values with a single request. A list of the individual getValue args */
 		requests: {
-			[key: string]: GetValueAtKeyPathArgs;
+			[key: string]: GetValueArgs;
 		};
 	}
 
-	export interface GetNodesInfoAtKeyPathsArgs extends GetValuesAtKeyPathsArgs {}
+	export interface GetNodesInfoArgs extends GetValuesArgs {}
 
 	export interface HasFocusArgs extends BaseKeyPath {}
 
@@ -114,26 +114,26 @@ export namespace ODC {
 		disableScreensaver?: boolean;
 	}
 
-	export interface FocusNodeAtKeyPathArgs extends BaseKeyPath {
+	export interface FocusNodeArgs extends BaseKeyPath {
 		/** Set to false to take away focus from the node. Defaults to true */
 		on?: boolean;
 	}
 
-	export interface FileSystemGetVolumeListArgs {}
+	export interface GetVolumeListArgs {}
 
 	export interface Path {
 		path: string
 	}
 
-	export interface FileSystemGetDirectoryListingArgs extends Path {}
+	export interface GetDirectoryListingArgs extends Path {}
 
-	export interface FileSystemStatArgs extends Path {}
+	export interface StatPathArgs extends Path {}
 
-	export interface FileSystemCreateDirectoryArgs extends Path {}
+	export interface CreateDirectoryArgs extends Path {}
 
-	export interface FileSystemDeleteArgs extends Path {}
+	export interface DeleteFileArgs extends Path {}
 
-	export interface FileSystemRenameArgs {
+	export interface RenameFileArgs {
 		fromPath: string
 		toPath: string
 	}
@@ -163,7 +163,7 @@ export namespace ODC {
 		match?: MatchObject | ObserveFieldMatchValueTypes;
 	}
 
-	export interface SetValueAtKeyPathArgs extends BaseKeyPath {
+	export interface SetValueArgs extends BaseKeyPath {
 		/** Value that needs to be set to the field. Field path is defined by key path. */
 		value: any;
 	}
@@ -194,7 +194,7 @@ export namespace ODC {
 
 	export interface GetServerHostArgs {}
 
-	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueAtKeyPathArgs | GetValuesAtKeyPathsArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueAtKeyPathArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoAtKeyPathsArgs;
+	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs;
 
 	export interface RequestOptions {
 		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */

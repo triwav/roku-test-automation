@@ -53,25 +53,25 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async getValueAtKeyPath(args: ODC.GetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
+	public async getValue(args: ODC.GetValueArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		const result = await this.sendRequest('getValueAtKeyPath', args, options);
+		const result = await this.sendRequest('getValue', args, options);
 		return result.json as {
 			found: boolean;
 			value?: any;
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async getValuesAtKeyPaths(args: ODC.GetValuesAtKeyPathsArgs, options: ODC.RequestOptions = {}) {
+	public async getValues(args: ODC.GetValuesArgs, options: ODC.RequestOptions = {}) {
 		for (const key in args.requests) {
 			const requestArgs = args.requests[key];
 			this.conditionallyAddDefaultBase(requestArgs);
 			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
 		}
 
-		const result = await this.sendRequest('getValuesAtKeyPaths', args, options);
+		const result = await this.sendRequest('getValues', args, options);
 		return result.json as {
 			results: {
 				[key: string]: {
@@ -82,14 +82,14 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async getNodesInfoAtKeyPaths(args: ODC.GetNodesInfoAtKeyPathsArgs, options: ODC.RequestOptions = {}) {
+	public async getNodesInfo(args: ODC.GetNodesInfoArgs, options: ODC.RequestOptions = {}) {
 		for (const key in args.requests) {
 			const requestArgs = args.requests[key];
 			this.conditionallyAddDefaultBase(requestArgs);
 			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
 		}
 
-		const result = await this.sendRequest('getNodesInfoAtKeyPaths', args, options);
+		const result = await this.sendRequest('getNodesInfo', args, options);
 		return result.json as {
 			results: {
 				[key: string]: {
@@ -181,12 +181,12 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async setValueAtKeyPath(args: ODC.SetValueAtKeyPathArgs, options: ODC.RequestOptions = {}) {
+	public async setValue(args: ODC.SetValueArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		args.convertResponseToJsonCompatible = false;
-		const result = await this.sendRequest('setValueAtKeyPath', this.breakOutFieldFromKeyPath(args), options);
+		const result = await this.sendRequest('setValue', this.breakOutFieldFromKeyPath(args), options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
@@ -245,8 +245,8 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
-	public async focusNodeAtKeyPath(args: ODC.FocusNodeAtKeyPathArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('focusNodeAtKeyPath', args, options);
+	public async focusNode(args: ODC.FocusNodeArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('focusNode', args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 	//#endregion
@@ -279,22 +279,22 @@ export class OnDeviceComponent {
 		return await this.deleteRegistrySections(deleteSectionsArgs, options);
 	}
 
-	public async fileSystemGetVolumeList(args: ODC.FileSystemGetVolumeListArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('fileSystemGetVolumeList', args, options);
+	public async getVolumeList(args: ODC.GetVolumeListArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('getVolumeList', args, options);
 		return result.json as {
 			list: string[]
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async fileSystemGetDirectoryListing(args: ODC.FileSystemGetDirectoryListingArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('fileSystemGetDirectoryListing', args, options);
+	public async getDirectoryListing(args: ODC.GetDirectoryListingArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('getDirectoryListing', args, options);
 		return result.json as {
 			list: string[]
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async fileSystemStat(args: ODC.FileSystemStatArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('fileSystemStat', args, options);
+	public async statPath(args: ODC.StatPathArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('statPath', args, options);
 		const body = result.json;
 		// Convert timestamps for easier usage
 		body.ctime = new Date(body.ctime * 1000);
@@ -310,18 +310,18 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
-	public async fileSystemCreateDirectory(args: ODC.FileSystemCreateDirectoryArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('fileSystemCreateDirectory', args, options);
+	public async createDirectory(args: ODC.CreateDirectoryArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('createDirectory', args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
-	public async fileSystemDelete(args: ODC.FileSystemDeleteArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('fileSystemDelete', args, options);
+	public async deleteFile(args: ODC.DeleteFileArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('deleteFile', args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
-	public async fileSystemRename(args: ODC.FileSystemRenameArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('fileSystemRename', args, options);
+	public async renameFile(args: ODC.RenameFileArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('renameFile', args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
@@ -347,7 +347,7 @@ export class OnDeviceComponent {
 	//#endregion
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
-	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.ObserveFieldArgs | ODC.SetValueAtKeyPathArgs) {
+	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.ObserveFieldArgs | ODC.SetValueArgs) {
 		const keyPathParts = args.keyPath.split('.');
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}

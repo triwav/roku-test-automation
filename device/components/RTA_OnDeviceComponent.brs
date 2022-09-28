@@ -23,46 +23,46 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processCallFuncRequest(args)
 	else if requestType = "getFocusedNode" then
 		response = processGetFocusedNodeRequest(args)
-	else if requestType = "getValueAtKeyPath" then
-		response = processGetValueAtKeyPathRequest(args)
-	else if requestType = "getValuesAtKeyPaths" then
-		response = processGetValuesAtKeyPathsRequest(args)
+	else if requestType = "getValue" then
+		response = processGetValueRequest(args)
+	else if requestType = "getValues" then
+		response = processGetValuesRequest(args)
 	else if requestType = "hasFocus" then
 		response = processHasFocusRequest(args)
 	else if requestType = "isInFocusChain" then
 		response = processIsInFocusChainRequest(args)
 	else if requestType = "observeField" then
 		response = processObserveFieldRequest(request)
-	else if requestType = "setValueAtKeyPath" then
-		response = processSetValueAtKeyPathRequest(args)
+	else if requestType = "setValue" then
+		response = processSetValueRequest(args)
 	else if requestType = "storeNodeReferences" then
 		response = processStoreNodeReferencesRequest(args)
-	else if requestType = "getNodesInfoAtKeyPaths" then
-		response = processGetNodesInfoAtKeyPathsRequest(args)
+	else if requestType = "getNodesInfo" then
+		response = processGetNodesInfoRequest(args)
 	else if requestType = "deleteNodeReferences" then
 		response = processDeleteNodeReferencesRequest(args)
 	else if requestType = "disableScreenSaver" then
 		response = processDisableScreenSaverRequest(args)
-	else if requestType = "focusNodeAtKeyPath" then
-		response = processFocusNodeAtKeyPathRequest(args)
+	else if requestType = "focusNode" then
+		response = processFocusNodeRequest(args)
 	else
 		response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
 	end if
 
 	if response <> Invalid then
-		renderThreadSendBackResponse(request, response)
+		sendResponseToTask(request, response)
 	end if
 end sub
 
 function processCallFuncRequest(args as Object) as Object
-	keyPath = getStringAtKeyPath(args, "keyPath")
-	result = processGetValueAtKeyPathRequest(args)
+	result = processGetValueRequest(args)
 	if isErrorObject(result) then
 		return result
 	end if
 
 	node = result.value
 	if NOT isNode(node) then
+		keyPath = getStringAtKeyPath(args, "keyPath")
 		return buildErrorResponseObject("Node not found at key path '" + keyPath + "'")
 	end if
 
@@ -130,7 +130,7 @@ function processGetFocusedNodeRequest(args as Object) as Object
 	return result
 end function
 
-function processGetValueAtKeyPathRequest(args as Object) as Object
+function processGetValueRequest(args as Object) as Object
 	base = getBaseObject(args)
 	if isErrorObject(base) then
 		return base
@@ -152,14 +152,14 @@ function processGetValueAtKeyPathRequest(args as Object) as Object
 	}
 end function
 
-function processGetValuesAtKeyPathsRequest(args as Object) as Object
+function processGetValuesRequest(args as Object) as Object
 	requests = args.requests
 	if NOT isNonEmptyAA(requests) then
-		return buildErrorResponseObject("getValuesAtKeyPaths did not have have any requests")
+		return buildErrorResponseObject("getValues did not have have any requests")
 	end if
 	results = {}
 	for each key in requests
-		result = processGetValueAtKeyPathRequest(requests[key])
+		result = processGetValueRequest(requests[key])
 		if isErrorObject(result) then
 			return result
 		end if
@@ -170,16 +170,16 @@ function processGetValuesAtKeyPathsRequest(args as Object) as Object
 	}
 end function
 
-function processGetNodesInfoAtKeyPathsRequest(args as Object) as Object
+function processGetNodesInfoRequest(args as Object) as Object
 	requests = args.requests
 	if NOT isNonEmptyAA(requests) then
-		return buildErrorResponseObject("getNodesInfoAtKeyPaths did not have have any requests")
+		return buildErrorResponseObject("getNodesInfo did not have have any requests")
 	end if
 
 	results = {}
 	for each key in requests
 		requestArgs = requests[key]
-		result = processGetValueAtKeyPathRequest(requestArgs)
+		result = processGetValueRequest(requestArgs)
 		if isErrorObject(result) then
 			return result
 		end if
@@ -220,19 +220,18 @@ function processGetNodesInfoAtKeyPathsRequest(args as Object) as Object
 end function
 
 function processHasFocusRequest(args as Object) as Object
-	keyPath = getStringAtKeyPath(args, "keyPath")
-	result = processGetValueAtKeyPathRequest(args)
+	result = processGetValueRequest(args)
 	if isErrorObject(result) then
 		return result
 	end if
 
 	if result.found <> true then
-		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+		return buildErrorResponseObject("No value found at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 	end if
 
 	node = result.value
 	if NOT isNode(node) then
-		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+		return buildErrorResponseObject("Value at key path '" + getStringAtKeyPath(args, "keyPath") + "' was not a node")
 	end if
 
 	return {
@@ -241,19 +240,18 @@ function processHasFocusRequest(args as Object) as Object
 end function
 
 function processIsInFocusChainRequest(args as Object) as Object
-	keyPath = getStringAtKeyPath(args, "keyPath")
-	result = processGetValueAtKeyPathRequest(args)
+	result = processGetValueRequest(args)
 	if isErrorObject(result) then
 		return result
 	end if
 
 	if result.found <> true then
-		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+		return buildErrorResponseObject("No value found at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 	end if
 
 	node = result.value
 	if NOT isNode(node) then
-		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+		return buildErrorResponseObject("Value at key path '" + getStringAtKeyPath(args, "keyPath") + "' was not a node")
 	end if
 
 	return {
@@ -264,8 +262,7 @@ end function
 function processObserveFieldRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
-	keyPath = getStringAtKeyPath(args, "keyPath")
-	result = processGetValueAtKeyPathRequest(args)
+	result = processGetValueRequest(args)
 	if isErrorObject(result) then
 		return result
 	end if
@@ -309,9 +306,9 @@ function processObserveFieldRequest(request as Object) as Dynamic
 		end if
 
 		if NOT parentIsNode then
-			errorMessage = "Node not found at key path '" + keyPath + "'"
+			errorMessage = "Node not found at key path '" + getStringAtKeyPath(args, "keyPath") + "'"
 		else
-			errorMessage = "Node did not have field named '" + field + "' at key path '" + keyPath + "'"
+			errorMessage = "Node did not have field named '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'"
 		end if
 		if timePassed > 0 then
 			errorMessage += " timed out after " + timePassed.toStr() + "ms"
@@ -319,7 +316,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 		logWarn(errorMessage)
 
 		m.activeObserveFieldRequests.delete(requestId)
-		renderThreadSendBackResponse(request, buildErrorResponseObject(errorMessage))
+		sendResponseToTask(request, buildErrorResponseObject(errorMessage))
 
 		' Might be called asyncronous and we already handled so returning Invalid
 		return Invalid
@@ -329,7 +326,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	match = args.match
 	if isAA(match) then
 		match.key = args.key
-		result = processGetValueAtKeyPathRequest(match)
+		result = processGetValueRequest(match)
 		if isErrorObject(result) then
 			return result
 		end if
@@ -347,9 +344,9 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	end if
 
 	if node.observeFieldScoped(field, "observeFieldCallback") then
-		logDebug("Now observing '" + field + "' at key path '" + keyPath + "'")
+		logDebug("Now observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 	else
-		return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + keyPath + "'")
+		return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 	end if
 
 	request.node = node
@@ -375,9 +372,9 @@ sub observeFieldCallback(event as Object)
 		if node.isSameNode(request.node) AND args.field = field then
 			match = args.match
 			if isAA(match) then
-				result = processGetValueAtKeyPathRequest(match)
+				result = processGetValueRequest(match)
 				if isErrorObject(result) then
-					renderThreadSendBackResponse(request, result)
+					sendResponseToTask(request, result)
 					return
 				end if
 
@@ -385,7 +382,7 @@ sub observeFieldCallback(event as Object)
 					logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
 					node.unobserveFieldScoped(field)
 					m.activeObserveFieldRequests.delete(requestId)
-					renderThreadSendBackResponse(request, buildErrorResponseObject("Match was requested and key path was not valid"))
+					sendResponseToTask(request, buildErrorResponseObject("Match was requested and key path was not valid"))
 					return
 				end if
 
@@ -397,7 +394,7 @@ sub observeFieldCallback(event as Object)
 			logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
 			node.unobserveFieldScoped(field)
 			m.activeObserveFieldRequests.delete(requestId)
-			renderThreadSendBackResponse(request, {
+			sendResponseToTask(request, {
 				"value": data
 				"observerFired": true
 			})
@@ -407,9 +404,9 @@ sub observeFieldCallback(event as Object)
 	logError("Received callback for unknown node or field ", node)
 end sub
 
-function processSetValueAtKeyPathRequest(args as Object) as Object
+function processSetValueRequest(args as Object) as Object
 	keyPath = getStringAtKeyPath(args, "keyPath")
-	result = processGetValueAtKeyPathRequest(args)
+	result = processGetValueRequest(args)
 	if isErrorObject(result) then
 		return result
 	end if
@@ -601,8 +598,8 @@ function processDisableScreenSaverRequest(args as Object) as Object
 	return {}
 end function
 
-function processFocusNodeAtKeyPathRequest(args as Object) as Object
-	result = processGetValueAtKeyPathRequest(args)
+function processFocusNodeRequest(args as Object) as Object
+	result = processGetValueRequest(args)
 	if isErrorObject(result) then
 		return result
 	end if
@@ -640,7 +637,7 @@ function getBaseObject(args as Object) as Dynamic
 	return buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
 end function
 
-sub renderThreadSendBackResponse(request as Object, response as Object)
+sub sendResponseToTask(request as Object, response as Object)
 	if getBooleanAtKeyPath(request, "args.convertResponseToJsonCompatible", true) then
 		response = recursivelyConvertValueToJsonCompatible(response, getNumberAtKeyPath(request, "args.responseMaxChildDepth"))
 	end if
