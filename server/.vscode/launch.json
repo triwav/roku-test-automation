@@ -18,8 +18,7 @@
 			"request": "launch",
 			"cwd": "${workspaceFolder}",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-			"args": ["./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js", "./dist/NetworkProxy.spec.js"],
-			// "args": ["--bail", "./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js", "./dist/NetworkProxy.spec.js"],
+			"args": ["--grep", "\\[SLOW\\]", "--invert", "./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js", "./dist/NetworkProxy.spec.js"], // "--bail"
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen"
 		}]

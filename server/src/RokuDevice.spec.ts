@@ -33,7 +33,7 @@ describe('RokuDevice', function () {
 		});
 	});
 
-	describe('getScreenshot', () => {
+	describe('getScreenshot [SLOW]', () => {
 		it('should work', async () => {
 			const screenShotPath = await device.getScreenshot('output');
 			if (!fsExtra.existsSync(screenShotPath)) {

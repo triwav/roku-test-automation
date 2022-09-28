@@ -6,19 +6,28 @@ export namespace ODC {
 		deleteNodeReferences,
 		deleteRegistrySections,
 		disableScreenSaver,
+		focusNode,
 		getFocusedNode,
-		getNodesInfoAtKeyPaths,
-		getServerHost,
-		getValueAtKeyPath,
-		getValuesAtKeyPaths,
+		getNodesInfo,
+		getValue,
+		getValues,
 		handshake,
 		hasFocus,
 		isInFocusChain,
 		observeField,
 		readRegistry,
-		setValueAtKeyPath,
+		setValue,
 		storeNodeReferences,
 		writeRegistry,
+		getVolumeList,
+		getDirectoryListing,
+		statPath,
+		createDirectory,
+		deleteFile,
+		renameFile,
+		readFile,
+		writeFile,
+		getServerHost,
 	}
 	export type RequestTypes = keyof typeof RequestEnum;
 
@@ -69,16 +78,16 @@ export namespace ODC {
 		key?: string;
 	}
 
-	export interface GetValueAtKeyPathArgs extends BaseKeyPath {}
+	export interface GetValueArgs extends BaseKeyPath {}
 
-	export interface GetValuesAtKeyPathsArgs {
-		/** Retrieve multiple values with a single request. A list of the individual getValueAtKeyPath args */
+	export interface GetValuesArgs {
+		/** Retrieve multiple values with a single request. A list of the individual getValue args */
 		requests: {
-			[key: string]: GetValueAtKeyPathArgs;
+			[key: string]: GetValueArgs;
 		};
 	}
 
-	export interface GetNodesInfoAtKeyPathsArgs extends GetValuesAtKeyPathsArgs {}
+	export interface GetNodesInfoArgs extends GetValuesArgs {}
 
 	export interface HasFocusArgs extends BaseKeyPath {}
 
@@ -105,7 +114,37 @@ export namespace ODC {
 		disableScreensaver?: boolean;
 	}
 
-	// TODO build out to support more complicated types
+	export interface FocusNodeArgs extends BaseKeyPath {
+		/** Set to false to take away focus from the node. Defaults to true */
+		on?: boolean;
+	}
+
+	export interface GetVolumeListArgs {}
+
+	export interface Path {
+		path: string
+	}
+
+	export interface GetDirectoryListingArgs extends Path {}
+
+	export interface StatPathArgs extends Path {}
+
+	export interface CreateDirectoryArgs extends Path {}
+
+	export interface DeleteFileArgs extends Path {}
+
+	export interface RenameFileArgs {
+		fromPath: string
+		toPath: string
+	}
+
+	export interface ReadFileArgs extends Path {}
+
+	export interface WriteFileArgs extends Path {
+		binaryPayload: Buffer
+	}
+
+	// IMPROVEMENT build out to support more complicated types
 	export type ObserveFieldMatchValueTypes = string | number | boolean;
 
 	interface MatchObject extends BaseKeyPath {
@@ -124,7 +163,7 @@ export namespace ODC {
 		match?: MatchObject | ObserveFieldMatchValueTypes;
 	}
 
-	export interface SetValueAtKeyPathArgs extends BaseKeyPath {
+	export interface SetValueArgs extends BaseKeyPath {
 		/** Value that needs to be set to the field. Field path is defined by key path. */
 		value: any;
 	}
@@ -155,7 +194,7 @@ export namespace ODC {
 
 	export interface GetServerHostArgs {}
 
-	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueAtKeyPathArgs | GetValuesAtKeyPathsArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueAtKeyPathArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs;
+	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs;
 
 	export interface RequestOptions {
 		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
@@ -164,14 +203,20 @@ export namespace ODC {
 
 	export interface Request {
 		id: string;
-		callbackPort: number;
 		args: RequestArgs;
 		type: RequestTypes;
 		settings: {
 			logLevel: LogLevels
 		};
-		callback?: (req: express.Request) => void;
-		version: string;
+		callback?: (response: ODC.RequestResponse) => void;
+	}
+
+	export interface RequestResponse {
+		json: any;
+		stringLength: number;
+		binaryLength: number;
+		stringPayload: string;
+		binaryPayload: Buffer;
 	}
 
 	export interface NodeRepresentation {
