@@ -26,7 +26,11 @@ describe('ECP', function () {
 				return ecpResponse;
 			}
 		};
-		config = ({} as any);
+		config = {
+			RokuDevice: {
+				devices: []
+			}
+		};
 		ecp = new ECP(config);
 		(ecp as any).device = device;
 		ecpUtils = (ecp as any).utils;
@@ -388,16 +392,16 @@ describe('ECP', function () {
 			};
 
 			ecp.startRaspFileCreation();
-			await ecp.sendKeyPress(ecp.Key.UP);
-			await ecp.sendKeyPress(ecp.Key.UP);
-			await ecp.sendKeyPress(ecp.Key.DOWN);
-			await ecp.sendKeyPress(ecp.Key.DOWN);
-			await ecp.sendKeyPress(ecp.Key.LEFT);
-			await ecp.sendKeyPress(ecp.Key.RIGHT);
-			await ecp.sendKeyPress(ecp.Key.LEFT);
-			await ecp.sendKeyPress(ecp.Key.RIGHT);
+			await ecp.sendKeyPress(ecp.Key.UP, 1);
+			await ecp.sendKeyPress(ecp.Key.UP, 1);
+			await ecp.sendKeyPress(ecp.Key.DOWN, 1);
+			await ecp.sendKeyPress(ecp.Key.DOWN, 1);
+			await ecp.sendKeyPress(ecp.Key.LEFT, 1);
+			await ecp.sendKeyPress(ecp.Key.RIGHT, 1);
+			await ecp.sendKeyPress(ecp.Key.LEFT, 1);
+			await ecp.sendKeyPress(ecp.Key.RIGHT, 1);
 			await ecp.sleep(100);
-			await ecp.sendKeyPress(ecp.Key.OK);
+			await ecp.sendKeyPress(ecp.Key.OK, 1);
 			ecp.finishRaspFileCreation(outputPath);
 			const expectedContents =
 `params:
