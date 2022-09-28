@@ -929,7 +929,7 @@ describe('OnDeviceComponent', function () {
 			});
 		});
 
-		describe.only('restoreRegistry', function () {
+		describe('restoreRegistry', function () {
 			it('should properly restore if configured to do so', async () => {
 				(odc as any).config.OnDeviceComponent.restoreRegistry = true;
 				// This also triggers storing of the current values first
