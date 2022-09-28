@@ -24,7 +24,7 @@ export interface RokuDeviceConfigOptions {
 	/** zero based index of which `devices` index to use. If not provided defaults to 0 */
 	deviceIndex?: number;
 
-	/** Useful for debugging port 80 and ECP communication between Roku and server. Use in the format like (127.0.0.1:8888). */
+	/** Useful for debugging port 80 and ECP communication between Roku and client. Use in the format like (127.0.0.1:8888). */
 	proxy?: string;
 }
 
@@ -62,8 +62,8 @@ export interface OnDeviceComponentConfigOptions {
 	/** Device side log output level */
 	logLevel?: ODC.LogLevels;
 
-	/** Enable debug logging on the server side */
-	serverDebugLogging?: boolean;
+	/** Enable debug logging on the client side */
+	clientDebugLogging?: boolean;
 
 	/**
 	 * Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.
@@ -76,17 +76,14 @@ export interface OnDeviceComponentConfigOptions {
 
 	/** We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line */
 	disableCallOriginationLine?: boolean
-
-	/** By default ODC tries to find an open callback port on the server. This allows you to set one explicitly */
-	callbackListenPort?: number;
 }
 
 export interface NetworkProxyOptions {
 	/** What port the proxy will run on. If not provided will find one itself */
 	port?: number;
 
-	/** Enable debug logging on the server side */
-	serverDebugLogging?: boolean;
+	/** Enable debug logging on the client side */
+	clientDebugLogging?: boolean;
 
 	/** Useful for visually debugging issues. Use in the format like (http://127.0.0.1:8888). DOES NOT WORK WITH RELATIVE REDIRECTS IN CHARLES!!! */
 	forwardProxy?: string;

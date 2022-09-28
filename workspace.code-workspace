@@ -9,8 +9,8 @@
 			"path": "testProject"
 		},
 		{
-			"name": "server",
-			"path": "server"
+			"name": "client",
+			"path": "client"
 		},
 		{
 			"name": ".github",
