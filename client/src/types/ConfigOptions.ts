@@ -1,5 +1,4 @@
-import { ODC } from './OnDeviceComponentRequest';
-
+import type { ODC } from './OnDeviceComponentRequest';
 
 export enum ConfigBaseKeyEnum {
 	ECP,
