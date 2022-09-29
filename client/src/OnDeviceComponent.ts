@@ -566,7 +566,7 @@ export class OnDeviceComponent {
 	}
 
 	private debugLog(message: string, ...args) {
-		if (this.getConfig()?.serverDebugLogging) {
+		if (this.getConfig()?.clientDebugLogging) {
 			console.log(`[ODC] ${message}`, ...args);
 		}
 	}

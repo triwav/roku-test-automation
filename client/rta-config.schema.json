@@ -29,6 +29,10 @@
         "NetworkProxy": {
             "additionalProperties": false,
             "properties": {
+                "clientDebugLogging": {
+                    "description": "Enable debug logging on the client side",
+                    "type": "boolean"
+                },
                 "forwardProxy": {
                     "description": "Useful for visually debugging issues. Use in the format like (http://127.0.0.1:8888). DOES NOT WORK WITH RELATIVE REDIRECTS IN CHARLES!!!",
                     "type": "string"
@@ -36,10 +40,6 @@
                 "port": {
                     "description": "What port the proxy will run on. If not provided will find one itself",
                     "type": "number"
-                },
-                "serverDebugLogging": {
-                    "description": "Enable debug logging on the server side",
-                    "type": "boolean"
                 }
             },
             "type": "object"
@@ -47,9 +47,9 @@
         "OnDeviceComponent": {
             "additionalProperties": false,
             "properties": {
-                "callbackListenPort": {
-                    "description": "By default ODC tries to find an open callback port on the server. This allows you to set one explicitly",
-                    "type": "number"
+                "clientDebugLogging": {
+                    "description": "Enable debug logging on the client side",
+                    "type": "boolean"
                 },
                 "disableCallOriginationLine": {
                     "description": "We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line",
@@ -73,10 +73,6 @@
                 },
                 "restoreRegistry": {
                     "description": "Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.\nAt which point it will clear the registry completely and write back the stored registry values that were previously stored.",
-                    "type": "boolean"
-                },
-                "serverDebugLogging": {
-                    "description": "Enable debug logging on the server side",
                     "type": "boolean"
                 }
             },
@@ -133,7 +129,7 @@
                     "type": "array"
                 },
                 "proxy": {
-                    "description": "Useful for debugging port 80 and ECP communication between Roku and server. Use in the format like (127.0.0.1:8888).",
+                    "description": "Useful for debugging port 80 and ECP communication between Roku and client. Use in the format like (127.0.0.1:8888).",
                     "type": "string"
                 }
             },

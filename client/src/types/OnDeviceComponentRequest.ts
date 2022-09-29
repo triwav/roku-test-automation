@@ -1,5 +1,3 @@
-import * as express from 'express';
-
 export namespace ODC {
 	export enum RequestEnum {
 		callFunc,

@@ -12,8 +12,8 @@ class Utils {
 		return path.resolve(__dirname + '/../../device');
 	}
 
-	/** Provides a way to easily get a path to server files for external access */
-	public getServerFilesPath() {
+	/** Provides a way to easily get a path to client files for external access */
+	public getClientFilesPath() {
 		return path.resolve(__dirname + '/../');
 	}
 

@@ -100,7 +100,7 @@ export class NetworkProxy {
 	}
 
 	private debugLog(message: string, ...args) {
-		if (this.getConfig()?.serverDebugLogging) {
+		if (this.getConfig()?.clientDebugLogging) {
 			console.log(`[NetworkProxy] ${message}`, ...args);
 		}
 	}
