@@ -24,6 +24,7 @@
 			"**/coverage": true,
 			"**/release": true
 		},
-		"typescript.preferences.quoteStyle": "single"
+		"typescript.preferences.quoteStyle": "single",
+		"task.allowAutomaticTasks": "on"
 	}
 }
