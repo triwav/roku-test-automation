@@ -4,7 +4,6 @@ sub init()
 	m.top.observeFieldScoped("renderThreadResponse", m.port)
 	m.top.functionName = "runTaskThread"
 	m.top.control = "RUN"
-	m.i = 0
 end sub
 
 sub setValidRequestTypes()
@@ -94,8 +93,9 @@ sub runTaskThread()
 	end while
 end sub
 
-sub handleSocketEvent(message)
+sub handleSocketEvent(message as Object)
 	messageSocketId = message.getSocketID().toStr()
+
 	' If the socketId matches our listen socketId this is a new connection being established
 	if messageSocketId = m.listenSocketId then
 		if m.listenSocket.isReadable() then
@@ -109,46 +109,49 @@ sub handleSocketEvent(message)
 			end if
 		end if
 	else
-		handleClientSocketEvent(messageSocketId)
+		clientSocket = m.clientSockets[messageSocketId]
+		bufferLength = clientSocket.getCountRcvBuf()
+		if bufferLength > 0 then
+			handleClientSocketEvent(messageSocketId, clientSocket, bufferLength)
+		else
+			logInfo("Client closed connection")
+			clientSocket.close()
+			m.clientSockets.delete(messageSocketId)
+		end if
 	end if
 end sub
 
-sub handleClientSocketEvent(messageSocketId)
-	clientSocket = m.clientSockets[messageSocketId]
-	bufferLength = clientSocket.getCountRcvBuf()
+sub handleClientSocketEvent(messageSocketId as String, clientSocket as Object, bufferLength as Integer)
+	receivingRequest = m.receivingRequests[messageSocketId]
+	if receivingRequest = invalid then
+		ba = createObject("roByteArray")
+		ba[m.requestHeaderSize - 1] = 0
+
+		' Read our request header to know how big our request is
+		clientSocket.receive(ba, 0, m.requestHeaderSize)
+		bufferLength -= m.requestHeaderSize
+		receivingRequest = {
+			"stringLength": unpackInt32LE(ba, 0)
+			"binaryLength": unpackInt32LE(ba, 4)
+			"stringPayload": ""
+			"binaryPayload": createObject("roByteArray")
+			"socket": clientSocket
+		}
+		m.receivingRequests[messageSocketId] = receivingRequest
+	end if
+
 	if bufferLength > 0 then
-		receivingRequest = m.receivingRequests[messageSocketId]
-		if receivingRequest <> invalid then
-			' This is an existing request and we're now receiving more info for it
-			if receiveDataForRequest(receivingRequest, bufferLength) then
-				m.receivingRequests.delete(messageSocketId)
-				verifyAndHandleRequest(receivingRequest)
-			end if
-		else
-			ba = createObject("roByteArray")
-			ba[m.requestHeaderSize - 1] = 0
+		remainingBufferLength = receiveDataForRequest(receivingRequest, bufferLength)
+		if remainingBufferLength >= 0 then
+			' We've received the whole request so handle it now
+			m.receivingRequests.delete(messageSocketId)
+			verifyAndHandleRequest(receivingRequest)
 
-			' Read our request header to know how big our request is
-			clientSocket.receive(ba, 0, m.requestHeaderSize)
-			bufferLength -= m.requestHeaderSize
-			receivingRequest = {
-				"stringLength": unpackInt32LE(ba, 0)
-				"binaryLength": unpackInt32LE(ba, 4)
-				"stringPayload": ""
-				"binaryPayload": createObject("roByteArray")
-				"socket": clientSocket
-			}
-			m.receivingRequests[messageSocketId] = receivingRequest
-
-			if bufferLength > 0 AND receiveDataForRequest(receivingRequest, bufferLength) then
-				m.receivingRequests.delete(messageSocketId)
-				verifyAndHandleRequest(receivingRequest)
+			' If we still have more buffer left then go ahead and start the next request
+			if remainingBufferLength > 0 then
+				handleClientSocketEvent(messageSocketId, clientSocket, remainingBufferLength)
 			end if
 		end if
-	else
-		logInfo("Client closed connection")
-		clientSocket.close()
-		m.clientSockets.delete(messageSocketId)
 	end if
 end sub
 
@@ -164,19 +167,31 @@ sub handleNodeEvent(message)
 	end if
 end sub
 
-function receiveDataForRequest(request as Object, bufferLength as Integer) as Boolean
+' Returns number of bytes remaining in buffer if request was fully received or -1 if more data still needs to be received
+function receiveDataForRequest(request as Object, bufferLength as Integer) as Integer
 	socket = request.socket
 	' Check if we are going to receive binary or string data
 	if request.stringPayload.len() = request.stringLength then
+		' We've already received entire string payload so the rest is either the binary payload or the next request
+		binaryLength = request.binaryLength
 		if bufferLength > 0 then
-			ba = createObject("roByteArray")
-			ba[bufferLength - 1] = 0
-			socket.receive(ba, 0, bufferLength)
-			request.binaryPayload.append(ba)
+			if binaryLength > 0 then
+				if bufferLength > binaryLength then
+					receiveLength = binaryLength
+				else
+					receiveLength = bufferLength
+				end if
+
+				ba = createObject("roByteArray")
+				ba[bufferLength - 1] = 0
+				socket.receive(ba, 0, bufferLength)
+				request.binaryPayload.append(ba)
+				bufferLength -= receiveLength
+			end if
 		end if
 
-		if request.binaryLength = request.binaryPayload.count() then
-			return true
+		if binaryLength = request.binaryPayload.count() then
+			return bufferLength
 		end if
 	else
 		' Figure out amount to pull from the buffer for string
@@ -185,11 +200,11 @@ function receiveDataForRequest(request as Object, bufferLength as Integer) as Bo
 		else
 			receiveLength = bufferLength
 		end if
-		request["stringPayload"] += socket.receiveStr(receiveLength)
+		request.stringPayload += socket.receiveStr(receiveLength)
 		bufferLength -= receiveLength
 		return receiveDataForRequest(request, bufferLength)
 	end if
-	return false
+	return -1
 end function
 
 

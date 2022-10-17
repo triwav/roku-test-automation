@@ -226,10 +226,20 @@ export class OnDeviceComponent {
 				rootTree.push(tree);
 				continue;
 			}
+
 			const parentTree = body.flatTree[tree.parentRef];
+			if (!parentTree.children) {
+				parentTree.children = [];
+			}
+
 			parentTree.children.push(tree);
 		}
 		body.rootTree = rootTree;
+
+		// Go ahead and sort children by position to make output more logical
+		for (const tree of body.flatTree) {
+			tree.children.sort((a, b) => a.position - b.position);
+		}
 		return body;
 	}
 
@@ -356,11 +366,15 @@ export class OnDeviceComponent {
 		return new Promise<net.Socket>((resolve, reject) => {
 			const socket = new net.Socket();
 
+			const port = 9000;
+			const host = this.device.getCurrentDeviceConfig().host;
 			const socketConnect = () => {
-				socket.connect(9000, this.device.getCurrentDeviceConfig().host);
+				this.debugLog(`Attempting to connect to Roku at ${host} on port ${port}`);
+				socket.connect(9000, host);
 			};
 
 			socket.on('connect', () => {
+				this.debugLog(`Connected to Roku at ${host} on port ${port}`);
 				resolve(socket);
 			});
 
@@ -372,6 +386,9 @@ export class OnDeviceComponent {
 					this.debugLog('Retrying connection due to: ' + errorCode);
 					socketConnect();
 				} else {
+					if (errorCode === 'ETIMEDOUT') {
+						this.debugLog(`Failed to connect to Roku at ${host} on port ${port}`);
+					}
 					reject(e);
 				}
 			});

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="RowListRowTitleComponent" extends="Group">
+	<script type="text/brightscript" uri="RowListRowTitleComponent.brs" />
+	<interface>
+		<field id="content" type="node" onChange="onContentChange" />
+	</interface>
+	<children>
+		<Label id="label" />
+	</children>
+</component>

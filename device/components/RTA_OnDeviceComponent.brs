@@ -113,18 +113,39 @@ function processGetFocusedNodeRequest(args as Object) as Object
 			return buildErrorResponseObject("Invalid value supplied for 'key' param")
 		end if
 
-		nodeReferences = m.nodeReferences[nodeReferencesKey]
-		if NOT isArray(nodeReferences) then
+		storedNodes = m.nodeReferences[nodeReferencesKey]
+		if NOT isArray(storedNodes) then
 			return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
 		end if
 
-		for i = 0 to getLastIndex(nodeReferences)
-			nodeReference = nodeReferences[i]
-			if focusedNode.isSameNode(nodeReference) then
-				result.ref = i
-				exit for
+		arrayGridChildItemContent = invalid
+		if getBooleanAtKeyPath(args, "returnFocusedArrayGridChild") AND focusedNode.isSubtype("ArrayGrid") AND focusedNode.content <> Invalid then
+			rowItemFocused = focusedNode.rowItemFocused
+			if isArray(rowItemFocused) AND rowItemFocused.count() = 2 then
+				arrayGridChildItemContent = focusedNode.content.getChild(rowItemFocused[0]).getChild(rowItemFocused[1])
+			else
+				arrayGridChildItemContent = focusedNode.content.getChild(focusedNode.itemFocused)
 			end if
-		end for
+		end if
+
+		if arrayGridChildItemContent <> invalid then
+			for i = 0 to getLastIndex(storedNodes)
+				node = storedNodes[i]
+				if NOT node.isSubtype("ContentNode") AND isNode(node.itemContent) AND node.itemContent.isSameNode(arrayGridChildItemContent) then
+					result.node = node
+					result.ref = i
+					exit for
+				end if
+			end for
+		else
+			for i = 0 to getLastIndex(storedNodes)
+				nodeReference = storedNodes[i]
+				if focusedNode.isSameNode(nodeReference) then
+					result.ref = i
+					exit for
+				end if
+			end for
+		end if
 	end if
 
 	return result
@@ -146,10 +167,15 @@ function processGetValueRequest(args as Object) as Object
 		found = true
 	end if
 
-	return {
+	result = {
 		"found": found
-		"value": value
 	}
+
+	if found then
+		result.value = value
+	end if
+
+	return result
 end function
 
 function processGetValuesRequest(args as Object) as Object
@@ -318,7 +344,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 		m.activeObserveFieldRequests.delete(requestId)
 		sendResponseToTask(request, buildErrorResponseObject(errorMessage))
 
-		' Might be called asyncronous and we already handled so returning Invalid
+		' Might be called asynchronous and we already handled so returning Invalid
 		return Invalid
 	end if
 
@@ -469,6 +495,8 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 	end if
 
 	storedNodes = []
+	' Clear out old nodes before getting next retrieval of nodes
+	m.nodeReferences[nodeReferencesKey] = storedNodes
 	flatTree = []
 
 	arrayGridNodes = {}
@@ -478,23 +506,23 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 		"flatTree": flatTree
 	}
 
-	arrayGridComponents = {}
-	if includeArrayGridChildren then
-		for each key in arrayGridNodes
-			node = arrayGridNodes[key]
-			componentName = node.itemComponentName
-			if isString(componentName) then
-				arrayGridComponents[componentName] = componentName
-			else if isString(node.channelInfoComponentName) then
-				componentName = node.channelInfoComponentName
-				arrayGridComponents[componentName] = componentName
-			end if
-		end for
-	end if
-
 	if includeArrayGridChildren OR includeNodeCountInfo then
+		arrayGridComponents = {}
+		if includeArrayGridChildren then
+			for each key in arrayGridNodes
+				node = arrayGridNodes[key]
+				componentName = node.itemComponentName
+				if isString(componentName) then
+					arrayGridComponents[componentName] = true
+				else if isString(node.channelInfoComponentName) then
+					componentName = node.channelInfoComponentName
+					arrayGridComponents[componentName] = true
+				end if
+			end for
+		end if
+
 		nodeCountByType = {}
-		arrayGridTopChildren = []
+		itemComponentNodes = []
 
 		allNodes = m.top.getAll()
 		result["totalNodes"] = allNodes.count()
@@ -505,42 +533,16 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 			end if
 			nodeCountByType[nodeType]++
 
-			if includeArrayGridChildren then
-				for each componentName in arrayGridComponents
-					if nodeType = componentName then
-						parentStepCount = 0
-						previousParent = node
-						parent = node.getParent()
-						while parentStepCount < 5 AND isNode(parent)
-							if parent.isSubtype("ArrayGrid") AND parent.getParent().subtype() <> "RowListItem" then
-								alreadyExists = false
-								for each arrayGridTopChild in arrayGridTopChildren
-									if previousParent.isSameNode(arrayGridTopChild) then
-										alreadyExists = true
-										exit for
-									end if
-								end for
-								if NOT alreadyExists then
-									arrayGridTopChildren.push(previousParent)
-								end if
-							end if
-							previousParent = parent
-							parent = parent.getParent()
-							parentStepCount++
-						end while
-					end if
-				end for
+			if includeArrayGridChildren AND arrayGridComponents[nodeType] = true then
+				itemComponentNodes.push(node)
 			end if
 		end for
 
-		for each arrayGridTopChild in arrayGridTopChildren
-			for each arrayGridNodeRefString in arrayGridNodes
-				arrayGridNode = arrayGridNodes[arrayGridNodeRefString]
-				if arrayGridNode.isSameNode(arrayGridTopChild.getParent()) then
-					buildTree(storedNodes, flatTree, arrayGridTopChild, false, {}, strToI(arrayGridNodeRefString))
-				end if
-			end for
-		end for
+		' IMPROVEMENT look into optimization by removing nodes we'll never use (content node etc)
+
+		if includeArrayGridChildren then
+			buildItemComponentTrees(storedNodes, flatTree, itemComponentNodes, arrayGridNodes, allNodes)
+		end if
 
 		result["nodeCountByType"] = nodeCountByType
 	end if
@@ -549,26 +551,222 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 	return result
 end function
 
-sub buildTree(storedNodes as Object, flatTree as Object, node as Object, searchForArrayGrids as Boolean, arrayGridNodes = {} as Object, parentRef = -1 as Integer, position = -1 as Integer)
+' ArrayGrid children can't be built with a normal call to buildTree since you can only get the parent not the children
+' Often times nodes are in different spots as well and we want to standardize that as well to a consistent format
+sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemComponentNodes as Object, arrayGridNodes as Object, allNodes as Object)
+	unparentedItemComponentNodeBranch = []
+
+	' Serves as a place to store the nodes and their nodeRef we are adding and allows us to only have to check a small subset of the nodes for a matching parent
+	internalRowListItemNodeBranches = []
+	internalMarkupGridNodeBranches = []
+
+	for each itemComponentNode in itemComponentNodes
+		itemContent = itemComponentNode.itemContent
+		position = getNodeParentIndex(itemContent, itemContent.getParent())
+		childBranch = addNodeToTree(storedNodes, flatTree, itemComponentNode, -1, position)
+		parent = itemComponentNode.getParent()
+
+		' If we don't have a parent we want to handle parentRef based off of itemContent later
+		if NOT isNode(parent) then
+			' If no parent just store for now
+			unparentedItemComponentNodeBranch.push(childBranch)
+		else
+			' If we had a parent then we want to walk up until we reach the visible arrayGrid, storing each node as we go and then going back and building the node tree for each
+			shouldContinue = true
+			while shouldContinue
+				nodeBranch = Invalid
+
+				' If our parent is Group and grandparent is RowListItem then we change our perceived parent to be the MarkupGrid for easier understanding
+				if parent.subtype() = "Group" AND parent.getParent().subtype() = "RowListItem" then
+					' Walk up to the RowListItem
+					rowListItem = parent.getParent()
+					for i = 0 to getLastIndex(rowListItem)
+						' Once we find the MarkupGrid make it the parent
+						child = rowListItem.getChild(i)
+						if child.subtype() = "MarkupGrid" then
+							parent = child
+						end if
+					end for
+				end if
+
+				' Check if the parent has already been captured
+				for each internalRowListItemNodeBranch in internalRowListItemNodeBranches
+					rowListItem = storedNodes[internalRowListItemNodeBranch.ref]
+					if parent.isSameNode(rowListItem) then
+						nodeBranch = internalRowListItemNodeBranch
+						exit for
+					end if
+				end for
+
+				if nodeBranch = Invalid then
+					for each internalMarkupGridNodeBranch in internalMarkupGridNodeBranches
+						markupGrid = storedNodes[internalMarkupGridNodeBranch.ref]
+						if parent.isSameNode(markupGrid) then
+							nodeBranch = internalMarkupGridNodeBranch
+							exit for
+						end if
+					end for
+				end if
+
+				' If not go ahead and make a nodeBranch for it
+				if nodeBranch = Invalid then
+					position = getNodeParentIndex(parent, parent.getParent())
+					nodeBranch = addNodeToTree(storedNodes, flatTree, parent, -1, position)
+					nodeType = nodeBranch.subtype
+					if nodeType = "RowListItem" then
+						internalRowListItemNodeBranches.push(nodeBranch)
+					else if nodeType = "MarkupGrid" then
+						internalMarkupGridNodeBranches.push(nodeBranch)
+					else
+						logError("Encountered unexpected node type '" + nodeType + "' while handling ArrayGrid items ")
+					end if
+				end if
+
+				' Go ahead and assign parentRef now that we have made the parent
+				childBranch["parentRef"] = nodeBranch.ref
+
+				ancestors = [parent]
+				grandParent = parent.getParent()
+				if grandParent <> invalid then
+					ancestors.push(grandParent)
+				end if
+
+				for each parent in ancestors
+					if parent.isSubtype("ArrayGrid") then
+						for each nodeRef in arrayGridNodes
+							' Look for the visible ArrayGrid this renderer belongs to
+							if arrayGridNodes[nodeRef].isSameNode(parent) then
+								nodeBranch["parentRef"] = nodeRef.toInt()
+								' We've reached the top so go ahead and exit the while loop
+								shouldContinue = false
+								exit for
+							end if
+						end for
+					end if
+				end for
+
+				' Used on subsequent loop
+				childBranch = nodeBranch
+				parent = grandParent
+			end while
+		end if
+	end for
+
+	' Now go through each of the unparented items and use the content to find its matching parent
+	for each itemComponentNodeBranch in unparentedItemComponentNodeBranch
+		itemComponentNode = storedNodes[itemComponentNodeBranch.ref]
+		itemContentParent = itemComponentNode.itemContent.getParent()
+		for each internalMarkupGridNodeBranch in internalMarkupGridNodeBranches
+			markupGrid = storedNodes[internalMarkupGridNodeBranch.ref]
+			if itemContentParent.isSameNode(markupGrid.content) then
+				itemComponentNodeBranch["parentRef"] = internalMarkupGridNodeBranch.ref
+				exit for
+			end if
+		end for
+
+		if itemComponentNodeBranch.parentRef = -1 then
+			' Walk up until we hit the ArrayGrid and find out if we have a title component we can search for
+			rowTitleComponentName = invalid
+			parent = itemContentParent
+			while true
+				if parent.isSubtype("ArrayGrid") then
+					rowTitleComponentName = parent.rowTitleComponentName
+					exit while
+				end if
+				parent = parent.getParent()
+			end while
+
+			if rowTitleComponentName <> invalid then
+				for each node in allNodes
+					if node.subtype() = rowTitleComponentName AND itemContentParent.isSameNode(node.content) then
+						' We found the rowTitleComponentNode for this row. Store the RowListItem and MarkupGrid for this item. The rowTitleComponentNode will be handled in the final loop of this function
+						rowListItem = node.getParent().getParent()
+
+						' Find our parent ArrayGrid
+						parentRef = -1
+						for each nodeRef in arrayGridNodes
+							if arrayGridNodes[nodeRef].isSameNode(rowListItem.getParent()) then
+								parentRef = nodeRef.toInt()
+								exit for
+							end if
+						end for
+
+						position = getNodeParentIndex(rowListItem, rowListItem.getParent())
+						rowListItemNodeBranch = addNodeToTree(storedNodes, flatTree, rowListItem, parentRef, position)
+						internalRowListItemNodeBranches.push(rowListItemNodeBranch)
+
+
+						for i = 0 to getLastIndex(rowListItem)
+							child = rowListItem.getChild(i)
+
+							' First index is title info that we want to make available for external use as well
+							if child.subtype() = "MarkupGrid" then
+								markupGridNodeBranch = addNodeToTree(storedNodes, flatTree, child, rowListItemNodeBranch.ref, i)
+								internalMarkupGridNodeBranches.push(markupGridNodeBranch)
+								itemComponentNodeBranch["parentRef"] = markupGridNodeBranch.ref
+							end if
+						end for
+					end if
+				end for
+			end if
+		end if
+
+		if itemComponentNodeBranch.parentRef = -1 then
+			' Was throwing away but seems to cause issue so commenting out for now. Will likely just handle with the improvement below eventually instead
+			' for i = 0 to getLastIndex(flatTree)
+			' 	ref = flatTree[i].ref
+			' 	if ref <> -1 AND ref = itemComponentNodeBranch.ref then
+			' 		flatTree.delete(i)
+			' 		exit for
+			' 	end if
+			' end for
+			' IMPROVEMENT We weren't able to find the parent so we could make up the node structure to match a standard output and still give a parented output.
+		end if
+	end for
+
+	' Do position and adding children for RowListItem here so we only have to it once for each
+	for each internalRowListItemNodeBranch in internalRowListItemNodeBranches
+		rowListItem = storedNodes[internalRowListItemNodeBranch.ref]
+		for i = 0 to getLastIndex(rowListItem)
+			child = rowListItem.getChild(i)
+
+			' First index is title info that we want to make available for external use as well
+			if i = 0 then
+				buildTree(storedNodes, flatTree, child, false, {}, internalRowListItemNodeBranch.ref, i)
+			else if child.subtype() = "MarkupGrid" then
+				' Need to get position from the child MarkupGrid content
+				content = child.content
+				internalRowListItemNodeBranch.position = getNodeParentIndex(content, content.getParent())
+			end if
+		end for
+	end for
+end sub
+
+function addNodeToTree(storedNodes as Object, flatTree as Object, node as Object, parentRef = -1 as Integer, position = -1 as Integer) as Object
 	currentNodeReference = storedNodes.count()
 	storedNodes.push(node)
 
-	if searchForArrayGrids AND node.isSubtype("ArrayGrid") then
-		arrayGridNodes[currentNodeReference.toStr()] = node
-	end if
-
-	representation = {
+	nodeBranch = {
 		"id": node.id
 		"subtype": node.subtype()
 		"ref": currentNodeReference
 		"parentRef": parentRef
 		"position": position
 	}
-	flatTree.push(representation)
+	flatTree.push(nodeBranch)
+
+	return nodeBranch
+end function
+
+sub buildTree(storedNodes as Object, flatTree as Object, node as Object, searchForArrayGrids as Boolean, arrayGridNodes = {} as Object, parentRef = -1 as Integer, position = -1 as Integer)
+	nodeRef = addNodeToTree(storedNodes, flatTree, node, parentRef, position).ref
+	if searchForArrayGrids AND node.isSubtype("ArrayGrid") then
+		arrayGridNodes[nodeRef.toStr()] = node
+	end if
 
 	childPosition = 0
 	for each childNode in node.getChildren(-1, 0)
-		buildTree(storedNodes, flatTree, childNode, searchForArrayGrids, arrayGridNodes, currentNodeReference, childPosition)
+		buildTree(storedNodes, flatTree, childNode, searchForArrayGrids, arrayGridNodes, nodeRef, childPosition)
 		childPosition++
 	end for
 end sub
