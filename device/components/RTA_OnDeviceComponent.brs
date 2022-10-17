@@ -538,8 +538,6 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 			end if
 		end for
 
-		' IMPROVEMENT look into optimization by removing nodes we'll never use (content node etc)
-
 		if includeArrayGridChildren then
 			buildItemComponentTrees(storedNodes, flatTree, itemComponentNodes, arrayGridNodes, allNodes)
 		end if
@@ -556,20 +554,20 @@ end function
 sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemComponentNodes as Object, arrayGridNodes as Object, allNodes as Object)
 	unparentedItemComponentNodeBranch = []
 
-	' Serves as a place to store the nodes and their nodeRef we are adding and allows us to only have to check a small subset of the nodes for a matching parent
+	' Serves as a place to store the nodeBranch and allows us to only have to check a small subset of the nodes for a matching parent
 	internalRowListItemNodeBranches = []
 	internalMarkupGridNodeBranches = []
 
 	for each itemComponentNode in itemComponentNodes
 		itemContent = itemComponentNode.itemContent
 		position = getNodeParentIndex(itemContent, itemContent.getParent())
-		childBranch = addNodeToTree(storedNodes, flatTree, itemComponentNode, -1, position)
+		childNodeBranch = addNodeToTree(storedNodes, flatTree, itemComponentNode, -1, position)
 		parent = itemComponentNode.getParent()
 
 		' If we don't have a parent we want to handle parentRef based off of itemContent later
 		if NOT isNode(parent) then
 			' If no parent just store for now
-			unparentedItemComponentNodeBranch.push(childBranch)
+			unparentedItemComponentNodeBranch.push(childNodeBranch)
 		else
 			' If we had a parent then we want to walk up until we reach the visible arrayGrid, storing each node as we go and then going back and building the node tree for each
 			shouldContinue = true
@@ -623,7 +621,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 				end if
 
 				' Go ahead and assign parentRef now that we have made the parent
-				childBranch["parentRef"] = nodeBranch.ref
+				childNodeBranch["parentRef"] = nodeBranch.ref
 
 				ancestors = [parent]
 				grandParent = parent.getParent()
@@ -646,7 +644,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 				end for
 
 				' Used on subsequent loop
-				childBranch = nodeBranch
+				childNodeBranch = nodeBranch
 				parent = grandParent
 			end while
 		end if
@@ -665,6 +663,8 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 		end for
 
 		if itemComponentNodeBranch.parentRef = -1 then
+			' IMPROVEMENT look into optimization by removing nodes from allNodes we'll never use (content node etc)
+
 			' Walk up until we hit the ArrayGrid and find out if we have a title component we can search for
 			rowTitleComponentName = invalid
 			parent = itemContentParent
@@ -698,8 +698,6 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 
 						for i = 0 to getLastIndex(rowListItem)
 							child = rowListItem.getChild(i)
-
-							' First index is title info that we want to make available for external use as well
 							if child.subtype() = "MarkupGrid" then
 								markupGridNodeBranch = addNodeToTree(storedNodes, flatTree, child, rowListItemNodeBranch.ref, i)
 								internalMarkupGridNodeBranches.push(markupGridNodeBranch)
