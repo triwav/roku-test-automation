@@ -344,7 +344,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 		m.activeObserveFieldRequests.delete(requestId)
 		sendResponseToTask(request, buildErrorResponseObject(errorMessage))
 
-		' Might be called asynchronous and we already handled so returning Invalid
+		' Might be called asynchronously, and we already handled this, so return Invalid
 		return Invalid
 	end if
 
