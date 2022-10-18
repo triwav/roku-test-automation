@@ -549,8 +549,8 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 	return result
 end function
 
-' ArrayGrid children can't be built with a normal call to buildTree since you can only get the parent not the children
-' Often times nodes are in different spots as well and we want to standardize that as well to a consistent format
+' ArrayGrid children can't be built with a normal call to buildTree since you can only get the parent not the children.
+' Often times nodes are in different spots, so this will also standardize them to a single consistent spot
 sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemComponentNodes as Object, arrayGridNodes as Object, allNodes as Object)
 	unparentedItemComponentNodeBranch = []
 
