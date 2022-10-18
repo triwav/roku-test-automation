@@ -236,7 +236,7 @@ export class OnDeviceComponent {
 		}
 		body.rootTree = rootTree;
 
-		// Go ahead and sort children by position to make output more logical
+		// sort children by position to make output more logical
 		for (const tree of body.flatTree) {
 			tree.children.sort((a, b) => a.position - b.position);
 		}
