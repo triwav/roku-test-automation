@@ -150,7 +150,7 @@ At the heart of almost all requests internally is `getValue`. It serves as your 
 - `base?: string` can be either `global`, `scene`, `nodeRef` or `focusedNode`. If not supplied it defaults to `global`
 - `keyPath: string` builds off of the base and supplies the path to what you are interested in getting the value for. A simple example might be something like `AuthManager.isLoggedIn` which would let you check if a user is logged in or not. It can operate on much more than just keyed type fields though.
 
-Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.idOfChildNodeToInspect`. The [`getValue` unit tests](./client/src/types/client/src/OnDeviceComponent.spec.ts#L219) provide a full list of what is possible for a key path.
+Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.idOfChildNodeToInspect`. The [`getValue` unit tests](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provide a full list of what is possible for a key path.
 
 ```ts
 odc.getValue({
@@ -374,7 +374,7 @@ This class serves as a wrapper around the [http-network-proxy](https://www.npmjs
 
 ### `utils`
 
-Contains a number of helpers that are mostly used internally but may also be of externally. [Be sure to checkout the file for a full list](https://github.com/triwav/roku-test-automation/blob/master/client/src/utils.ts). Below are few of the most useful ones for external use:
+Contains a number of helpers that are mostly used internally but may also be of externally. [Be sure to checkout the file for a full list](./client/src/utils.ts). Below are few of the most useful ones for external use:
 
 #### `setupEnvironmentFromConfigFile`
 
@@ -400,13 +400,13 @@ If you're wanting to run multiple tests at the same time then this helper is use
 
 > addRandomPostfix(message: string, length: number = 2)): string
 
-A lot of times with that tests it's useful to to append something to it to make sure a string is unique.
+A lot of times with tests it's useful to to append something to it to make sure a string is unique for each run/test.
 
 #### `sleep`
 
 > sleep(milliseconds: number)
 
-While doing arbitrary waiting is almost never needed thanks to `observeField`, there might be some use cases for this.
+While doing arbitrary waiting is almost never needed thanks to [`observeField`](#observefield), there might be some use cases for this.
 
 ```ts
 import { utils } from 'roku-test-automation';
