@@ -143,7 +143,7 @@ Once setup you can send requests to the device to either kick off an event or ch
 
 #### `getValue`
 
-> getValue(args: [ODC.GetValueArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetValueArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {found: boolean, value}
+> getValue(args: [ODC.GetValueArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {found: boolean, value}
 
 At the heart of almost all requests internally is `getValue`. It serves as your entry point from which you execute other requests but can also be used by itself to return a requested value. `args` takes two properties:
 
@@ -184,17 +184,17 @@ odc.getValue({
 
 #### `getValues`
 
-> getValues(args: [ODC.GetValuesArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetValuesArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {results: {[key: string]: {found: boolean; value?: any; }}, timeTaken: number}
+> getValues(args: [ODC.GetValuesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetValuesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {results: {[key: string]: {found: boolean; value?: any; }}, timeTaken: number}
 
 `getValues` allows you to retrieve multiple values with a single request. It takes one property for `args`:
 
 - `requests`: `object` A list of the individual `getValue` args with a user supplied key that will be returned as the same key for the output results object.
 
-The [`getValues` unit test](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C-,function,-()%20%7B) provides an example of its usage
+The [`getValues` unit test](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provides an example of its usage
 
 #### `getNodesInfo`
 
-> getNodesInfo(args: [ODC.GetNodesInfoArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetNodesInfoArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): results: {[key: string]: {
+> getNodesInfo(args: [ODC.GetNodesInfoArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetNodesInfoArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): results: {[key: string]: {
 					subtype: string;
 					fields: {
 						[key: string]: {
@@ -213,7 +213,7 @@ Sometimes it may be necessary to know the type of a field on a node. This is pri
 
 #### `setValue`
 
-> setValue(args: [ODC.SetValueArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20SetValueArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> setValue(args: [ODC.SetValueArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20SetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
 
 Allows you to set a value at a key path. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
@@ -229,7 +229,7 @@ odc.setValue({
 
 #### `callFunc`
 
-> callFunc(args: [ODC.CallFuncArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20CallFuncArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {value: any, timeTaken: number}
+> callFunc(args: [ODC.CallFuncArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20CallFuncArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {value: any, timeTaken: number}
 
 Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-program/core-concepts/handling-application-events.md#functional-fields) on a node. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
@@ -247,7 +247,7 @@ odc.callFunc({
 
 #### `getFocusedNode`
 
-> getFocusedNode(args: [ODC.GetFocusedNodeArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetFocusedNodeArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {node: NodeRepresentation, ref?: number, timeTaken: number}
+> getFocusedNode(args: [ODC.GetFocusedNodeArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetFocusedNodeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {node: NodeRepresentation, ref?: number, timeTaken: number}
 
 Gets the currently focused node. `args` includes the following:
 
@@ -260,13 +260,13 @@ let focusedNode = await odc.getFocusedNode();
 
 #### `hasFocus`
 
-> hasFocus(args: [ODC.HasFocusArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20HasFocusArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): boolean
+> hasFocus(args: [ODC.HasFocusArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20HasFocusArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): boolean
 
 Check if the node at the supplied key path has focus or not. It takes the standard `base` and `keyPath` properties.
 
 #### `isInFocusChain`
 
-> isInFocusChain(args: [ODC.IsInFocusChainArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20IsInFocusChainArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): boolean
+> isInFocusChain(args: [ODC.IsInFocusChainArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20IsInFocusChainArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): boolean
 
 Check if the node at the supplied key path is in the focus chain. It takes the standard `base` and `keyPath` properties.
 
@@ -279,7 +279,7 @@ const isBtnInFocusChain = await odc.isInFocusChain({
 
 #### `observeField`
 
-> observeField(args: [ODC.ObserveFieldArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20ObserveFieldArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
+> observeField(args: [ODC.ObserveFieldArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20ObserveFieldArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
 
 Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use observeField to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
@@ -312,43 +312,43 @@ to help distinguish if the observer actually fired the property `observerFired` 
 
 #### `storeNodeReferences`
 
-> storeNodeReferences(args: [ODC.StoreNodeReferencesArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20StoreNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> storeNodeReferences(args: [ODC.StoreNodeReferencesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20StoreNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
 
 Creates a list of nodes in the currently running application by traversing the node tree. The returned node indexes can then be used as the base for other functions such as [getValue](#getvalue)
 
 #### `deleteNodeReferences`
 
-> deleteNodeReferences(args: [ODC.DeleteNodeReferencesArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> deleteNodeReferences(args: [ODC.DeleteNodeReferencesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
 
 Deletes the list of nodes previously stored by [storeNodeReferences](#storeNodeReferences) on the specified key
 
 #### `disableScreenSaver`
 
-> disableScreenSaver(args: [ODC.DisableScreensaverArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DisableScreensaverArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> disableScreenSaver(args: [ODC.DisableScreensaverArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DisableScreensaverArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
 
 Allows for disabling the screen saver in the application. While the screen saver is running communication between the on device component and server is not possible. This can help avoid these issues.
 
 #### `readRegistry`
 
-> readRegistry(args: [ODC.ReadRegistryArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20ReadRegistryArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {values: { [section: string]: {[sectionItemKey: string]: string}}}
+> readRegistry(args: [ODC.ReadRegistryArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20ReadRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {values: { [section: string]: {[sectionItemKey: string]: string}}}
 
 Allows for reading from the registry. If no specific sections are requested then it will return the entire contents of the registry.
 
 #### `writeRegistry`
 
-> writeRegistry(args: [ODC.WriteRegistryArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20WriteRegistryArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
+> writeRegistry(args: [ODC.WriteRegistryArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20WriteRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
 
 Allows for writing to the registry. If `null` is passed for a sectionItemKey that key will be deleted. If `null` is passed for a section that entire section will be deleted.
 
 #### `deleteRegistrySections`
 
-> deleteRegistrySections(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
+> deleteRegistrySections(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
 
 Allows for deleting sections from the registry. Similar functionality can be achieved with `writeRegistry` passing null sections but helps to make it clearer if a mixed model isn't needed.
 
 #### `deleteEntireRegistry`
 
-> deleteEntireRegistry(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
+> deleteEntireRegistry(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
 
 Provides a way to clear out all sections in registry. Uses `deleteRegistrySections` under the hood but makes it clearer what is being done.
 
