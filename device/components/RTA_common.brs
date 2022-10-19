@@ -206,12 +206,12 @@ end function
 
 ' /**
 ' * @description Gets the index position for this node in its parent
-' * @param {Node} node Object to get parent from
+' * @param {Node} node we want to find the parent index for
+' * @param {Node} parent we are searching for the children of
 ' * @return {Integer} Result or -1
 ' */
-function getNodeParentIndex(node as Object) as Integer
+function getNodeParentIndex(node as Object, parent) as Integer
 	if isNode(node) then
-		parent = node.getParent()
 		for i = 0 to getLastIndex(parent)
 			if node.isSameNode(parent.getChild(i)) then
 				return i

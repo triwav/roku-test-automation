@@ -7,6 +7,7 @@
 		<field id="gridHasFocus" type="boolean" />
 		<field id="focusPercent" type="float" />
 		<field id="rowFocusPercent" type="float" />
+		<field id="itemContent" type="node" />
 	</interface>
 	<children>
 		<Rectangle id="rect" color="#FF0000" />

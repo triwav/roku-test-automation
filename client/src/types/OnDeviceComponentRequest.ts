@@ -74,6 +74,9 @@ export namespace ODC {
 
 		/** Key that the references were stored on. If one isn't provided we use the automatically generated one */
 		key?: string;
+
+		/** If true, will try to return the actual ArrayGrid itemComponent that is currently focused */
+		returnFocusedArrayGridChild?: boolean;
 	}
 
 	export interface GetValueArgs extends BaseKeyPath {}

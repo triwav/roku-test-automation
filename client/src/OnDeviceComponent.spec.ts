@@ -88,7 +88,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			it('should include ArrayGrid children if requested', async () => {
+			it('should include ArrayGrid children if requested', () => {
 				let arrayGridChildrenCount = 0;
 				for (const nodeTree of storeResult.flatTree) {
 					if (nodeTree.subtype === 'RowListItem') {
@@ -96,6 +96,20 @@ describe('OnDeviceComponent', function () {
 					}
 				}
 				expect(arrayGridChildrenCount).to.be.greaterThan(0);
+			});
+
+			it('should be able to pull ArrayGrid children for an itemComponent even if it did not have a parent and did not have enough items to have an itemComponent in the same row that had a parent as long as we have a rowTitleComponent', () => {
+				let rowListWithCustomTitleComponentNodeTree: ODC.NodeTree | undefined = undefined;
+				for (const nodeTree of storeResult.flatTree) {
+					if (nodeTree.id === 'rowListWithCustomTitleComponent') {
+						rowListWithCustomTitleComponentNodeTree = nodeTree;
+					}
+				}
+				expect(rowListWithCustomTitleComponentNodeTree).to.be.ok;
+				const markupGrid = rowListWithCustomTitleComponentNodeTree?.children[0].children[1];
+				expect(markupGrid?.subtype).to.equal('MarkupGrid');
+				expect(markupGrid?.children.length).to.equal(1);
+				expect(markupGrid?.children[0].subtype).to.equal('RowListItemComponent');
 			});
 		});
 	});
@@ -235,7 +249,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should not find a child if it is not beneath the parent node', async () => {
 			const {value} = await odc.getValue({base: 'scene', keyPath: 'subchild3.testTarget'});
-			expect(value.id).to.be.undefined;
+			expect(value?.id).to.be.undefined;
 		});
 
 		it('should work with findNode.getChild', async () => {
@@ -436,7 +450,7 @@ describe('OnDeviceComponent', function () {
 
 			describe('subtype()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.subtype()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.subtype()'});
 					expect(value).to.equal('RowList');
 				});
 
@@ -448,11 +462,11 @@ describe('OnDeviceComponent', function () {
 
 			describe('boundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.boundingRect()'});
-					expect(value.height).to.equal(338);
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.boundingRect()'});
+					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
-					expect(value.y).to.equal(581);
+					expect(value.y).to.equal(681);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -463,8 +477,8 @@ describe('OnDeviceComponent', function () {
 
 			describe('localBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.localBoundingRect()'});
-					expect(value.height).to.equal(338);
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.localBoundingRect()'});
+					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(-19);
 					expect(value.y).to.equal(-19);
@@ -478,11 +492,11 @@ describe('OnDeviceComponent', function () {
 
 			describe('sceneBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowList.sceneBoundingRect()'});
-					expect(value.height).to.equal(338);
+					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.sceneBoundingRect()'});
+					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
-					expect(value.y).to.equal(581);
+					expect(value.y).to.equal(681);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -508,6 +522,10 @@ describe('OnDeviceComponent', function () {
 
 	describe('getFocusedNode', function () {
 		it('should return currently focused node', async () => {
+			await odc.focusNode({
+				base: 'scene',
+				keyPath: 'pagesContainer.loginButton'
+			});
 			const {node} = await odc.getFocusedNode();
 			expect(node.id).to.equal('loginButton');
 		});
@@ -550,13 +568,37 @@ describe('OnDeviceComponent', function () {
 			const storeResult = await odc.storeNodeReferences();
 			const {node, ref} = await odc.getFocusedNode({includeRef: true});
 			expect(ref).to.be.ok;
+			expect(storeResult.flatTree[ref!].subtype).to.equal(node.subtype);
 			expect(storeResult.flatTree[ref!].id).to.equal(node.id);
+		});
+
+		it('should return focused arrayGrid child if requested', async () => {
+			const storeResult = await odc.storeNodeReferences({includeArrayGridChildren: true});
+			await odc.focusNode({
+				base: 'scene',
+				keyPath: 'rowListWithCustomTitleComponent'
+			});
+			const {node, ref} = await odc.getFocusedNode({
+				includeRef: true,
+				returnFocusedArrayGridChild: true
+			});
+			expect(ref).to.be.ok;
+			expect(storeResult.flatTree[ref!].subtype).to.equal(node.subtype);
+			expect(node.itemContent.id).to.equal('row 0  item 0');
+
+			// Reset back to login button for focus
+			await odc.focusNode({
+				base: 'scene',
+				keyPath: 'pagesContainer.loginButton'
+			});
 		});
 	});
 
 	describe('hasFocus', function () {
 		it('should return true when current node has focus', async () => {
-			const hasFocus = await odc.hasFocus({base: 'scene', keyPath: 'pagesContainer.loginButton'});
+			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer.loginButton'};
+			await odc.focusNode(args);
+			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
 		});
 
@@ -567,7 +609,9 @@ describe('OnDeviceComponent', function () {
 
 	describe('isInFocusChain', function () {
 		it('should return true when current node is in focus chain', async () => {
-			const isInFocusChain = await odc.isInFocusChain({base: 'scene', keyPath: 'pagesContainer.loginButton'});
+			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer.loginButton'};
+			await odc.focusNode(args);
+			const isInFocusChain = await odc.isInFocusChain(args);
 			expect(isInFocusChain).to.be.true;
 		});
 
