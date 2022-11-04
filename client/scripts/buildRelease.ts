@@ -51,6 +51,10 @@ if (argv[2] === '--dev') {
 	let options = '';
 	if (argv[2] === '--beta') {
 		options = '--tag beta';
+
+		execSync(`npm version prerelease`, {
+			encoding: 'utf8'
+		});
 	}
 	output = execSync(`npm publish ${options} ${outputFolder}`, {
 		encoding: 'utf8'

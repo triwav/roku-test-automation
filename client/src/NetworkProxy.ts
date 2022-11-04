@@ -20,9 +20,7 @@ export class NetworkProxy {
 
 	public getConfig() {
 		if (!this.config) {
-			const config = utils.getConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config);
-			this.config = config;
+			this.config = utils.getConfigFromEnvironmentOrConfigFile();
 		}
 		return this.config?.NetworkProxy;
 	}

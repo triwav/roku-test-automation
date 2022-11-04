@@ -37,15 +37,20 @@ class Utils {
 		return matchingDevices;
 	}
 
+	public getConfigFromConfigFile(configFilePath = 'rta-config.json') {
+		const config: ConfigOptions = this.parseJsonFile(configFilePath);
+		if (!config) {
+			throw utils.makeError('NoConfigFound', 'Config could not be found');
+		}
+
+		this.validateRTAConfigSchema(config);
+
+		return config;
+	}
+
 	/** Helper for setting up process.env from a config */
 	public setupEnvironmentFromConfigFile(configFilePath = 'rta-config.json', deviceSelector: Record<string, any> | number | undefined = undefined) {
-		const config: ConfigOptions = this.parseJsonFile(configFilePath);
-
-
-		if (!config.RokuDevice) {
-			console.log('Config did not contain RokuDevice object!!!');
-			return;
-		}
+		const config = this.getConfigFromConfigFile(configFilePath);
 
 		if (deviceSelector === undefined) {
 			deviceSelector = config.RokuDevice.deviceIndex ?? 0;
@@ -75,17 +80,34 @@ class Utils {
 		}
 	}
 
+	public getConfigFromEnvironmentOrConfigFile(configFilePath = 'rta-config.json') {
+		let config = this.getOptionalConfigFromEnvironment();
+
+		if (!config) {
+			config = this.getConfigFromConfigFile(configFilePath);
+		}
+
+		return config;
+	}
+
 	public getConfigFromEnvironment() {
 		const config = this.getOptionalConfigFromEnvironment();
+
 		if (!config) {
 			throw this.makeError('MissingEnvironmentError', 'Did not contain config at "process.env.rtaConfig"');
 		}
+
 		return config;
 	}
 
 	public getOptionalConfigFromEnvironment() {
 		if (!process.env.rtaConfig) return undefined;
 		const config: ConfigOptions = JSON.parse(process.env.rtaConfig);
+
+		if (config) {
+			this.validateRTAConfigSchema(config);
+		}
+
 		return config;
 	}
 
@@ -164,6 +186,15 @@ class Utils {
         // eslint-disable-next-line no-prototype-builtins
         return obj.hasOwnProperty(prop);
     }
+
+	public convertValueToNumber(value: string | number | undefined, defaultValue = 0) {
+		if (typeof value === 'number') {
+			return value;
+		} else if (typeof value === 'string') {
+			return +value;
+		}
+		return defaultValue;
+	}
 }
 
 const utils = new Utils();

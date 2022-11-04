@@ -203,7 +203,7 @@ describe('ECP', function () {
 			try {
 				await ecp.sendLaunchChannel();
 			} catch (e) {
-				expect(e.name).to.equal('sendLaunchChannelChannelIdMissing');
+				expect(e.name).to.equal('LaunchChannelIdMissing');
 				return;
 			}
 			assert.fail('Exception should have been thrown');

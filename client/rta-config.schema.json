@@ -137,6 +137,32 @@
                 "devices"
             ],
             "type": "object"
+        },
+        "Suitest": {
+            "additionalProperties": false,
+            "properties": {
+                "appId": {
+                    "description": "AppId of the application we're retrieving tests from from Suitest",
+                    "type": "string"
+                },
+                "applicationPath": {
+                    "description": "Path to your application",
+                    "type": "string"
+                },
+                "tokenId": {
+                    "description": "TokenId for API access as supplied by Suitest",
+                    "type": "string"
+                },
+                "tokenPassword": {
+                    "description": "Token password for API access as supplied by Suitest",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "The version of the application we're retrieving for",
+                    "type": "string"
+                }
+            },
+            "type": "object"
         }
     },
     "required": [

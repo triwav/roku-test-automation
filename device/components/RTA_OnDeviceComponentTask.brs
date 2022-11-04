@@ -12,6 +12,7 @@ sub setValidRequestTypes()
 		"deleteNodeReferences": {}
 		"getFocusedNode": {}
 		"getNodesInfo": {}
+		"getNodesWithProperties": {}
 		"getValue": {}
 		"getValues": {}
 		"hasFocus": {}

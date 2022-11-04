@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="LandingPage" extends="BasePage">
 	<script type="text/brightscript" uri="LandingPage.brs" />
+	<interface>
+		<field id="myCustomStringField" type="string" />
+		<field id="myCustomBooleanField" type="boolean" />
+		<field id="myCustomIntegerField" type="integer" />
+		<field id="myCustomArrayField" type="array" />
+		<field id="myCustomAssocArrayField" type="assocarray" />
+	</interface>
 	<children>
 		<AppButton id="loginButton" text="Login" translation="[300, 150]" />
 		<Group id="testTarget">
@@ -12,7 +19,7 @@
 			</Group>
 			<Group id="child3" />
 		</Group>
-		<Poster id="poster" />
+		<Poster id="poster" width="42" />
 		<RowList
 			id="rowListWithoutCustomTitleComponent"
 			itemComponentName="RowListItemComponent"

@@ -1,5 +1,5 @@
 export interface MediaPlayerResponse {
-	state: 'close' | 'startup' | 'buffer' | 'play' | 'pause';
+	state: 'close' | 'startup' | 'buffer' | 'play' | 'pause' | 'open';
 	error: boolean;
 	plugin?: MediaPlayerPlugin;
 	format?: MediaPlayerFormat;
@@ -38,10 +38,12 @@ export interface MediaPlayerNewStream {
 
 export interface MediaPlayerPosition {
 	value: string;
+	number: number;
 }
 
 export interface MediaPlayerDuration {
 	value: string;
+	number: number;
 }
 
 export interface MediaPlayerIsLive {
@@ -50,6 +52,7 @@ export interface MediaPlayerIsLive {
 
 export interface MediaPlayerRuntime {
 	value: string;
+	number: number;
 }
 
 export interface MediaPlayerStreamSegment {

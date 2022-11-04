@@ -11,6 +11,6 @@
 	</interface>
 	<children>
 		<Poster id="poster" />
-		<Group id="pagesContainer" />
+		<Group id="pagesContainerGroup" />
 	</children>
 </component>
