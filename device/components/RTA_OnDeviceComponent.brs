@@ -359,11 +359,8 @@ function processObserveFieldRequest(request as Object) as Dynamic
 			return result
 		end if
 
-		if result.found <> true then
-			return buildErrorResponseObject("Match was requested and key path was not valid")
-		end if
 		' IMPROVEMENT hook into compareValues() functionality and eventually build out to support more complicated types
-		if result.value = match.value then
+		if result.found AND result.value = match.value then
 			return {
 				"value": node[field]
 				"observerFired": false
@@ -385,7 +382,12 @@ end function
 sub onProcessObserveFieldRequestRetryFired(event as Object)
 	requestId = event.getNode()
 	request = m.activeObserveFieldRequests[requestId]
-	processObserveFieldRequest(request)
+	response = processObserveFieldRequest(request)
+
+	' If response isn't invalid then we have to send it back ourselves
+	if response <> Invalid then
+		sendResponseToTask(request, response)
+	end if
 end sub
 
 sub observeFieldCallback(event as Object)
@@ -406,15 +408,7 @@ sub observeFieldCallback(event as Object)
 					return
 				end if
 
-				if result.found <> true then
-					logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
-					node.unobserveFieldScoped(field)
-					m.activeObserveFieldRequests.delete(requestId)
-					sendResponseToTask(request, buildErrorResponseObject("Match was requested and key path was not valid"))
-					return
-				end if
-
-				if result.value <> match.value then
+				if result.found = false OR result.value <> match.value then
 					logVerbose("Match.value did not match requested value continuing to wait")
 					return
 				end if
