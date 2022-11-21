@@ -1,5 +1,5 @@
 export interface MediaPlayerResponse {
-	state: 'close' | 'startup' | 'buffer' | 'play' | 'pause' | 'open';
+	state: 'close' | 'none' | 'startup' | 'buffer' | 'play' | 'pause' | 'open';
 	error: boolean;
 	plugin?: MediaPlayerPlugin;
 	format?: MediaPlayerFormat;
