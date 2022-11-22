@@ -9,7 +9,7 @@ import { ODC } from './types/OnDeviceComponentRequest';
 import { OnDeviceComponent } from './OnDeviceComponent';
 import { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import {TestLine, AssertTestLine, AssertThen, PressButtonTestLine, IdElementSubject, Condition, StringComparator, NumberComparator} from '@suitest/types';
+import {TestLine, AssertTestLine, PressButtonTestLine, IdElementSubject, Condition, StringComparator, NumberComparator} from '@suitest/types';
 
 export class Suitest {
 	public testsByTestId: {
@@ -24,6 +24,10 @@ export class Suitest {
 		[key: string]: {
 			platforms: {
 				roku: {
+					info: {
+						[key: string]: any;
+					},
+					excludedProperties: string[];
 					selectors: {
 						xpath?: {
 							val: string;
@@ -38,6 +42,9 @@ export class Suitest {
 			}
 		}
 	} = {};
+
+	public preOpenAppHook: (() => void) | undefined;
+	public postOpenAppHook: (() => void) | undefined;
 
 	//store the import on the class to make testing easier
 	private utils = utils;
@@ -232,15 +239,14 @@ export class Suitest {
 					this.debugLog(`Running ${testLine.type} lineId: ${testLine.lineId}`);
 
 					if (!isSnippet) {
+						await this.preOpenAppHook?.();
 						const device = this.odc.device;
 						await device.deploy({
 							rootDir: applicationPath,
 							files: [`**/*`],
 							deleteBeforeInstall: true
 						});
-						// Adding sleep for now. In the future could add a hook here maybe
-						//TODO see if still needed
-						// await utils.sleep(5000);
+						await this.postOpenAppHook?.();
 					}
 					break;
 				}
@@ -337,10 +343,11 @@ export class Suitest {
 		let error: Error | undefined;
 		const buttonPressMaxCount = utils.convertValueToNumber(testLine.count, 1);
 		for (let i = 0; i < buttonPressMaxCount; i++) {
+			error = undefined;
 			for (const id of testLine.ids) {
 				const key = this.buttonIdToKeyMap[id];
 				if (key) {
-					await this.ecp.sendKeyPress(key, utils.convertValueToNumber(testLine.delay) * 1.1); // Some tests seem to fail with the same delay likely due to Suitest's functions being quite a bit slower evaluating
+					await this.ecp.sendKeyPress(key, { wait: utils.convertValueToNumber(testLine.delay) * 1.1 }) ; // Some tests seem to fail with the same delay likely due to Suitest's functions being quite a bit slower evaluating
 				} else {
 					debugger;
 				}
@@ -392,7 +399,7 @@ export class Suitest {
 			switch(subject.type) {
 				case 'element':
 					try {
-						await this.handleElementCondition(subject as IdElementSubject, condition, testLine.then);
+						await this.handleElementCondition(subject as IdElementSubject, condition);
 						shouldContinue = false;
 					} catch (e) {
 						error = e;
@@ -415,7 +422,7 @@ export class Suitest {
 		}
 	}
 
-	private async handleElementCondition(subject: IdElementSubject, condition: Condition, then?: AssertThen) {
+	private async handleElementCondition(subject: IdElementSubject, condition: Condition) {
 		const element = this.allElements[subject.elementId];
 		if (!element) {
 			throw new Error(`Could not find element ${subject.nameHint} with id: ${subject.elementId}`);
@@ -427,17 +434,20 @@ export class Suitest {
 		const roku = element.platforms.roku;
 
 		let matchingNodeTree: ODC.NodeTree | undefined;
+		let matchingNodeError: Error | undefined;
 		let matchingNode: ODC.NodeRepresentation | undefined;
 
 		if (roku.selectors.xpath && roku.selectors.xpath.active) {
 			const xpathParts = roku.selectors.xpath.val.split('/');
-			matchingNodeTree = await this.findMatchingNode(rootTree, xpathParts, flatTree);
-			if (matchingNodeTree) {
+			try {
+				matchingNodeTree = await this.findMatchingNode(rootTree, xpathParts, flatTree);
 				const {value} = await this.odc.getValue({
 					base: 'nodeRef',
 					keyPath: `${matchingNodeTree.ref}`
 				});
 				matchingNode = value;
+			} catch (e) {
+				matchingNodeError = e;
 			}
 
 		} else if (roku.selectors.text && roku.selectors.text.active) {
@@ -450,11 +460,38 @@ export class Suitest {
 				}]
 			});
 
-			// We always just select the first match
-			matchingNodeTree = flatTree[nodeRefs[0]];
-			matchingNode = nodes[0];
+			if (nodeRefs.length > 0) {
+				// We always just select the first match
+				matchingNodeTree = flatTree[nodeRefs[0]];
+				matchingNode = nodes[0];
+			} else {
+				matchingNodeError = new Error(`Could not find node with text '${textToSearchFor}'`);
+			}
 		} else {
 			debugger;
+		}
+
+		if (matchingNode) {
+			for (const key in roku.info) {
+				if (roku.excludedProperties.includes(key) || key === 'isFocused') {
+					continue;
+				}
+
+				let actualValue;
+				if (key === 'visibility') {
+					actualValue = matchingNode.visible ? 'visible' : 'invisible';
+				} else if (matchingNode[key] !== undefined) {
+					actualValue = matchingNode[key];
+				} else {
+					debugger;
+				}
+
+				if (actualValue !== roku.info[key]) {
+					matchingNodeTree = undefined;
+					matchingNodeError = new Error(`Element ${key} value of '${matchingNode[key]}' did not match expected value of '${roku.info[key]}'`);
+					break;
+				}
+			}
 		}
 
 		switch (condition.type) {
@@ -464,90 +501,87 @@ export class Suitest {
 				}
 				return;
 			case 'has':
-				// TODO had && then !== 'success' but removed. Test if we're ok still // No reason to run the checks if we're just going to succeed no matter what
-				if (matchingNodeTree) {
-					for (const expression of condition.expression) {
-						if (!expression.val) {
-							continue;
-						}
-						console.log('expression', expression);
+				if (matchingNodeError) {
+					throw matchingNodeError;
+				}
+				for (const expression of condition.expression) {
+					if (!expression.val) {
+						continue;
+					}
 
-
-						let actualValue;
-						if (matchingNode) {
-							const property = expression.property;
-							if (property === 'visibility') {
-								actualValue = matchingNode.visible ? 'visible' : 'invisible';
-							} else if (matchingNode[property] !== undefined) {
-								actualValue = matchingNode[property];
-							} else {
-								debugger;
-							}
+					let actualValue;
+					if (matchingNode) {
+						const property = expression.property;
+						if (property === 'visibility') {
+							actualValue = matchingNode.visible ? 'visible' : 'invisible';
+						} else if (matchingNode[property] !== undefined) {
+							actualValue = matchingNode[property];
 						} else {
 							debugger;
 						}
+					} else {
+						debugger;
+					}
 
-						switch (expression.type) {
-							case "=":
-								if (actualValue !== expression.val) {
-									throw new Error(`Actual value ${actualValue} did not match ${expression.val}`);
-								}
-								break;
-							case "!=":
-								if (actualValue === expression.val) {
-									throw new Error(`Actual value ${actualValue} was not expected to match ${expression.val}`);
-								}
-								break;
-							case ">":
-								if (!(actualValue > expression.val)) {
-									throw new Error(`Actual value ${actualValue} was expected to be greater than ${expression.val}`);
-								}
-								break;
-							case ">=":
-								if (!(actualValue >= expression.val)) {
-									throw new Error(`Actual value ${actualValue} was expected to be greater than or equal to ${expression.val}`);
-								}
-								break;
-							case "<":
-								if (!(actualValue < expression.val)) {
-									throw new Error(`Actual value ${actualValue} was expected to be greater than equal to ${expression.val}`);
-								}
-								break;
-							case "<=":
-								if (!(actualValue <= expression.val)) {
-									throw new Error(`Actual value ${actualValue} was expected to be less than or equal to ${expression.val}`);
-								}
-								break;
-							case "~":
-								if (!actualValue) {
-									debugger;
-								}
-								if (!actualValue.includes(expression.val)) {
-									throw new Error(`Actual value ${actualValue} was expected to contain ${expression.val}`);
-								}
-								break;
-							case "!~":
-								if (actualValue.includes(expression.val)) {
-									throw new Error(`Actual value ${actualValue} was expected not to contain ${expression.val}`);
-								}
-								break;
-							case "^":
-							case "!^":
-							case "$":
-							case "!$":
-							case "matches":
-							case "exists":
-							case "!exists":
-							case "+-":
-								throw new Error(`Not implemented yet: "${expression.type}"`);
-						}
+					switch (expression.type) {
+						case "=":
+							if (actualValue !== expression.val) {
+								throw new Error(`Actual value ${actualValue} did not match ${expression.val}`);
+							}
+							break;
+						case "!=":
+							if (actualValue === expression.val) {
+								throw new Error(`Actual value ${actualValue} was not expected to match ${expression.val}`);
+							}
+							break;
+						case ">":
+							if (!(actualValue > expression.val)) {
+								throw new Error(`Actual value ${actualValue} was expected to be greater than ${expression.val}`);
+							}
+							break;
+						case ">=":
+							if (!(actualValue >= expression.val)) {
+								throw new Error(`Actual value ${actualValue} was expected to be greater than or equal to ${expression.val}`);
+							}
+							break;
+						case "<":
+							if (!(actualValue < expression.val)) {
+								throw new Error(`Actual value ${actualValue} was expected to be greater than equal to ${expression.val}`);
+							}
+							break;
+						case "<=":
+							if (!(actualValue <= expression.val)) {
+								throw new Error(`Actual value ${actualValue} was expected to be less than or equal to ${expression.val}`);
+							}
+							break;
+						case "~":
+							if (!actualValue) {
+								debugger;
+							}
+							if (!actualValue.includes(expression.val)) {
+								throw new Error(`Actual value ${actualValue} was expected to contain ${expression.val}`);
+							}
+							break;
+						case "!~":
+							if (actualValue.includes(expression.val)) {
+								throw new Error(`Actual value ${actualValue} was expected not to contain ${expression.val}`);
+							}
+							break;
+						case "^":
+						case "!^":
+						case "$":
+						case "!$":
+						case "matches":
+						case "exists":
+						case "!exists":
+						case "+-":
+							throw new Error(`Not implemented yet: "${expression.type}"`);
 					}
 				}
 				break;
 			case 'exists':
-				if (matchingNodeTree === undefined) {
-					debugger;
-					throw new Error(`${subject.nameHint} was expected to exist but was not found`);
+				if (matchingNodeError) {
+					throw matchingNodeError;
 				}
 				break;
 			default:
@@ -585,14 +619,27 @@ export class Suitest {
 						console.log('response.duration', response.duration);
 
 						if (!response.duration) {
-							throw new Error(`Video state was expected to be 'pause' but had state '${response.state}'`);
+							throw new Error(`No duration was returned from Roku device`);
 						}
 						if (!this.compareValues(expression.type as StringComparator | NumberComparator, response.duration.number, expression.val)) {
 							throw new Error(`duration did not match: ${response.duration.number} ${expression.type} expression.val`);
 						}
+					} else if (expression.property === 'videoPos') {
+						if (!response.position) {
+							throw new Error(`No position was returned from Roku device`);
+						}
+
+						if (!this.compareValues(expression.type as StringComparator | NumberComparator, response.position.number, expression.val)) {
+							throw new Error(`position did not match: ${response.position.number} ${expression.type} expression.val`);
+						}
 					} else {
 						debugger;
 					}
+				}
+				break;
+			case 'exists':
+				if (response.state === 'close' || response.state === 'none') {
+					throw new Error(`Video player was expected to exist but did not`);
 				}
 				break;
 			default:
@@ -625,12 +672,13 @@ export class Suitest {
 		return false;
 	}
 
-	private async findMatchingNode(rootNodeTree: ODC.NodeTree[], xpathParts: string[], flatTree: ODC.NodeTree[]): Promise<ODC.NodeTree | undefined> {
+	private async findMatchingNode(rootNodeTree: ODC.NodeTree[], xpathParts: string[], flatTree: ODC.NodeTree[], previousXpathParts = [] as string[]): Promise<ODC.NodeTree> {
 		while (xpathParts.length > 0 && xpathParts[0] === '') {
 			xpathParts.shift();
 		}
 
 		let currentNodeSubtypePattern = xpathParts.shift() ?? '';
+		previousXpathParts.push(currentNodeSubtypePattern);
 		const positionMatch = currentNodeSubtypePattern.match(/\[(\d*)\]?/);
 		let matchesLeft = 0;
 		if (positionMatch) {
@@ -650,7 +698,7 @@ export class Suitest {
 			const markupGridNodeTree = this.getNodeTree(flatTree, itemComponentNodeTree?.parentRef);
 			const rowlistItemNodeTree = this.getNodeTree(flatTree, markupGridNodeTree?.parentRef);
 			if (rowlistItemNodeTree) {
-				return this.findMatchingNode(rowlistItemNodeTree.children, xpathParts, flatTree);
+				return this.findMatchingNode(rowlistItemNodeTree.children, xpathParts, flatTree, previousXpathParts);
 			} else {
 				debugger;
 			}
@@ -665,9 +713,11 @@ export class Suitest {
 				if (xpathParts.length === 0) {
 					return nodeTree;
 				}
-				return this.findMatchingNode(nodeTree.children, xpathParts, flatTree);
+				return this.findMatchingNode(nodeTree.children, xpathParts, flatTree, previousXpathParts);
 			}
 		}
+
+		throw new Error(`Failed to find '${currentNodeSubtypePattern}' at xpath '${previousXpathParts.join('/')}'`);
 	}
 
 	private getNodeTree(flatTree: ODC.NodeTree[], ref?: number) {
@@ -683,7 +733,7 @@ export class Suitest {
 	}
 
 	private debugLog(message: string, ...args) {
-		console.log(`[Suitest] ${' --> '.repeat(this.logIndentLevel)}${message}`, ...args);
+		console.log(`[Suitest] ${'  '.repeat(this.logIndentLevel)}${message}`, ...args);
 	}
 }
 
