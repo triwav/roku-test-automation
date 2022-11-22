@@ -53,9 +53,9 @@ describe('ECP', function () {
 		it('uses_raspTemplateVariable_if_provided_instead_of_text_for_rasp_output', async () => {
 			ecp.startRaspFileCreation();
 			const raspFileSteps = (ecp as any).raspFileSteps as string[];
-			await ecp.sendText('bob@hotmail.com', undefined, 'script-login');
+			await ecp.sendText('bob@hotmail.com', {raspTemplateVariable: 'script-login'});
 			expect(raspFileSteps[0]).to.contain('script-login');
-			await ecp.sendText('123456', undefined, 'script-password');
+			await ecp.sendText('123456', {raspTemplateVariable: 'script-password'});
 			expect(raspFileSteps[1]).to.contain('script-password');
 		});
 	});
@@ -67,6 +67,32 @@ describe('ECP', function () {
 			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
 			await ecp.sendKeyPressSequence(keys);
 			expect(stub.callCount).to.equal(keys.length);
+		});
+
+		it('should send the pattern multiple times in the correct order if count is more than one', async () => {
+			let index = 0;
+			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
+			const count = 3;
+
+			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {
+				expect(path).to.contain(keys[index]);
+				index++;
+				if (index === keys.length) {
+					index = 0;
+				}
+			});
+
+			await ecp.sendKeyPressSequence(keys, {count: count});
+			expect(stub.callCount).to.equal(keys.length * count);
+		});
+
+		it('should not send any keys if count is 0', async () => {
+			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
+
+			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
+
+			await ecp.sendKeyPressSequence(keys, {count: 0});
+			expect(stub.callCount).to.equal(0);
 		});
 	});
 
@@ -228,6 +254,7 @@ describe('ECP', function () {
 		});
 
 		it('should_throw_if_launch_not_successful_and_verification_is_enabled', async () => {
+			sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
 			try {
 				await ecp.sendLaunchChannel({
 					channelId: 'dev',
@@ -385,6 +412,7 @@ describe('ECP', function () {
 		const outputPath = 'test-path.rasp';
 
 		it('outputs_file_at_path_specified_with_correct_contents', async () => {
+			sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
 			config.ECP = {
 				default: {
 					keyPressDelay: 1500

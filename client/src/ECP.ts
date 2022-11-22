@@ -37,15 +37,27 @@ export class ECP {
 		return this.config?.ECP;
 	}
 
-	public async sendText(text: string, wait?: number, raspTemplateVariable?: 'script-login' | 'script-password') {
-		this.addRaspFileStep(`text: ${raspTemplateVariable ?? text}`);
+	public async sendText(text: string, options?: SendKeyPressOptions & {raspTemplateVariable?: 'script-login' | 'script-password'}) {
+		this.addRaspFileStep(`text: ${options?.raspTemplateVariable ?? text}`);
 		for (const char of text) {
 			const value: any = `LIT_${char}`;
-			await this.sendKeyPress(value, wait);
+			await this.sendKeyPress(value, options);
 		}
 	}
 
-	public async sendKeyPress(key: ECPKeys, wait = 0) {
+
+
+	public async sendKeyPress(key: ECPKeys, options?: SendKeyPressOptions) {
+		if (typeof options === 'number') {
+			options = {
+				wait: options
+			};
+		}
+
+		if (options?.count) {
+			return this.sendKeyPressSequence([key], options);
+		}
+
 		const raspEquivalent = this.convertKeyToRaspEquivalent(key);
 		if (raspEquivalent) {
 			this.addRaspFileStep(`press: ${raspEquivalent}`);
@@ -53,6 +65,7 @@ export class ECP {
 		await this.device.sendECP(`keypress/${encodeURIComponent(key)}`, {}, '');
 
 		const keyPressDelay = this.getConfig()?.default?.keyPressDelay;
+		let wait = options?.wait;
 		if (!wait && keyPressDelay) {
 			wait = keyPressDelay;
 		}
@@ -101,9 +114,22 @@ export class ECP {
 		}
 	}
 
-	public async sendKeyPressSequence(keys: ECPKeys[], wait?: number) {
+	public async sendKeyPressSequence(keys: ECPKeys[], options?: SendKeyPressOptions) {
+		if (typeof options !== 'number') {
+			const count = options?.count;
+			if (count !== undefined) {
+				// Needed to avoid infinite recursion
+				delete options?.count;
+				const passedInKeys = keys;
+				keys = [];
+				for (let i = 0; i < count; i++) {
+					keys = keys.concat(passedInKeys);
+				}
+			}
+		}
+
 		for (const key of keys) {
-			await this.sendKeyPress(key, wait);
+			await this.sendKeyPress(key, options);
 		}
 	}
 
@@ -228,4 +254,10 @@ export class ECP {
 		this.raspFileSteps = undefined;
 		fsExtra.writeFileSync(outputPath, raspFileLines.join('\n'));
 	}
+}
+
+/** If value is a number then we convert it to an object with the number used for wait  */
+type SendKeyPressOptions = number | {
+	wait?: number;
+	count?: number;
 }
