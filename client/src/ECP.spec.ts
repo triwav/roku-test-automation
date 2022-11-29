@@ -53,9 +53,9 @@ describe('ECP', function () {
 		it('uses_raspTemplateVariable_if_provided_instead_of_text_for_rasp_output', async () => {
 			ecp.startRaspFileCreation();
 			const raspFileSteps = (ecp as any).raspFileSteps as string[];
-			await ecp.sendText('bob@hotmail.com', undefined, 'script-login');
+			await ecp.sendText('bob@hotmail.com', {raspTemplateVariable: 'script-login'});
 			expect(raspFileSteps[0]).to.contain('script-login');
-			await ecp.sendText('123456', undefined, 'script-password');
+			await ecp.sendText('123456', {raspTemplateVariable: 'script-password'});
 			expect(raspFileSteps[1]).to.contain('script-password');
 		});
 	});
@@ -67,6 +67,32 @@ describe('ECP', function () {
 			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
 			await ecp.sendKeyPressSequence(keys);
 			expect(stub.callCount).to.equal(keys.length);
+		});
+
+		it('should send_the_pattern_multiple_times_in_the_correct_order_if_count_is_more_than_one', async () => {
+			let index = 0;
+			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
+			const count = 3;
+
+			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {
+				expect(path).to.contain(keys[index]);
+				index++;
+				if (index === keys.length) {
+					index = 0;
+				}
+			});
+
+			await ecp.sendKeyPressSequence(keys, {count: count});
+			expect(stub.callCount).to.equal(keys.length * count);
+		});
+
+		it('should_not_send_any_keys_if_count_is_zero', async () => {
+			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
+
+			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
+
+			await ecp.sendKeyPressSequence(keys, {count: 0});
+			expect(stub.callCount).to.equal(0);
 		});
 	});
 
@@ -203,7 +229,7 @@ describe('ECP', function () {
 			try {
 				await ecp.sendLaunchChannel();
 			} catch (e) {
-				expect(e.name).to.equal('sendLaunchChannelChannelIdMissing');
+				expect(e.name).to.equal('LaunchChannelIdMissing');
 				return;
 			}
 			assert.fail('Exception should have been thrown');
@@ -228,6 +254,7 @@ describe('ECP', function () {
 		});
 
 		it('should_throw_if_launch_not_successful_and_verification_is_enabled', async () => {
+			sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
 			try {
 				await ecp.sendLaunchChannel({
 					channelId: 'dev',
@@ -373,6 +400,26 @@ describe('ECP', function () {
 		});
 	});
 
+	describe('getChanperf', function () {
+		it('app_closed', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getChanperf();
+			expect(result.error).to.equal('Channel not running');
+			expect(result.status).to.equal('FAILED');
+			expect(result.plugin).to.not.be.ok;
+		});
+
+		it('app_open', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getChanperf();
+			expect(result.status).to.equal('OK');
+			expect(result.plugin?.id).to.equal('dev');
+			expect(result.plugin?.cpuPercent).to.be.ok;
+			expect(result.plugin?.cpuPercent.user).to.equal(0.2);
+			expect(result.plugin?.memory.anon).to.equal(91312128);
+		});
+	});
+
 	describe('startRaspFileCreation', function () {
 		it('creates_empty_array_for_raspFileSteps_when_run', async () => {
 			expect((ecp as any).raspFileSteps).to.be.undefined;
@@ -385,6 +432,7 @@ describe('ECP', function () {
 		const outputPath = 'test-path.rasp';
 
 		it('outputs_file_at_path_specified_with_correct_contents', async () => {
+			sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
 			config.ECP = {
 				default: {
 					keyPressDelay: 1500

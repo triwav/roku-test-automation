@@ -19,8 +19,6 @@ describe('OnDeviceComponent', function () {
 			rootDir: '../testProject',
 			preventMultipleDeployments: true
 		});
-
-		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});
 
 	describe('storeNodeReferences', function () {
@@ -218,6 +216,113 @@ describe('OnDeviceComponent', function () {
 			}
 			assert.fail('Should have thrown an exception on the getNodesInfo if the references were removed');
 		});
+	});
+
+	describe('getNodesWithProperties', function () {
+		before(async () => {
+			await odc.storeNodeReferences({includeArrayGridChildren: true});
+		});
+
+		it('should be able to work with a single field with no operator specified and return the correct response', async () => {
+			const fieldValue = true;
+			const fieldName = 'myCustomBooleanField';
+
+			await setAndVerifyValue({
+				base: 'scene',
+				keyPath: `pagesContainer.0.${fieldName}`,
+				value: fieldValue
+			});
+
+			const {nodes, nodeRefs} = await odc.getNodesWithProperties({
+				properties: [{
+					field: fieldName,
+					value: fieldValue
+				}]
+			});
+
+			expect(nodes.length).to.equal(1);
+			expect(nodeRefs.length).to.equal(1);
+			const node = nodes[0];
+			expect(node.subtype).to.equal('LandingPage');
+			expect(node[fieldName]).to.equal(fieldValue);
+		});
+
+		it('should be able to work with a multiple fields with operator specified and return the correct node response', async () => {
+			const fieldValue = utils.addRandomPostfix('myCustomStringFieldValue');
+			const fieldName = 'myCustomStringField';
+			await setAndVerifyValue({
+				base: 'scene',
+				keyPath: `pagesContainer.0.${fieldName}`,
+				value: fieldValue + 'ExtraToTestInWorksCorrect'
+			});
+
+			const {nodes} = await odc.getNodesWithProperties({
+				properties: [{
+					fields: ['renderTracking', fieldName],
+					operator: 'in',
+					value: fieldValue
+				}]
+			});
+
+			expect(nodes.length).to.equal(1);
+			const node = nodes[0];
+			expect(node.subtype).to.equal('LandingPage');
+			expect(node[fieldName]).to.contain(fieldValue);
+		});
+
+		it('If only one property matches then the node should not be returned', async () => {
+			const fieldValue = utils.addRandomPostfix('myCustomStringFieldValue');
+			const fieldName = 'myCustomStringField';
+
+			const {nodes} = await odc.getNodesWithProperties({
+				properties: [{
+					field: 'visible',
+					value: false
+				},
+				{
+					fields: ['renderTracking', fieldName],
+					operator: 'in',
+					value: fieldValue
+				}]
+			});
+
+			expect(nodes.length).to.equal(0);
+		});
+
+		it('If wrong value type for operator we should throw an error', async () => {
+			try {
+				const fieldName = 'myCustomStringField';
+
+				const result = await odc.getNodesWithProperties({
+					properties: [{
+						field: fieldName,
+						operator: '>=',
+						value: ''
+					}]
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it('should be able to run all the same advanced functionality as we can on a keyPath in getValue if we set a keyPath', async () => {
+			// Only return nodes whose width is 42
+			const {nodes} = await odc.getNodesWithProperties({
+				properties: [{
+					keyPath: 'boundingRect().width',
+					operator: '=',
+					value: 42
+				}]
+			});
+
+			expect(nodes.length).to.equal(1);
+			const node = nodes[0];
+			expect(node.subtype).to.equal('Poster');
+			expect(node.id).to.equal('poster');
+		});
+
 	});
 
 	describe('disableScreenSaver', function () {
@@ -697,6 +802,51 @@ describe('OnDeviceComponent', function () {
 
 			// Check a value that wasn't in the initial to make sure it actually created a node vs an AA of the structure
 			expect(firstChildResult.opacity).to.equal(1);
+		});
+
+		it('should be able to add a child node to scene', async () => {
+			const nodeKey = utils.addRandomPostfix('node');
+
+			const updateValue = {
+				children: [{
+					subtype: 'Group',
+					id: nodeKey
+				}]
+			};
+
+			await odc.setValue({
+				base: 'scene',
+				keyPath: '',
+				value: updateValue
+			});
+
+			const {value} = await odc.getValue({base: 'scene', keyPath: '', responseMaxChildDepth: 1});
+
+			const lastNode = value.children.pop();
+			expect(lastNode.id).to.equal(nodeKey);
+		});
+
+		it('should be able to add a childnode to an existing node', async () => {
+			const nodeKey = utils.addRandomPostfix('node');
+
+			const updateValue = {
+				children: [{
+					subtype: 'Group',
+					id: nodeKey
+				}]
+			};
+
+			await odc.setValue({
+				base: 'scene',
+				keyPath: 'pagesContainer',
+				field: '',
+				value: updateValue
+			});
+
+			const {value} = await odc.getValue({base: 'scene', keyPath: 'pagesContainer', responseMaxChildDepth: 1});
+
+			const lastNode = value.children.pop();
+			expect(lastNode.id).to.equal(nodeKey);
 		});
 	});
 

@@ -35,9 +35,7 @@ export class OnDeviceComponent {
 
 	public getConfig() {
 		if (!this.config) {
-			const config = utils.getOptionalConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config);
-			this.config = config;
+			this.config = utils.getConfigFromEnvironmentOrConfigFile();
 		}
 		return this.config?.OnDeviceComponent;
 	}
@@ -186,7 +184,14 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
 		args.convertResponseToJsonCompatible = false;
-		const result = await this.sendRequest('setValue', this.breakOutFieldFromKeyPath(args), options);
+
+		let result: ODC.RequestResponse;
+		if (args.field !== undefined) {
+			result = await this.sendRequest('setValue', args, options);
+		} else {
+			result = await this.sendRequest('setValue', this.breakOutFieldFromKeyPath(args), options);
+		}
+
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
@@ -248,6 +253,62 @@ export class OnDeviceComponent {
 
 		const result = await this.sendRequest('deleteNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async getNodesWithProperties(args: ODC.GetNodesWithPropertiesArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+
+		// We allow short symbol operators but want to convert to a common format for simpler code on the Roku side
+		const operatorConversion: {
+			[key: string]: ODC.ComparisonOperators
+		} = {
+			'=': 'equal',
+			'!=': 'notEqual',
+			'>': 'greaterThan',
+			'>=': 'greaterThanEqualTo',
+			'<': 'lessThan',
+			'<=': 'lessThanEqualTo'
+		};
+
+		for (const property of args.properties) {
+			if (!property.operator) {
+				// Default to equal if none was provided
+				property.operator = 'equal';
+			} else if (operatorConversion[property.operator]) {
+				// Go ahead and see if need to convert the operator
+				property.operator = operatorConversion[property.operator];
+			}
+
+			// Convert to standard fields input for the Roku's side
+			if (property.field !== undefined) {
+				if (property.fields !== undefined) {
+					throw new Error('field and fields are mutually exclusive');
+				}
+				property.fields = [property.field];
+				delete property.field;
+			}
+
+			if (property.fields === undefined) {
+				// Convert to standard keyPaths input for the Roku's side
+				if (property.keyPath !== undefined) {
+					if (property.keyPaths !== undefined) {
+						throw new Error('keyPath and keyPaths are mutually exclusive');
+					}
+					property.keyPaths = [property.keyPath];
+					delete property.keyPath;
+				}
+
+				if (property.keyPaths === undefined) {
+					throw new Error('No fields or keyPaths provided');
+				}
+			}
+		}
+
+		const result = await this.sendRequest('getNodesWithProperties', args, options);
+		return result.json as {
+			nodes: ODC.NodeRepresentation[]
+			nodeRefs: number[]
+		} & ODC.ReturnTimeTaken;
 	}
 
 	public async disableScreenSaver(args: ODC.DisableScreensaverArgs, options: ODC.RequestOptions = {}) {
@@ -362,12 +423,14 @@ export class OnDeviceComponent {
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}
 
-	private setupClientSocket() {
+	private setupClientSocket(options: ODC.RequestOptions) {
 		return new Promise<net.Socket>((resolve, reject) => {
-			const socket = new net.Socket();
-
 			const port = 9000;
 			const host = this.device.getCurrentDeviceConfig().host;
+			const timeout = this.getTimeOut(options);
+			const startTime = Date.now();
+			const socket = new net.Socket();
+
 			const socketConnect = () => {
 				this.debugLog(`Attempting to connect to Roku at ${host} on port ${port}`);
 				socket.connect(9000, host);
@@ -381,8 +444,14 @@ export class OnDeviceComponent {
 			socket.on('error', async (e) => {
 				const errorCode: string = (e as any).code;
 				if (errorCode === 'ECONNREFUSED' || errorCode === 'EPIPE') {
+					if (Date.now() - startTime > timeout) {
+						const error = new Error(`Failed to connect to Roku at ${host} on port ${port}. Make sure you have the on device component running on your Roku.`);
+						reject(error);
+						return;
+					}
+
 					this.clientSocket = undefined;
-					await utils.sleep(50);
+					await utils.sleep(1000);
 					this.debugLog('Retrying connection due to: ' + errorCode);
 					socketConnect();
 				} else {
@@ -499,7 +568,7 @@ export class OnDeviceComponent {
 		}
 
 		if (!this.clientSocket) {
-			this.clientSocket = await this.setupClientSocket();
+			this.clientSocket = await this.setupClientSocket(options);
 		}
 
 		if (this.getConfig()?.restoreRegistry && !this.storedDeviceRegistry) {
@@ -528,10 +597,7 @@ export class OnDeviceComponent {
 			};
 		});
 
-		const deviceConfig = this.device.getCurrentDeviceConfig();
-		let timeout = options?.timeout ?? deviceConfig.defaultTimeout ?? this.defaultTimeout;
-		const multiplier = deviceConfig.timeoutMultiplier ?? 1;
-		timeout *= multiplier;
+		const timeout = this.getTimeOut(options);
 		try {
 			return await utils.promiseTimeout(promise, timeout);
 		} catch(e) {
@@ -550,6 +616,14 @@ export class OnDeviceComponent {
 			}
 			throw e;
 		}
+	}
+
+	private getTimeOut(options: ODC.RequestOptions) {
+		const deviceConfig = this.device.getCurrentDeviceConfig();
+		let timeout = options?.timeout ?? deviceConfig.defaultTimeout ?? this.defaultTimeout;
+		const multiplier = deviceConfig.timeoutMultiplier ?? 1;
+		timeout *= multiplier;
+		return timeout;
 	}
 
 	public async shutdown() {

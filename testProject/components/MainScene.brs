@@ -3,7 +3,7 @@ sub init()
 		m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
 	#end if
 
-	m.top.pagesContainer = m.top.findNode("pagesContainer")
+	m.top.pagesContainer = m.top.findNode("pagesContainerGroup")
 
 	m.poster = m.top.findNode("poster")
 

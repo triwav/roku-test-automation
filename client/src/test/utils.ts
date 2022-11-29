@@ -8,7 +8,7 @@ export async function getMock(mockFilePath: string) {
 }
 
 export async function getTestMock(contextOrSuite: Mocha.Context | Mocha.Suite, extension: MockFileFormat = 'json'): Promise<object | string> {
-	let mockFilePath = 'src/test/mocks/' + utils.generateFileNameForTest(contextOrSuite, extension);
+	const mockFilePath = 'src/test/mocks/' + utils.generateFileNameForTest(contextOrSuite, extension);
 	const mockContents = await getMock(mockFilePath);
 	if (extension === 'json') {
 		return JSON.parse(mockContents);

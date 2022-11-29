@@ -1,6 +1,6 @@
 {
     "name": "roku-test-automation",
-    "version": "2.0.0-beta.6",
+    "version": "2.0.0-beta.8",
     "description": "Helps with automating functional tests",
     "main": "client/dist/index.js",
     "typings": "client/dist/index.d.ts",
@@ -33,7 +33,8 @@
         "http-network-proxy": "^1.0.11",
         "needle": "^2.9.1",
         "path": "^0.12.7",
-        "roku-deploy": "^3.5.2"
+        "roku-deploy": "^3.9.2",
+        "@suitest/types": "^4.6.0"
     },
     "devDependencies": {
         "@rokucommunity/bslint": "^0.7.3",

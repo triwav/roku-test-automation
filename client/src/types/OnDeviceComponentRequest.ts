@@ -1,31 +1,32 @@
 export namespace ODC {
 	export enum RequestEnum {
 		callFunc,
+		createDirectory,
+		deleteFile,
 		deleteNodeReferences,
 		deleteRegistrySections,
 		disableScreenSaver,
 		focusNode,
+		getDirectoryListing,
 		getFocusedNode,
 		getNodesInfo,
+		getNodesWithProperties,
+		getServerHost,
 		getValue,
 		getValues,
+		getVolumeList,
 		handshake,
 		hasFocus,
 		isInFocusChain,
 		observeField,
-		readRegistry,
-		setValue,
-		storeNodeReferences,
-		writeRegistry,
-		getVolumeList,
-		getDirectoryListing,
-		statPath,
-		createDirectory,
-		deleteFile,
-		renameFile,
 		readFile,
+		readRegistry,
+		renameFile,
+		setValue,
+		statPath,
+		storeNodeReferences,
 		writeFile,
-		getServerHost,
+		writeRegistry,
 	}
 	export type RequestTypes = keyof typeof RequestEnum;
 
@@ -123,7 +124,7 @@ export namespace ODC {
 	export interface GetVolumeListArgs {}
 
 	export interface Path {
-		path: string
+		path: string;
 	}
 
 	export interface GetDirectoryListingArgs extends Path {}
@@ -135,8 +136,8 @@ export namespace ODC {
 	export interface DeleteFileArgs extends Path {}
 
 	export interface RenameFileArgs {
-		fromPath: string
-		toPath: string
+		fromPath: string;
+		toPath: string;
 	}
 
 	export interface ReadFileArgs extends Path {}
@@ -146,11 +147,38 @@ export namespace ODC {
 	}
 
 	// IMPROVEMENT build out to support more complicated types
-	export type ObserveFieldMatchValueTypes = string | number | boolean;
+	type ComparableValueTypes = string | number | boolean;
+
+	export type ComparisonOperators = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo';
+
+	interface NodeComparison {
+		/* defaults to equal if not provided */
+		operator?: ComparisonOperators;
+
+		/* field acts a shorthand to specify fields. */
+		field?: string;
+
+		/* only fields will be used if both fields and keyPaths are provided */
+		fields?: string[];
+
+		/* keyPath acts a shorthand to specify keyPaths */
+		keyPath?: string;
+
+		/* only fields will be used if both fields and keyPaths are provided */
+		keyPaths?: string[];
+
+		value: ComparableValueTypes;
+	}
+
+	export interface GetNodesWithPropertiesArgs extends MaxChildDepth {
+		/** This is the key that we used to store the node references on. If one isn't provided we use the automatically generated one */
+		key?: string;
+		properties: NodeComparison[];
+	}
 
 	interface MatchObject extends BaseKeyPath {
 		/** If the match value is passed in then the observer will be fired when the field value equals to the value in match */
-		value: ObserveFieldMatchValueTypes;
+		value: ComparableValueTypes;
 	}
 
 	export interface ObserveFieldArgs extends BaseKeyPath {
@@ -161,18 +189,21 @@ export namespace ODC {
 		retryTimeout?: number;
 
 		/** If provided will only return when this matches (including if it already equals that value) */
-		match?: MatchObject | ObserveFieldMatchValueTypes;
+		match?: MatchObject | ComparableValueTypes;
 	}
 
 	export interface SetValueArgs extends BaseKeyPath {
 		/** Value that needs to be set to the field. Field path is defined by key path. */
 		value: any;
+
+		/** Used to specify whether we are setting a field on a node or if we're updating the node structure itself. If not defined, we take the last part of the keyPath and use it as the field */
+		field?: string;
 	}
 
 	export interface ReadRegistryArgs {
 		/** List of Section keys of which we need data to be read, if empty then it will return entire contents of the registry */
 		values?: {
-			[section: string]: string[] | string
+			[section: string]: string[] | string;
 		};
 	}
 
@@ -224,9 +255,9 @@ export namespace ODC {
 		// Allow other fields
 		[key: string]: any;
 		change: {
-			Index1: number
-			Index2: number
-			Operation: string
+			Index1: number;
+			Index2: number;
+			Operation: string;
 		};
 		childRenderOrder?: 'renderFirst' | 'renderLast';
 		children: NodeRepresentation[];

@@ -26,36 +26,35 @@ export class RokuDevice {
 
 	public getConfig() {
 		if (!this.config) {
-			const config = utils.getConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config);
-			this.config = config;
+			this.config = utils.getConfigFromEnvironmentOrConfigFile();
 		}
 		return this.config?.RokuDevice;
 	}
 
 	public getCurrentDeviceConfig() {
-		if (!this.config) {
-			const config = utils.getConfigFromEnvironment();
-			utils.validateRTAConfigSchema(config);
-			this.config = config;
-		}
 		const configSection = this.getConfig();
 		return configSection.devices[configSection.deviceIndex ?? 0];
 	}
 
 	public async deploy(options?: rokuDeploy.RokuDeployOptions & {
-		injectTestingFiles?: boolean,
-		preventMultipleDeployments?: boolean
+		injectTestingFiles?: boolean;
+		preventMultipleDeployments?: boolean;
+		deleteBeforeInstall?: boolean;
 	}, beforeZipCallback?: (info: rokuDeploy.BeforeZipCallbackInfo) => void) {
-		if (options?.preventMultipleDeployments !== false) {
-			if (this.deployed) return;
-		}
 		const injectTestingFiles = options?.injectTestingFiles !== false;
 
 		const deviceConfig = this.getCurrentDeviceConfig();
 		options = rokuDeploy.getOptions(options);
 		options.host = deviceConfig.host;
 		options.password = deviceConfig.password;
+
+		if (options.deleteBeforeInstall) {
+			try {
+				await rokuDeploy.deleteInstalledChannel(options);
+			} catch (e) {}
+		} else if (options?.preventMultipleDeployments !== false) {
+			if (this.deployed) return;
+		}
 
 		if (injectTestingFiles) {
 			const files = options.files ?? [];
@@ -67,7 +66,7 @@ export class RokuDevice {
 		}
 
 		await rokuDeploy.deploy(options, (info) => {
-			const manifestPath = `${info.stagingFolderPath}/manifest`;
+			const manifestPath = `${info.stagingDir}/manifest`;
 			const manifestContents = fsExtra.readFileSync(manifestPath, 'utf-8').replace('ENABLE_RTA=false', 'ENABLE_RTA=true');
 			fsExtra.writeFileSync(manifestPath, manifestContents);
 			if (beforeZipCallback) {

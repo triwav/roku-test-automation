@@ -1,0 +1,19 @@
+{
+	"name": "chanperf",
+	"value": "",
+	"attributes": {},
+	"children": [
+		{
+			"name": "status",
+			"value": "FAILED",
+			"attributes": {},
+			"children": []
+		},
+		{
+			"name": "error",
+			"value": "Channel not running",
+			"attributes": {},
+			"children": []
+		}
+	]
+}

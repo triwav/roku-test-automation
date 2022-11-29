@@ -39,6 +39,8 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processStoreNodeReferencesRequest(args)
 	else if requestType = "getNodesInfo" then
 		response = processGetNodesInfoRequest(args)
+	else if requestType = "getNodesWithProperties" then
+		response = processGetNodesWithPropertiesRequest(args)
 	else if requestType = "deleteNodeReferences" then
 		response = processDeleteNodeReferencesRequest(args)
 	else if requestType = "disableScreenSaver" then
@@ -357,11 +359,8 @@ function processObserveFieldRequest(request as Object) as Dynamic
 			return result
 		end if
 
-		if result.found <> true then
-			return buildErrorResponseObject("Match was requested and key path was not valid")
-		end if
-		' TODO build out to support more complicated types
-		if result.value = match.value then
+		' IMPROVEMENT hook into compareValues() functionality and eventually build out to support more complicated types
+		if result.found AND result.value = match.value then
 			return {
 				"value": node[field]
 				"observerFired": false
@@ -383,7 +382,12 @@ end function
 sub onProcessObserveFieldRequestRetryFired(event as Object)
 	requestId = event.getNode()
 	request = m.activeObserveFieldRequests[requestId]
-	processObserveFieldRequest(request)
+	response = processObserveFieldRequest(request)
+
+	' If response isn't invalid then we have to send it back ourselves
+	if response <> Invalid then
+		sendResponseToTask(request, response)
+	end if
 end sub
 
 sub observeFieldCallback(event as Object)
@@ -404,15 +408,7 @@ sub observeFieldCallback(event as Object)
 					return
 				end if
 
-				if result.found <> true then
-					logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
-					node.unobserveFieldScoped(field)
-					m.activeObserveFieldRequests.delete(requestId)
-					sendResponseToTask(request, buildErrorResponseObject("Match was requested and key path was not valid"))
-					return
-				end if
-
-				if result.value <> match.value then
+				if result.found = false OR result.value <> match.value then
 					logVerbose("Match.value did not match requested value continuing to wait")
 					return
 				end if
@@ -437,7 +433,6 @@ function processSetValueRequest(args as Object) as Object
 		return result
 	end if
 
-
 	if result.found <> true then
 		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
 	end if
@@ -452,34 +447,43 @@ function processSetValueRequest(args as Object) as Object
 		return buildErrorResponseObject("Missing valid 'field' param")
 	end if
 
-	' Have to walk up the tree until we get to a node as anything that is a field on a node must be replaced
-	base = getBaseObject(args)
 	nodeParent = resultValue
-	parentKeyPath = keyPath
-	parentKeyPathParts = parentKeyPath.tokenize(".").toArray()
-	setKeyPathParts = []
-	while NOT parentKeyPathParts.isEmpty()
-		nodeParent = getValueAtKeyPath(base, parentKeyPathParts.join("."))
-		if isNode(nodeParent) then
-			exit while
-		else
-			setKeyPathParts.unshift(parentKeyPathParts.pop())
+
+	base = getBaseObject(args)
+	if field = "" then
+		updateAA = args.value
+		if NOT isAA(updateAA) then
+			return buildErrorResponseObject("If field is empty, then value must be an AA")
 		end if
-	end while
+	else
+		' Have to walk up the tree until we get to a node as anything that is a field on a node must be replaced
+		parentKeyPath = keyPath
+		parentKeyPathParts = parentKeyPath.tokenize(".").toArray()
+		setKeyPathParts = []
+		while NOT parentKeyPathParts.isEmpty()
+			nodeParent = getValueAtKeyPath(base, parentKeyPathParts.join("."))
+			if isNode(nodeParent) then
+				exit while
+			else
+				setKeyPathParts.unshift(parentKeyPathParts.pop())
+			end if
+		end while
+
+		if setKeyPathParts.isEmpty() then
+			updateAA = createCaseSensitiveAA(field, args.value)
+		else
+			setKeyPathParts.push(field)
+			nodeFieldKey = setKeyPathParts.shift()
+			nodeFieldValueCopy = nodeParent[nodeFieldKey]
+			setValueAtKeyPath(nodeFieldValueCopy, setKeyPathParts.join("."), args.value)
+			updateAA = createCaseSensitiveAA(nodeFieldKey, nodeFieldValueCopy)
+		end if
+	end if
 
 	if NOT isNode(nodeParent) then
 		nodeParent = base
 	end if
 
-	if setKeyPathParts.isEmpty() then
-		updateAA = createCaseSensitiveAA(field, args.value)
-	else
-		setKeyPathParts.push(field)
-		nodeFieldKey = setKeyPathParts.shift()
-		nodeFieldValueCopy = nodeParent[nodeFieldKey]
-		setValueAtKeyPath(nodeFieldValueCopy, setKeyPathParts.join("."), args.value)
-		updateAA = createCaseSensitiveAA(nodeFieldKey, nodeFieldValueCopy)
-	end if
 	nodeParent.update(updateAA, true)
 	return {}
 end function
@@ -561,7 +565,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 	for each itemComponentNode in itemComponentNodes
 		itemContent = itemComponentNode.itemContent
 		position = getNodeParentIndex(itemContent, itemContent.getParent())
-		childNodeBranch = addNodeToTree(storedNodes, flatTree, itemComponentNode, -1, position)
+		childNodeBranch = buildTree(storedNodes, flatTree, itemComponentNode, false, {}, -1, position)
 		parent = itemComponentNode.getParent()
 
 		' If we don't have a parent we want to handle parentRef based off of itemContent later
@@ -573,6 +577,20 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 			shouldContinue = true
 			while shouldContinue
 				nodeBranch = Invalid
+
+				' This helps match up what ArrayGrid in the nodeTree we are connected to. We only want it if it's an external ArrayGrid not the internal ones inside RowList
+				if parent.isSubtype("ArrayGrid") AND getNodeSubtype(parent.getParent()) <> "RowListItem" then
+					for each nodeRef in arrayGridNodes
+						' Look for the visible ArrayGrid this renderer belongs to
+						if arrayGridNodes[nodeRef].isSameNode(parent) then
+							childNodeBranch["parentRef"] = nodeRef.toInt()
+							' We've reached the top so go ahead and exit the while loop
+							exit for
+						end if
+					end for
+					' Roku gets in weird state if we try and exit out of while loop in for loop
+					exit while
+				end if
 
 				' If our parent is Group and grandparent is RowListItem then we change our perceived parent to be the MarkupGrid for easier understanding
 				if parent.subtype() = "Group" AND parent.getParent().subtype() = "RowListItem" then
@@ -616,36 +634,20 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 					else if nodeType = "MarkupGrid" then
 						internalMarkupGridNodeBranches.push(nodeBranch)
 					else
-						logError("Encountered unexpected node type '" + nodeType + "' while handling ArrayGrid items ")
+						logError("Encountered unexpected node type '" + nodeType + "' while handling ArrayGrid items")
 					end if
 				end if
 
 				' Go ahead and assign parentRef now that we have made the parent
 				childNodeBranch["parentRef"] = nodeBranch.ref
 
-				ancestors = [parent]
-				grandParent = parent.getParent()
-				if grandParent <> invalid then
-					ancestors.push(grandParent)
-				end if
-
-				for each parent in ancestors
-					if parent.isSubtype("ArrayGrid") then
-						for each nodeRef in arrayGridNodes
-							' Look for the visible ArrayGrid this renderer belongs to
-							if arrayGridNodes[nodeRef].isSameNode(parent) then
-								nodeBranch["parentRef"] = nodeRef.toInt()
-								' We've reached the top so go ahead and exit the while loop
-								shouldContinue = false
-								exit for
-							end if
-						end for
-					end if
-				end for
-
 				' Used on subsequent loop
 				childNodeBranch = nodeBranch
-				parent = grandParent
+				parent = parent.getParent()
+				if parent = Invalid then
+					' We can hit this if the arrayGrid is being kept alive by a brightscript reference but isn't connected to the scene tree
+					exit while
+				end if
 			end while
 		end if
 	end for
@@ -654,71 +656,80 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 	for each itemComponentNodeBranch in unparentedItemComponentNodeBranch
 		itemComponentNode = storedNodes[itemComponentNodeBranch.ref]
 		itemContentParent = itemComponentNode.itemContent.getParent()
-		for each internalMarkupGridNodeBranch in internalMarkupGridNodeBranches
-			markupGrid = storedNodes[internalMarkupGridNodeBranch.ref]
-			if itemContentParent.isSameNode(markupGrid.content) then
-				itemComponentNodeBranch["parentRef"] = internalMarkupGridNodeBranch.ref
-				exit for
-			end if
-		end for
-
-		if itemComponentNodeBranch.parentRef = -1 then
-			' IMPROVEMENT look into optimization by removing nodes from allNodes we'll never use (content node etc)
-
-			' Walk up until we hit the ArrayGrid and find out if we have a title component we can search for
-			rowTitleComponentName = invalid
-			parent = itemContentParent
-			while true
-				if parent.isSubtype("ArrayGrid") then
-					rowTitleComponentName = parent.rowTitleComponentName
-					exit while
+		if itemContentParent <> invalid then
+			' Go through the MarkupGrids we have already found and try to find a match based on content nodes.
+			for each internalMarkupGridNodeBranch in internalMarkupGridNodeBranches
+				markupGrid = storedNodes[internalMarkupGridNodeBranch.ref]
+				if itemContentParent.isSameNode(markupGrid.content) then
+					itemComponentNodeBranch["parentRef"] = internalMarkupGridNodeBranch.ref
+					exit for
 				end if
-				parent = parent.getParent()
-			end while
+			end for
 
-			if rowTitleComponentName <> invalid then
-				for each node in allNodes
-					if node.subtype() = rowTitleComponentName AND itemContentParent.isSameNode(node.content) then
-						' We found the rowTitleComponentNode for this row. Store the RowListItem and MarkupGrid for this item. The rowTitleComponentNode will be handled in the final loop of this function
-						rowListItem = node.getParent().getParent()
+			' If we found a match above then none of this gets called
+			if itemComponentNodeBranch.parentRef = -1 then
+				' IMPROVEMENT look into optimization by removing nodes from allNodes we'll never use (content node etc)
 
-						' Find our parent ArrayGrid
-						parentRef = -1
-						for each nodeRef in arrayGridNodes
-							if arrayGridNodes[nodeRef].isSameNode(rowListItem.getParent()) then
-								parentRef = nodeRef.toInt()
-								exit for
-							end if
-						end for
-
-						position = getNodeParentIndex(rowListItem, rowListItem.getParent())
-						rowListItemNodeBranch = addNodeToTree(storedNodes, flatTree, rowListItem, parentRef, position)
-						internalRowListItemNodeBranches.push(rowListItemNodeBranch)
-
-
-						for i = 0 to getLastIndex(rowListItem)
-							child = rowListItem.getChild(i)
-							if child.subtype() = "MarkupGrid" then
-								markupGridNodeBranch = addNodeToTree(storedNodes, flatTree, child, rowListItemNodeBranch.ref, i)
-								internalMarkupGridNodeBranches.push(markupGridNodeBranch)
-								itemComponentNodeBranch["parentRef"] = markupGridNodeBranch.ref
-							end if
-						end for
+				' Walk up until we hit the ArrayGrid and find out if we have a title component we can search for
+				rowTitleComponentName = invalid
+				parent = itemContentParent
+				while true
+					if parent.isSubtype("ArrayGrid") then
+						rowTitleComponentName = parent.rowTitleComponentName
+						exit while
 					end if
-				end for
-			end if
-		end if
+					parent = parent.getParent()
+					if parent = invalid then
+						exit while
+					end if
+				end while
 
-		if itemComponentNodeBranch.parentRef = -1 then
-			' Was throwing away but seems to cause issue so commenting out for now. Will likely just handle with the improvement below eventually instead
-			' for i = 0 to getLastIndex(flatTree)
-			' 	ref = flatTree[i].ref
-			' 	if ref <> -1 AND ref = itemComponentNodeBranch.ref then
-			' 		flatTree.delete(i)
-			' 		exit for
-			' 	end if
-			' end for
-			' IMPROVEMENT We weren't able to find the parent so we could make up the node structure to match a standard output and still give a parented output.
+				' Proceed only if we have a row title component
+				if rowTitleComponentName <> invalid then
+					for each node in allNodes
+						if node.subtype() = rowTitleComponentName AND itemContentParent.isSameNode(node.content) then
+							' We found the rowTitleComponentNode for this row. Store the RowListItem and MarkupGrid for this item. The rowTitleComponentNode will be handled in the final loop of this function
+							rowListItem = node.getParent().getParent()
+
+							' Find our parent ArrayGrid
+							parentRef = -1
+							for each nodeRef in arrayGridNodes
+								if arrayGridNodes[nodeRef].isSameNode(rowListItem.getParent()) then
+									parentRef = nodeRef.toInt()
+									exit for
+								end if
+							end for
+
+							position = getNodeParentIndex(rowListItem, rowListItem.getParent())
+							rowListItemNodeBranch = addNodeToTree(storedNodes, flatTree, rowListItem, parentRef, position)
+							internalRowListItemNodeBranches.push(rowListItemNodeBranch)
+
+							' Go through the RowListItem's children to get the internal MarkupGrid
+							for i = 0 to getLastIndex(rowListItem)
+								child = rowListItem.getChild(i)
+								if child.subtype() = "MarkupGrid" then
+									markupGridNodeBranch = addNodeToTree(storedNodes, flatTree, child, rowListItemNodeBranch.ref, i)
+									internalMarkupGridNodeBranches.push(markupGridNodeBranch)
+									itemComponentNodeBranch["parentRef"] = markupGridNodeBranch.ref
+								end if
+							end for
+							exit for
+						end if
+					end for
+				end if
+			end if
+
+			if itemComponentNodeBranch.parentRef = -1 then
+				' Was throwing away but seems to cause issue so commenting out for now. Will likely just handle with the improvement below eventually instead
+				' for i = 0 to getLastIndex(flatTree)
+				' 	ref = flatTree[i].ref
+				' 	if ref <> -1 AND ref = itemComponentNodeBranch.ref then
+				' 		flatTree.delete(i)
+				' 		exit for
+				' 	end if
+				' end for
+				' IMPROVEMENT We weren't able to find the parent so we could make up the node structure to match a standard output and still give a parented output.
+			end if
 		end if
 	end for
 
@@ -756,8 +767,9 @@ function addNodeToTree(storedNodes as Object, flatTree as Object, node as Object
 	return nodeBranch
 end function
 
-sub buildTree(storedNodes as Object, flatTree as Object, node as Object, searchForArrayGrids as Boolean, arrayGridNodes = {} as Object, parentRef = -1 as Integer, position = -1 as Integer)
-	nodeRef = addNodeToTree(storedNodes, flatTree, node, parentRef, position).ref
+function buildTree(storedNodes as Object, flatTree as Object, node as Object, searchForArrayGrids as Boolean, arrayGridNodes = {} as Object, parentRef = -1 as Integer, position = -1 as Integer) as Object
+	nodeBranch = addNodeToTree(storedNodes, flatTree, node, parentRef, position)
+	nodeRef = nodeBranch.ref
 	if searchForArrayGrids AND node.isSubtype("ArrayGrid") then
 		arrayGridNodes[nodeRef.toStr()] = node
 	end if
@@ -767,7 +779,9 @@ sub buildTree(storedNodes as Object, flatTree as Object, node as Object, searchF
 		buildTree(storedNodes, flatTree, childNode, searchForArrayGrids, arrayGridNodes, nodeRef, childPosition)
 		childPosition++
 	end for
-end sub
+
+	return nodeBranch
+end function
 
 function processDeleteNodeReferencesRequest(args as Object) as Object
 	nodeReferencesKey = args.key
@@ -777,6 +791,129 @@ function processDeleteNodeReferencesRequest(args as Object) as Object
 	m.nodeReferences.delete(nodeReferencesKey)
 
 	return {}
+end function
+
+function processGetNodesWithPropertiesRequest(args as Object) as Object
+	nodeReferencesKey = args.key
+	if NOT isString(nodeReferencesKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	end if
+
+	storedNodes = m.nodeReferences[nodeReferencesKey]
+	if NOT isArray(storedNodes) then
+		return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
+	end if
+
+	matchingNodes = []
+	matchingNodeRefs = []
+	properties = args.properties
+	for nodeRef = 0 to getLastIndex(storedNodes)
+		node = storedNodes[nodeRef]
+		nodeMatches = true
+		for each property in properties
+			result = doesNodeHaveProperty(node, property)
+			if result = -1 then
+				return buildErrorResponseObject("Invalid type for property " + formatJson(property))
+			end if
+
+			if result = 0 then
+				nodeMatches = false
+				exit for
+			end if
+		end for
+		if nodeMatches then
+			matchingNodes.push(node)
+			matchingNodeRefs.push(nodeRef)
+		end if
+	end for
+
+	return {
+		"nodes": matchingNodes
+		"nodeRefs": matchingNodeRefs
+	}
+end function
+
+' Returns 0 if no, 1 if yes and -1 if the comparison isn't possible on the current type
+function doesNodeHaveProperty(node as Object, property as Object) as Integer
+	result = 0
+	operator = property.operator
+	fields = property.fields
+	if isArray(fields) then
+		for each field in fields
+			if node.hasField(field) then
+				result = compareValues(operator, node[field], property.value)
+				if result <> 0 then
+					return result
+				end if
+			end if
+		end for
+	else if isArray(property.keyPaths) then
+		for each keyPath in property.keyPaths
+			' Route through keypath functionality to allow more advanced searches
+			actualValue = getValueAtKeyPath(node, keyPath, "[[VALUE_NOT_FOUND]]")
+			found = NOT isString(actualValue) OR actualValue <> "[[VALUE_NOT_FOUND]]"
+
+			if found then
+				result = compareValues(operator, actualValue, property.value)
+				if result <> 0 then
+					return result
+				end if
+			end if
+		end for
+	end if
+
+	return 0
+end function
+
+' Returns 0 if no, 1 if yes and -1 if the comparison isn't possible on the current type
+function compareValues(operator as String, a as Dynamic, b as Dynamic) as Integer
+	result = 0
+	if operator = "equal" then
+		if a = b then
+			return 1
+		end if
+	else if operator = "notEqual" then
+		if a <> b then
+			return 1
+		end if
+	else if operator = "greaterThan" OR operator = "greaterThanEqualTo" OR operator = "lessThan" OR operator = "lessThanEqualTo" then
+		if isNumber(a) AND isNumber(b) then
+			if operator = "greaterThan" then
+				if a > b then
+					return 1
+				end if
+			else if operator = "greaterThanEqualTo" then
+				if a >= b then
+					return 1
+				end if
+			else if operator = "lessThan" then
+				if a < b then
+					return 1
+				end if
+			else if operator = "lessThanEqualTo" then
+				if a <= b then
+					return 1
+				end if
+			end if
+		else
+			result = -1
+		end if
+	else if operator = "in" OR operator = "!in" then
+		' Only string checking allowed for now
+		if isString(a) AND isString(b) then
+			found = a.instr(b) >= 0
+
+			if operator = "in" AND found then
+				return 1
+			else if operator = "!in" AND NOT found then
+				return 1
+			end if
+		else
+			result = -1
+		end if
+	end if
+
+	return result
 end function
 
 function processDisableScreenSaverRequest(args as Object) as Object

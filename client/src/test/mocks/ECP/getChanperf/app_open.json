@@ -1,0 +1,100 @@
+{
+	"name": "chanperf",
+	"value": "",
+	"attributes": {},
+	"children": [
+		{
+			"name": "timestamp",
+			"value": "1669155295858",
+			"attributes": {},
+			"children": []
+		},
+		{
+			"name": "plugin",
+			"value": "",
+			"attributes": {},
+			"children": [
+				{
+					"name": "cpu-percent",
+					"value": "",
+					"attributes": {},
+					"children": [
+						{
+							"name": "duration-seconds",
+							"value": "1.000000",
+							"attributes": {},
+							"children": []
+						},
+						{
+							"name": "user",
+							"value": "0.2",
+							"attributes": {},
+							"children": []
+						},
+						{
+							"name": "sys",
+							"value": "0.2",
+							"attributes": {},
+							"children": []
+						}
+					]
+				},
+				{
+					"name": "memory",
+					"value": "",
+					"attributes": {},
+					"children": [
+						{
+							"name": "used",
+							"value": "117075968",
+							"attributes": {},
+							"children": []
+						},
+						{
+							"name": "res",
+							"value": "116690944",
+							"attributes": {},
+							"children": []
+						},
+						{
+							"name": "anon",
+							"value": "91312128",
+							"attributes": {},
+							"children": []
+						},
+						{
+							"name": "swap",
+							"value": "385024",
+							"attributes": {},
+							"children": []
+						},
+						{
+							"name": "file",
+							"value": "25042944",
+							"attributes": {},
+							"children": []
+						},
+						{
+							"name": "shared",
+							"value": "335872",
+							"attributes": {},
+							"children": []
+						}
+					]
+				},
+				{
+					"name": "id",
+					"value": "dev",
+					"attributes": {},
+					"children": []
+				}
+			]
+		},
+		{
+			"name": "status",
+			"value": "OK",
+			"attributes": {},
+			"children": []
+		}
+	]
+}
