@@ -69,7 +69,7 @@ describe('ECP', function () {
 			expect(stub.callCount).to.equal(keys.length);
 		});
 
-		it('should send the pattern multiple times in the correct order if count is more than one', async () => {
+		it('should send_the_pattern_multiple_times_in_the_correct_order_if_count_is_more_than_one', async () => {
 			let index = 0;
 			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
 			const count = 3;
@@ -86,7 +86,7 @@ describe('ECP', function () {
 			expect(stub.callCount).to.equal(keys.length * count);
 		});
 
-		it('should not send any keys if count is 0', async () => {
+		it('should_not_send_any_keys_if_count_is_zero', async () => {
 			const keys = [ECP.Key.FORWARD, ECP.Key.PLAY, ECP.Key.REWIND];
 
 			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
@@ -397,6 +397,26 @@ describe('ECP', function () {
 			expect(result.duration?.value).to.equal('8551626 ms');
 
 			expect(result.is_live?.value).to.equal('false');
+		});
+	});
+
+	describe('getChanperf', function () {
+		it('app_closed', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getChanperf();
+			expect(result.error).to.equal('Channel not running');
+			expect(result.status).to.equal('FAILED');
+			expect(result.plugin).to.not.be.ok;
+		});
+
+		it('app_open', async () => {
+			ecpResponse = await utils.getNeedleMockResponse(this);
+			const result = await ecp.getChanperf();
+			expect(result.status).to.equal('OK');
+			expect(result.plugin?.id).to.equal('dev');
+			expect(result.plugin?.cpuPercent).to.be.ok;
+			expect(result.plugin?.cpuPercent.user).to.equal(0.2);
+			expect(result.plugin?.memory.anon).to.equal(91312128);
 		});
 	});
 

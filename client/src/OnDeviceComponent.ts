@@ -599,7 +599,7 @@ export class OnDeviceComponent {
 
 		const timeout = this.getTimeOut(options);
 		try {
-			return utils.promiseTimeout(promise, timeout);
+			return await utils.promiseTimeout(promise, timeout);
 		} catch(e) {
 			if ((e as Error).name === 'Timeout') {
 				let message = `${request.type} request timed out after ${timeout}ms`;

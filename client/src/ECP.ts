@@ -222,6 +222,70 @@ export class ECP {
 		return response;
 	}
 
+	public async getChanperf() {
+		const {body} = await this.device.sendECP(`query/chanperf`);
+
+		const response = this.simplifyEcpResponse(body);
+		const plugin = response.plugin;
+
+		if (plugin) {
+			// Convert dashes to camelCase
+			plugin.cpuPercent = plugin['cpu-percent'];
+			delete plugin['cpu-percent'];
+
+			plugin.cpuPercent.durationSeconds = plugin.cpuPercent['duration-seconds'];
+			delete plugin.cpuPercent['duration-seconds'];
+
+			// Convert values to numbers
+			response.timestamp = +response.timestamp;
+
+			for (const field of ['cpuPercent', 'memory']) {
+				for (const key in plugin[field]) {
+					plugin[field][key] = +plugin[field][key];
+				}
+			}
+		}
+
+		return response as {
+			timestamp?: number;
+			status: 'OK' | 'FAILED'
+			error?: string;
+			plugin?: {
+				id: string;
+				cpuPercent: {
+					durationSeconds: number;
+					user: number;
+					sys: number;
+				}
+				memory: {
+					used: number;
+					res: number;
+					anon: number;
+					swap: number;
+					file: number;
+					shared: number;
+				}
+			};
+		};
+	}
+
+	private simplifyEcpResponse(body) {
+		const response: any = {};
+		for (const child of body.children) {
+			if (child.children.length > 0) {
+				response[child.name] = this.simplifyEcpResponse(child);
+			} else if (child.attributes.length > 0) {
+				response[child.name] = {
+					...child.attributes,
+					value: child.value
+				};
+			} else {
+				response[child.name] = child.value;
+			}
+		}
+		return response;
+	}
+
 	private addRaspFileStep(step: string) {
 		if (this.raspFileSteps) {
 			this.raspFileSteps.push(`    - ${step}`);
