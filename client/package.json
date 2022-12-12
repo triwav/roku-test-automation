@@ -1,6 +1,6 @@
 {
     "name": "roku-test-automation",
-    "version": "2.0.0-beta.8",
+    "version": "2.0.0-beta.10",
     "description": "Helps with automating functional tests",
     "main": "client/dist/index.js",
     "typings": "client/dist/index.d.ts",
@@ -14,7 +14,8 @@
         "buildRequestArgsSchema": "typescript-json-schema src/types/OnDeviceComponentRequest.ts ODC.RequestArgs --propOrder --out requestArgs.schema.json --ignoreErrors",
         "buildRelease": "npx ts-node scripts/buildRelease.ts",
         "buildRelease:beta": "npx ts-node scripts/buildRelease.ts --beta",
-        "buildRelease:dev": "npx ts-node scripts/buildRelease.ts --dev"
+        "buildRelease:dev": "npx ts-node scripts/buildRelease.ts --dev",
+        "increment:beta": "npm version prerelease"
     },
     "repository": {
         "type": "git",

@@ -311,6 +311,45 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	public async startResponsivenessTesting(args: ODC.StartResponsivenessTestingArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('startResponsivenessTesting', args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async getResponsivenessTestingData(args = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('getResponsivenessTestingData', args, options);
+		return result.json as ODC.ReturnTimeTaken & {
+			periods: {
+				/** Duration of this period in milliseconds */
+				duration: number;
+
+				/** What percent of the time during the period the render thread was responsive */
+				percent: number;
+
+				/** How many ticks there were in this period */
+				tickCount: number;
+			}[];
+			periodsTrackCount: number;
+			periodTickCount: number;
+			testingTotals: {
+				/** Total duration since testing started in milliseconds */
+				duration: number;
+
+				/** What percent of the time since testing started the render thread was responsive */
+				percent: number;
+
+				/** Total number of ticks since testing started */
+				tickCount: number;
+			}
+			tickDuration: number;
+		};
+	}
+
+	public async stopResponsivenessTesting(args = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('stopResponsivenessTesting', args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
 	public async disableScreenSaver(args: ODC.DisableScreensaverArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest('disableScreenSaver', args, options);
 		return result.json as ODC.ReturnTimeTaken;

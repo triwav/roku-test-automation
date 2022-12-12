@@ -7,12 +7,6 @@ import { argv } from 'process';
 let output: any;
 
 if (argv[2] !== '--dev') {
-	if (argv[2] === '--beta') {
-		execSync(`npm version prerelease`, {
-			encoding: 'utf8'
-		});
-	}
-
 	output = execSync('npm run build', {
 		encoding: 'utf8'
 	});

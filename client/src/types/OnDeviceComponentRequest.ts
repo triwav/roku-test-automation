@@ -23,6 +23,9 @@ export namespace ODC {
 		readRegistry,
 		renameFile,
 		setValue,
+		startResponsivenessTesting,
+		getResponsivenessTestingData,
+		stopResponsivenessTesting,
 		statPath,
 		storeNodeReferences,
 		writeFile,
@@ -113,7 +116,19 @@ export namespace ODC {
 
 	export interface DisableScreensaverArgs {
 		/** Set to true to disable screensaver from starting, false to allow screensaver to start at the appropriate time */
-		disableScreensaver?: boolean;
+		disableScreensaver: boolean;
+	}
+
+	export interface StartResponsivenessTestingArgs {
+		/** Sets how long a 'tick' is. Any render thread unresponsiveness shorter than this tick duration will not be captured. Number is in milliseconds and defaults to 17
+		 */
+		tickDuration?: number;
+
+		/** Sets the number of ticks we are shooting for in each period and is multiplied by tickDuration to set our timer duration */
+		periodTickCount?: number;
+
+		/** Sets how many periods we will keep in the stored data before we start throwing out older periods. Defaults to 10 */
+		periodsTrackCount?: number;
 	}
 
 	export interface FocusNodeArgs extends BaseKeyPath {

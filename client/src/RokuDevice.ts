@@ -76,7 +76,7 @@ export class RokuDevice {
 		this.deployed = true;
 	}
 
-	public async sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {
+	public sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {
 		let url = `http://${this.getCurrentDeviceConfig().host}:8060/${path}`;
 
 		if (params && Object.keys(params).length) {

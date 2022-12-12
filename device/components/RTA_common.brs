@@ -18,6 +18,15 @@ function isErrorObject(value as Dynamic) as Boolean
 	return false
 end function
 
+function safeDivide(dividend as Integer, divisor as Integer) as Float
+	if divisor = 0 then
+		return 0
+	end if
+
+	return dividend / divisor
+end function
+
+
 '*************************************************************************
 '#endregion *** RTA HELPERS
 '*************************************************************************
@@ -186,7 +195,7 @@ end function
 
 function findChildNodeWithId(parentNode as Object, id as String, maxDepth = 10 as Integer, depth = 0 as Integer) as Dynamic
 	if depth > maxDepth then
-		logWarn(depth.toStr() + " exceeded maximum depth of " + maxDepth.toStr())
+		logWarn(depth.toStr() + " exceeded maximum depth of " + maxDepth.toStr() + " searching for node with id '" + id + "'")
 		return Invalid
 	end if
 

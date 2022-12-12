@@ -7,21 +7,7 @@ sub init()
 end sub
 
 sub setValidRequestTypes()
-	m.validRequestTypes = {
-		"callFunc": {}
-		"deleteNodeReferences": {}
-		"getFocusedNode": {}
-		"getNodesInfo": {}
-		"getNodesWithProperties": {}
-		"getValue": {}
-		"getValues": {}
-		"hasFocus": {}
-		"isInFocusChain": {}
-		"observeField": {}
-		"setValue": {}
-		"storeNodeReferences": {}
-		"disableScreensaver": {}
-		"focusNode": {}
+	m.validTaskRequestTypes = {
 		"readRegistry": {
 			"handler": processReadRegistryRequest
 		}
@@ -232,7 +218,12 @@ sub verifyAndHandleRequest(request)
 		return
 	end if
 
-	requestTypeConfig = m.validRequestTypes[requestType]
+	if m.activeRequests[requestId] <> Invalid then
+		logError("Ignoring request id " + requestId + ". Already received and running")
+		return
+	end if
+
+	requestTypeConfig = m.validTaskRequestTypes[requestType]
 	if requestTypeConfig <> Invalid then
 		' If there is a handler, this request type is handled on the task thread
 		handler = requestTypeConfig.handler
@@ -240,17 +231,10 @@ sub verifyAndHandleRequest(request)
 			handler(request)
 			return
 		end if
-
-		if m.activeRequests[requestId] <> Invalid then
-			logError("Ignoring request id " + requestId + ". Already received and running")
-			return
-		end if
-
-		m.activeRequests[requestId] = request
-		m.top.renderThreadRequest = json
-	else
-		sendBackError(request, "request type '" + requestType + "' not currently handled")
 	end if
+
+	m.activeRequests[requestId] = request
+	m.top.renderThreadRequest = json
 end sub
 
 sub processReadRegistryRequest(request as Object)
