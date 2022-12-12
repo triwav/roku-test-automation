@@ -325,7 +325,7 @@ describe('OnDeviceComponent', function () {
 
 	});
 
-	describe.only('ResponsivenessTesting', function () {
+	describe('ResponsivenessTesting', function () {
 		it('should fail to get data if we have not started responsiveness testing yet', async () => {
 			try {
 				await odc.getResponsivenessTestingData();
