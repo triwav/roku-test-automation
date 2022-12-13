@@ -37,18 +37,24 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processSetValueRequest(args)
 	else if requestType = "storeNodeReferences" then
 		response = processStoreNodeReferencesRequest(args)
+	else if requestType = "deleteNodeReferences" then
+		response = processDeleteNodeReferencesRequest(args)
 	else if requestType = "getNodesInfo" then
 		response = processGetNodesInfoRequest(args)
 	else if requestType = "getNodesWithProperties" then
 		response = processGetNodesWithPropertiesRequest(args)
-	else if requestType = "deleteNodeReferences" then
-		response = processDeleteNodeReferencesRequest(args)
+	else if requestType = "startResponsivenessTesting" then
+		response = processStartResponsivenessTestingRequest(args)
+	else if requestType = "getResponsivenessTestingData" then
+		response = processGetResponsivenessTestingDataRequest(args)
+	else if requestType = "stopResponsivenessTesting" then
+		response = processStopResponsivenessTestingRequest(args)
 	else if requestType = "disableScreenSaver" then
 		response = processDisableScreenSaverRequest(args)
 	else if requestType = "focusNode" then
 		response = processFocusNodeRequest(args)
 	else
-		response = buildErrorResponseObject("Could not handle request type '" + requestType + "'")
+		response = buildErrorResponseObject("Request type '" + requestType + "' not handled in this version")
 	end if
 
 	if response <> Invalid then
@@ -917,7 +923,7 @@ function compareValues(operator as String, a as Dynamic, b as Dynamic) as Intege
 end function
 
 function processDisableScreenSaverRequest(args as Object) as Object
-	if args.disableScreenSaver then
+	if getBooleanAtKeyPath(args, "disableScreenSaver") then
 		if m.videoNode = Invalid then
 			m.videoNode = m.top.createChild("Video")
 			m.videoNode.disableScreenSaver = true
@@ -929,6 +935,112 @@ function processDisableScreenSaverRequest(args as Object) as Object
 		end if
 	end if
 	return {}
+end function
+
+function processStartResponsivenessTestingRequest(args as Object) as Object
+	' Using 60 FPS as our baseline but timers work on a millisecond level so everything is a little bit off
+	defaultTickDuration = 16
+	m.responsivenessTestingTickDuration = getNumberAtKeyPath(args, "tickDuration", defaultTickDuration)
+
+	defaultPeriodTickCount = 60
+	m.responsivenessTestingPeriodTickCount = getNumberAtKeyPath(args, "periodTickCount", defaultPeriodTickCount)
+
+	defaultPeriodsTrackCount = 10
+	m.responsivenessTestingperiodsTrackCount = getNumberAtKeyPath(args, "periodsTrackCount", defaultPeriodsTrackCount)
+
+	if m.responsivenessTestingCurrentPeriodTimeSpan = invalid then
+		m.responsivenessTestingCurrentPeriodTimer = createObject("roSGNode", "Timer")
+		m.responsivenessTestingCurrentPeriodTimer.observeFieldScoped("fire", "onResponsivenessTestingCurrentPeriodTimerFire")
+		m.responsivenessTestingCurrentPeriodTimer.duration = m.responsivenessTestingPeriodTickCount * m.responsivenessTestingTickDuration / 1000
+		m.responsivenessTestingCurrentPeriodTimer.repeat = true
+
+		m.responsivenessTestingTickTimer = createObject("roSGNode", "Timer")
+		m.responsivenessTestingTickTimer.observeFieldScoped("fire", "onResponsivenessTestingTickTimerFire")
+		m.responsivenessTestingTickTimer.duration = m.responsivenessTestingTickDuration / 1000
+		m.responsivenessTestingTickTimer.repeat = true
+
+		m.responsivenessTestingCurrentPeriodTimeSpan = createObject("roTimespan")
+		m.responsivenessTestingTotalTimeSpan = createObject("roTimespan")
+	end if
+
+	m.responsivenessTestingData = {
+		"periods": []
+		"totalTicks": 0
+	}
+
+	m.responsivenessTestingTotalTimeSpan.mark()
+	m.responsivenessTestingCurrentPeriodTimeSpan.mark()
+	m.responsivenessTestingCurrentPeriodTickCount = 0
+
+	m.responsivenessTestingTickTimer.control = "start"
+	m.responsivenessTestingCurrentPeriodTimer.control = "start"
+	return {}
+end function
+
+function processStopResponsivenessTestingRequest(args as Object) as Object
+	if m.responsivenessTestingTickTimer <> invalid then
+		m.responsivenessTestingTickTimer.control = "stop"
+		m.responsivenessTestingCurrentPeriodTimer.control = "stop"
+		m.delete("responsivenessTestingCurrentPeriodTimeSpan")
+		m.delete("responsivenessTestingTotalTimeSpan")
+		m.delete("responsivenessTestingTickTimer")
+		m.delete("responsivenessTestingCurrentPeriodTimer")
+		m.delete("responsivenessTestingData")
+	end if
+
+	return {}
+end function
+
+sub onResponsivenessTestingTickTimerFire()
+	m.responsivenessTestingCurrentPeriodTickCount++
+end sub
+
+sub onResponsivenessTestingCurrentPeriodTimerFire()
+	elapsedTime = m.responsivenessTestingCurrentPeriodTimeSpan.totalMilliseconds()
+	m.responsivenessTestingCurrentPeriodTimeSpan.mark()
+
+	numberOfExpectedTicks = cint(elapsedTime / m.responsivenessTestingTickDuration)
+
+	tickCount = m.responsivenessTestingCurrentPeriodTickCount
+
+	m.responsivenessTestingCurrentPeriodTickCount = 0
+
+	periods = m.responsivenessTestingData.periods
+	periods.push({
+		"duration": elapsedTime
+		"tickCount": tickCount
+		"percent": safeDivide(tickCount, numberOfExpectedTicks) * 100
+	})
+
+	m.responsivenessTestingData.totalTicks += tickCount
+
+	while periods.count() > m.responsivenessTestingperiodsTrackCount
+		periods.shift()
+	end while
+end sub
+
+function processGetResponsivenessTestingDataRequest(args as Object) as Object
+	if m.responsivenessTestingData = invalid then
+		return buildErrorResponseObject("Responsiveness testing is not started. Be sure to call 'startResponsivenessTesting()' first")
+	end if
+
+	tickDuration = m.responsivenessTestingTickDuration
+
+	totalTime = m.responsivenessTestingTotalTimeSpan.totalMilliseconds()
+	totalTicks = m.responsivenessTestingData.totalTicks + m.responsivenessTestingCurrentPeriodTickCount
+	numberOfExpectedTicks = cint(totalTime / tickDuration)
+
+	return {
+		"periods": m.responsivenessTestingData.periods
+		"periodTickCount": m.responsivenessTestingPeriodTickCount
+		"periodsTrackCount": m.responsivenessTestingperiodsTrackCount
+		"tickDuration": tickDuration
+		"testingTotals": {
+			"duration": totalTime
+			"percent": safeDivide(totalTicks, numberOfExpectedTicks) * 100
+			"tickCount": totalTicks
+		}
+	}
 end function
 
 function processFocusNodeRequest(args as Object) as Object

@@ -325,6 +325,71 @@ describe('OnDeviceComponent', function () {
 
 	});
 
+	describe('ResponsivenessTesting', function () {
+		it('should fail to get data if we have not started responsiveness testing yet', async () => {
+			try {
+				await odc.getResponsivenessTestingData();
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it('should use our passed in params if provided', async () => {
+			const periodTickCount = 10;
+			const tickDuration = 1;
+			const periodsTrackCount = 2;
+			await odc.startResponsivenessTesting({
+				periodTickCount: periodTickCount,
+				tickDuration: tickDuration,
+				periodsTrackCount: periodsTrackCount
+			});
+			const response = await odc.getResponsivenessTestingData();
+			await odc.stopResponsivenessTesting();
+			expect(response.periodTickCount).to.equal(periodTickCount);
+			expect(response.tickDuration).to.equal(tickDuration);
+			expect(response.periodsTrackCount).to.equal(periodsTrackCount);
+		});
+
+		it('should return an empty array response if we have not finished a period yet but still give total counts', async () => {
+			const periodTickCount = 5000;
+			const tickDuration = 1;
+			await odc.startResponsivenessTesting({
+				periodTickCount: periodTickCount,
+				tickDuration: tickDuration
+			});
+			await utils.sleep(50);
+			const {periods, testingTotals} = await odc.getResponsivenessTestingData();
+			await odc.stopResponsivenessTesting();
+			expect(periods).to.be.an('array');
+			expect(periods.length).to.equal(0);
+			expect(testingTotals.duration).to.be.a('number');
+			expect(testingTotals.tickCount).to.be.a('number');
+			expect(testingTotals.percent).to.be.a('number');
+		});
+
+		it('should return a proper response if enough time has passed for periods to be set', async () => {
+			const periodTickCount = 5;
+			const tickDuration = 1;
+			const periodsTrackCount = 2;
+			await odc.startResponsivenessTesting({
+				periodTickCount: periodTickCount,
+				tickDuration: tickDuration,
+				periodsTrackCount: periodsTrackCount
+			});
+			await utils.sleep(50);
+			const {periods, testingTotals} = await odc.getResponsivenessTestingData();
+			await odc.stopResponsivenessTesting();
+			expect(periods).to.be.an('array');
+			expect(periods.length).to.equal(periodsTrackCount);
+			expect(periods[0].percent).to.be.a('number');
+			expect(testingTotals.duration).to.be.a('number');
+			expect(testingTotals.tickCount).to.be.a('number');
+			expect(testingTotals.percent).to.be.a('number');
+		});
+	});
+
 	describe('disableScreenSaver', function () {
 		it('should work disabling', async () => {
 			await odc.disableScreenSaver({disableScreensaver: true});
