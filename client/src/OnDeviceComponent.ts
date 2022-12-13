@@ -323,7 +323,7 @@ export class OnDeviceComponent {
 				/** Duration of this period in milliseconds */
 				duration: number;
 
-				/** What percent of the time during the period the render thread was responsive */
+				/** What percent of the time during the period the render thread was responsive. Value is from 0-100 */
 				percent: number;
 
 				/** How many ticks there were in this period */
@@ -335,7 +335,7 @@ export class OnDeviceComponent {
 				/** Total duration since testing started in milliseconds */
 				duration: number;
 
-				/** What percent of the time since testing started the render thread was responsive */
+				/** What percent of the time since testing started the render thread was responsive. Value is from 0-100 */
 				percent: number;
 
 				/** Total number of ticks since testing started */

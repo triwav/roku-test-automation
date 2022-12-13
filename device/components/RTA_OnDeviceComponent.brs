@@ -54,7 +54,7 @@ sub onRenderThreadRequestChange(event as Object)
 	else if requestType = "focusNode" then
 		response = processFocusNodeRequest(args)
 	else
-		response = buildErrorResponseObject("Request type  '" + requestType + "' not handled in this version")
+		response = buildErrorResponseObject("Request type '" + requestType + "' not handled in this version")
 	end if
 
 	if response <> Invalid then
