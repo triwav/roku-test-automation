@@ -197,14 +197,12 @@ export class OnDeviceComponent {
 
 	private conditionallyAddDefaultBase(args: ODC.BaseArgs) {
 		if (!args.base) {
-			// IMPROVEMENT: Could probably allow users to change this to a different default in their config
-			args.base = 'global';
+			args.base = (this.getConfig()?.defaultBase) ?? 'scene';
 		}
 	}
 
 	private conditionallyAddDefaultNodeReferenceKey(args: ODC.BaseArgs) {
 		if (!args.key) {
-			// TODO test if we need to add if no base provided
 			if (!args.base || args.base === 'nodeRef') {
 				args.key = this.defaultNodeReferencesKey;
 			}
@@ -697,7 +695,9 @@ export class OnDeviceComponent {
 
 	private debugLog(message: string, ...args) {
 		if (this.getConfig()?.clientDebugLogging) {
-			console.log(`[ODC] ${message}`, ...args);
+			const date = new Date;
+			const formattedDate = `${utils.lpad(date.getMonth())}-${utils.lpad(date.getDate())} ${utils.lpad(date.getHours())}:${utils.lpad(date.getMinutes())}:${utils.lpad(date.getSeconds())}:${utils.lpad(date.getMilliseconds(), 3)}`;
+			console.log(`${formattedDate} [ODC] ${message}`, ...args);
 		}
 	}
 }

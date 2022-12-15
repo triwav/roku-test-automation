@@ -66,6 +66,9 @@ export interface OnDeviceComponentConfigOptions {
 	/** Enable debug logging on the client side */
 	clientDebugLogging?: boolean;
 
+	/** Allows specifying the default base that will be used if one was not provided in the args for a request */
+	defaultBase?: ODC.BaseTypes
+
 	/**
 	 * Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.
 	 * At which point it will clear the registry completely and write back the stored registry values that were previously stored.

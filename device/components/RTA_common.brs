@@ -573,13 +573,25 @@ sub _log(level as Integer, message as String, value = "nil" as Dynamic)
 		"DEBUG"
 		"VERBOSE"
 	]
-	message = "[RTA][" + levels[level] + "] " + message
+
+    date = createObject("roDateTime")
+	date.toLocalTime()
+	formattedDate = lpad(date.getMonth()) + "-" + lpad(date.getDayOfMonth()) + " " + lpad(date.getHours()) + ":" + lpad(date.getMinutes()) + ":" + lpad(date.getSeconds()) + "." + lpad(date.getMilliseconds(), 3)
+	message = formattedDate + " [RTA][" + levels[level] + "] " + message
 	if isString(value) AND value = "nil" then
 		print message
 	else
 		print message value
 	end if
 end sub
+
+function lpad(value as Dynamic, padLength = 2 as Integer, padCharacter = "0" as String)
+	value = value.toStr()
+	while value.len() < padLength
+		value = padCharacter + value
+	end while
+	return value
+End function
 
 '*************************************************************************
 '#endregion *** LOGGING

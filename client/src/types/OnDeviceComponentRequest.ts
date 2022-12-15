@@ -162,7 +162,7 @@ export namespace ODC {
 	}
 
 	// IMPROVEMENT build out to support more complicated types
-	type ComparableValueTypes = string | number | boolean;
+	export type ComparableValueTypes = string | number | boolean;
 
 	export type ComparisonOperators = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo';
 

@@ -195,6 +195,14 @@ class Utils {
 		}
 		return defaultValue;
 	}
+
+	public lpad(value, padLength = 2, padCharacter = '0') {
+		return value.toString().padStart(padLength, padCharacter);
+	}
+
+	public randomInteger(max = 2147483647, min = 0) {
+		return Math.floor(Math.random() * (max - min + 1) ) + min;
+	}
 }
 
 const utils = new Utils();

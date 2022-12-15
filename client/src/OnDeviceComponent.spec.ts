@@ -206,6 +206,7 @@ describe('OnDeviceComponent', function () {
 				await odc.getNodesInfo({
 					requests: {
 						firstItem: {
+							base: 'nodeRef',
 							keyPath: '0'
 						}
 					}
@@ -438,17 +439,17 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should be able to get a value on a valid field', async () => {
-			const {value} = await odc.getValue({keyPath: 'AuthManager.isLoggedIn'});
+			const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.isLoggedIn'});
 			expect(value).to.be.false;
 		});
 
 		it('should work with array values', async () => {
-			const {value} = await odc.getValue({keyPath: 'arrayValue.0.name'});
+			const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.name'});
 			expect(value).to.equal('firstItem');
 		});
 
 		it('should work with negative array values', async () => {
-			const {value} = await odc.getValue({keyPath: 'arrayValue.-1.name'});
+			const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.-1.name'});
 			expect(value).to.equal('lastItem');
 		});
 
@@ -497,53 +498,53 @@ describe('OnDeviceComponent', function () {
 
 			describe('count()', async () => {
 				it('should work on array item', async () => {
-					const {value} = await odc.getValue({keyPath: 'arrayValue.count()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.count()'});
 					expect(value).to.equal(3);
 				});
 
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValue({keyPath: 'arrayValue.0.count()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.count()'});
 					expect(value).to.equal(1);
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: 'AuthManager.count()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.count()'});
 					expect(value).to.equal(6);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.count()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.count()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('keys()', async () => {
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValue({keyPath: 'arrayValue.0.keys()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.keys()'});
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('name');
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: 'AuthManager.keys()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.keys()'});
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('change');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.keys()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.keys()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('len()', async () => {
 				it('should work on string item', async () => {
-					const {value} = await odc.getValue({keyPath: 'stringValue.len()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'stringValue.len()'});
 					expect(value).to.equal(11);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.len()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.len()'});
 					expect(found).to.false;
 				});
 			});
@@ -555,7 +556,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.getChildCount()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.getChildCount()'});
 					expect(found).to.false;
 				});
 			});
@@ -569,7 +570,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.threadinfo()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.threadinfo()'});
 					expect(found).to.false;
 				});
 			});
@@ -613,7 +614,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.getFieldTypes()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.getFieldTypes()'});
 					expect(found).to.false;
 				});
 			});
@@ -625,7 +626,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.subtype()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.subtype()'});
 					expect(found).to.false;
 				});
 			});
@@ -640,7 +641,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.boundingRect()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.boundingRect()'});
 					expect(found).to.false;
 				});
 			});
@@ -655,7 +656,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.localBoundingRect()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.localBoundingRect()'});
 					expect(found).to.false;
 				});
 			});
@@ -670,7 +671,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.sceneBoundingRect()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.sceneBoundingRect()'});
 					expect(found).to.false;
 				});
 			});
@@ -812,6 +813,7 @@ describe('OnDeviceComponent', function () {
 	describe('setValue', function () {
 		it('should be able to set a key on global', async () => {
 			await setAndVerifyValue({
+				base: 'global',
 				keyPath: 'booleanValue',
 				value: false,
 				expectedStartingValue: true
@@ -820,6 +822,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should be able set a value on a node and succeed', async () => {
 			await setAndVerifyValue({
+				base: 'global',
 				keyPath: 'AuthManager.isLoggedIn',
 				value: true,
 				expectedStartingValue: false
@@ -828,6 +831,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should be able to set a key on an AA stored on a node', async () => {
 			await setAndVerifyValue({
+				base: 'global',
 				keyPath: 'AuthManager.profiles.profile1.settings.personalization.showContinueWatching',
 				value: false,
 				expectedStartingValue: true
@@ -927,7 +931,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should succeed if given a valid node for its parent keyPath and should return timeTaken value', async () => {
-			const args = {keyPath: 'AuthManager.isLoggedIn'};
+			const args = {base: 'global', keyPath: 'AuthManager.isLoggedIn'} as ODC.BaseKeyPath;
 			await setAndVerifyValue({...args, value: false});
 			const observePromise = odc.observeField({...args});
 			await setAndVerifyValue({...args, value: true});
@@ -938,7 +942,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should wait for value to match if requested and should work with simple match property', async () => {
-			const args = {keyPath: 'stringValue'};
+			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
 			const expectedValue = utils.addRandomPostfix('secondValue');
 			const observePromise = odc.observeField({...args, match: expectedValue});
 			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
@@ -949,8 +953,8 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('if the match key path does not exist it should throw an error', async () => {
-			const args = {keyPath: 'stringValue'};
-			const observePromise = odc.observeField({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}});
+			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
+			const observePromise = odc.observeField({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}}, {timeout: 400});
 			const setValuePromise = setAndVerifyValue({...args, value: utils.addRandomPostfix('trigger')});
 			try {
 				await Promise.all([observePromise, setValuePromise]);
@@ -961,19 +965,22 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('it should allow match on other key paths and wait until that value matches', async () => {
-			const args = {
-				keyPath: 'stringValue',
-				match: {
-					keyPath: 'intValue',
-					value: 42
-				}
+			const stringKeyPath = {
+				base: 'global' as ODC.BaseTypes,
+				keyPath: 'stringValue'
 			};
-			await setAndVerifyValue({...args.match, value: 0});
-			const observePromise = odc.observeField(args);
-			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
+
+			const match = {
+				base: 'global' as ODC.BaseTypes,
+				keyPath: 'intValue',
+				value: utils.randomInteger()
+			};
+			await setAndVerifyValue({...match, value: utils.randomInteger()});
+			const observePromise = odc.observeField({...stringKeyPath, match: match});
+			await setAndVerifyValue({...stringKeyPath, value: utils.addRandomPostfix('firstValue')});
+			await setAndVerifyValue(match);
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			await setAndVerifyValue(args.match);
-			await setAndVerifyValue({...args, value: expectedValue});
+			await setAndVerifyValue({...stringKeyPath, value: expectedValue} as any);
 			const {value, observerFired} = await observePromise;
 			expect(value).to.equal(expectedValue);
 			expect(observerFired).to.be.true;
@@ -981,10 +988,12 @@ describe('OnDeviceComponent', function () {
 
 		it('if a match value is provided and the value already equals what we are looking for, it should return right away', async () => {
 			const args = {
+				base: 'global' as ODC.BaseTypes,
 				keyPath: 'stringValue',
 				match: {
+					base: 'global' as ODC.BaseTypes,
 					keyPath: 'intValue',
-					value: 42
+					value: utils.randomInteger()
 				}
 			};
 			await setAndVerifyValue(args.match);
@@ -999,6 +1008,7 @@ describe('OnDeviceComponent', function () {
 				verifyLaunch: false
 			});
 			const {observerFired} = await odc.observeField({
+				base: 'global',
 				keyPath: 'launchComplete'
 			});
 			expect(observerFired).to.be.true;
@@ -1017,9 +1027,9 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it(`should work with funcs that don't take any arguments`, async () => {
-			const args = {keyPath: 'AuthManager.isLoggedIn'};
+			const args = {base: 'global', keyPath: 'AuthManager.isLoggedIn'} as ODC.BaseKeyPath;
 			await setAndVerifyValue({...args, value: false});
-			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUserNoArgs'});
+			await odc.callFunc({base: 'global', keyPath: 'AuthManager', funcName: 'loginUserNoArgs'});
 			const {value} = await odc.getValue(args);
 			expect(value).to.be.true;
 		});
@@ -1190,11 +1200,17 @@ describe('OnDeviceComponent', function () {
 
 		describe('restoreRegistry', function () {
 			it('should properly restore if configured to do so', async () => {
-				(odc as any).config.OnDeviceComponent.restoreRegistry = true;
+				const odcConfig = odc['config'];
+				if (odcConfig?.OnDeviceComponent) {
+					odcConfig.OnDeviceComponent.restoreRegistry = true;
+				}
+
 				// This also triggers storing of the current values first
 				await odc.deleteEntireRegistry();
 				await odc.shutdown();
-				(odc as any).config.OnDeviceComponent.restoreRegistry = false;
+				if (odcConfig?.OnDeviceComponent) {
+					odcConfig.OnDeviceComponent.restoreRegistry = false;
+				}
 				const {values} = await odc.readRegistry();
 				expect(values.rtaFirstSectionName.firstItem).to.equal(firstKeyValue);
 				expect(values.rtaFirstSectionName.secondItem).to.equal(secondKeyValue);
