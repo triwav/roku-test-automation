@@ -18,6 +18,7 @@ export class OnDeviceComponent {
 	private activeRequests: { [key: string]: ODC.Request } = {};
 	private receivingRequestResponse?: ODC.RequestResponse;
 	private clientSocket?: net.Socket;
+	private clientSocketPromise?: Promise<net.Socket>;
 	private defaultNodeReferencesKey = utils.randomStringGenerator();
 
 	constructor(device: RokuDevice, config?: ConfigOptions) {
@@ -604,8 +605,14 @@ export class OnDeviceComponent {
 			requestBuffers.push(binaryBuffer);
 		}
 
+		if (this.clientSocketPromise) {
+			await this.clientSocketPromise;
+		}
+
 		if (!this.clientSocket) {
-			this.clientSocket = await this.setupClientSocket(options);
+			this.clientSocketPromise = this.setupClientSocket(options);
+			this.clientSocket = await this.clientSocketPromise;
+			this.clientSocketPromise = undefined;
 		}
 
 		if (this.getConfig()?.restoreRegistry && !this.storedDeviceRegistry) {
