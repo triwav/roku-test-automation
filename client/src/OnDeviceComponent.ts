@@ -134,7 +134,7 @@ export class OnDeviceComponent {
 		return result.json.isInFocusChain as boolean;
 	}
 
-	public async observeField(args: ODC.ObserveFieldArgs, options: ODC.RequestOptions = {}) {
+	public async onFieldChangeOnce(args: ODC.OnFieldChangeOnceArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
@@ -456,7 +456,7 @@ export class OnDeviceComponent {
 	//#endregion
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
-	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.ObserveFieldArgs | ODC.SetValueArgs) {
+	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.OnFieldChangeOnceArgs | ODC.SetValueArgs) {
 		const keyPathParts = args.keyPath.split('.');
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}

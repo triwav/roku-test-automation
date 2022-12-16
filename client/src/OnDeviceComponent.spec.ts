@@ -922,7 +922,7 @@ describe('OnDeviceComponent', function () {
 	describe('observeField', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
-				await odc.observeField({keyPath: 'does.not.exist', retryTimeout: 200});
+				await odc.onFieldChangeOnce({keyPath: 'does.not.exist', retryTimeout: 200});
 			} catch (e) {
 				// failed as expected
 				return;
@@ -933,7 +933,7 @@ describe('OnDeviceComponent', function () {
 		it('should succeed if given a valid node for its parent keyPath and should return timeTaken value', async () => {
 			const args = {base: 'global', keyPath: 'AuthManager.isLoggedIn'} as ODC.BaseKeyPath;
 			await setAndVerifyValue({...args, value: false});
-			const observePromise = odc.observeField({...args});
+			const observePromise = odc.onFieldChangeOnce({...args});
 			await setAndVerifyValue({...args, value: true});
 			const {value, observerFired, timeTaken} = await observePromise;
 			expect(value).to.be.true;
@@ -944,7 +944,7 @@ describe('OnDeviceComponent', function () {
 		it('should wait for value to match if requested and should work with simple match property', async () => {
 			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			const observePromise = odc.observeField({...args, match: expectedValue});
+			const observePromise = odc.onFieldChangeOnce({...args, match: expectedValue});
 			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
 			await setAndVerifyValue({...args, value: expectedValue});
 			const {value, observerFired} = await observePromise;
@@ -954,7 +954,7 @@ describe('OnDeviceComponent', function () {
 
 		it('if the match key path does not exist it should throw an error', async () => {
 			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
-			const observePromise = odc.observeField({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}}, {timeout: 400});
+			const observePromise = odc.onFieldChangeOnce({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}}, {timeout: 400});
 			const setValuePromise = setAndVerifyValue({...args, value: utils.addRandomPostfix('trigger')});
 			try {
 				await Promise.all([observePromise, setValuePromise]);
@@ -976,7 +976,7 @@ describe('OnDeviceComponent', function () {
 				value: utils.randomInteger()
 			};
 			await setAndVerifyValue({...match, value: utils.randomInteger()});
-			const observePromise = odc.observeField({...stringKeyPath, match: match});
+			const observePromise = odc.onFieldChangeOnce({...stringKeyPath, match: match});
 			await setAndVerifyValue({...stringKeyPath, value: utils.addRandomPostfix('firstValue')});
 			await setAndVerifyValue(match);
 			const expectedValue = utils.addRandomPostfix('secondValue');
@@ -997,7 +997,7 @@ describe('OnDeviceComponent', function () {
 				}
 			};
 			await setAndVerifyValue(args.match);
-			const {observerFired} = await odc.observeField(args);
+			const {observerFired} = await odc.onFieldChangeOnce(args);
 			expect(observerFired).to.be.false;
 		});
 
@@ -1007,7 +1007,7 @@ describe('OnDeviceComponent', function () {
 				launchParameters: {contentId: 'deeplink'},
 				verifyLaunch: false
 			});
-			const {observerFired} = await odc.observeField({
+			const {observerFired} = await odc.onFieldChangeOnce({
 				base: 'global',
 				keyPath: 'launchComplete'
 			});

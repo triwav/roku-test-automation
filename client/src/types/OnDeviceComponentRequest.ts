@@ -196,7 +196,7 @@ export namespace ODC {
 		value: ComparableValueTypes;
 	}
 
-	export interface ObserveFieldArgs extends BaseKeyPath {
+	export interface OnFieldChangeOnceArgs extends BaseKeyPath {
 		/** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
 		retryInterval?: number;
 
@@ -241,7 +241,7 @@ export namespace ODC {
 
 	export interface GetServerHostArgs {}
 
-	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs;
+	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs;
 
 	export interface RequestOptions {
 		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */

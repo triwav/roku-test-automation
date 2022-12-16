@@ -14,7 +14,7 @@
     - [`getFocusedNode`](#getfocusednode)
     - [`hasFocus`](#hasfocus)
     - [`isInFocusChain`](#isinfocuschain)
-    - [`observeField`](#observefield)
+    - [`onFieldChangeOnce`](#onfieldchangeonce)
     - [`storeNodeReferences`](#storenodereferences)
     - [`deleteNodeReferences`](#deletenodereferences)
     - [`disableScreenSaver`](#disablescreensaver)
@@ -39,6 +39,8 @@ Roku Test Automation (RTA from here on out) helps with automating functional tes
 Some incompatibility changes were made in v2.0. These include:
 
 - Use of `AtKeyPath` was removed from all functions to shorten function call length
+- `observeField()` has been renamed to `onFieldChangeOnce()`
+- The default base has been changed from `global` to `scene`. A config value `defaultBase` has been added to `OnDeviceComponent` allow switching this
 - `getFocusedNode()` now returns an object like all the ODC commands other than `hasFocus()` and `isInFocusChain()`
 - While never documented or designed to be used externally, the `getNodeReferences()` function was removed and replaced with `getNodesInfo`
 - `callFunc()` will no longer automatically inject an `invalid` param if a `params` array was not provided.
@@ -277,18 +279,18 @@ const isBtnInFocusChain = await odc.isInFocusChain({
 });
 ```
 
-#### `observeField`
+#### `onFieldChangeOnce`
 
-> observeField(args: [ODC.ObserveFieldArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20ObserveFieldArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
+> onFieldChangeOnce(args: [ODC.OnFieldChangeOnceArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20OnFieldChangeOnceArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
 
-Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use observeField to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
+Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use onFieldChangeOnce to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
 - `match?: any | {base, keyPath, value}`
 
-Sometimes when you are observing a field you don't just want the first change. You're looking for a specific value. In this case you can pass the value you're looking for the match like:
+Sometimes when you are observing a field you don't just want the first change. If you're looking for a specific value you can pass it for the match like:
 
 ```ts
-await odc.observeField({ keyPath: 'AuthManager.isLoggedIn', match: true });
+await odc.onFieldChangeOnce({ keyPath: 'AuthManager.isLoggedIn', match: true });
 ```
 
 In this case, `base` and `keyPath` for match are the same as those for the base level args. It's even more powerful than that though. You can also supply an object where the value your matching against actually comes from a totally different node than the one being observed.
@@ -296,16 +298,16 @@ In this case, `base` and `keyPath` for match are the same as those for the base 
 One note, to simplify writing tests, if `match` is supplied and the value already matches it will not setup an observer but will just return right away. Without this you'd have to write something like:
 
 ```ts
-const observePromise = odc.observeField(...);
+const onFieldChangeOncePromise = odc.onFieldChangeOnce(...);
 await odc.setValue(...);
-const result = await observePromise;
+const result = await onFieldChangeOncePromise;
 ```
 
 to avoid a race condition that the value already changed by the time you setup your observer. Instead you can write your test like:
 
 ```ts
 await odc.setValue(...);
-const result = await odc.observeField(...);
+const result = await odc.onFieldChangeOnce(...);
 ```
 
 to help distinguish if the observer actually fired the property `observerFired` is returned in the response object
@@ -406,7 +408,7 @@ A lot of times with tests it's useful to to append something to it to make sure 
 
 > sleep(milliseconds: number)
 
-While doing arbitrary waiting is almost never needed thanks to [`observeField`](#observefield), there might be some use cases for this.
+While doing arbitrary waiting is almost never needed thanks to [`onFieldChangeOnce`](#onFieldChangeOnce), there might be some use cases for this.
 
 ```ts
 import { utils } from 'roku-test-automation';
