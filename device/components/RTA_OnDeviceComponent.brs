@@ -167,7 +167,7 @@ function processGetValueRequest(args as Object) as Object
 
 	keyPath = getStringAtKeyPath(args, "keyPath")
 
-	if keyPath <> "" then
+	if isNonEmptyString(keyPath) then
 		value = getValueAtKeyPath(base, keyPath, "[[VALUE_NOT_FOUND]]")
 		found = NOT isString(value) OR value <> "[[VALUE_NOT_FOUND]]"
 	else

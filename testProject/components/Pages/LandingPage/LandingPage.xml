@@ -29,8 +29,7 @@
 			rowSpacings="[50, 50, 50]"
 			rowItemSpacing="[[30, 0]]"
 			rowItemSize="[[300, 150]]"
-			translation="[150, 300]">
-		</RowList>
+			translation="[150, 300]" />
 		<RowList
 			id="rowListWithCustomTitleComponent"
 			itemComponentName="RowListItemComponent"
@@ -41,7 +40,14 @@
 			rowSpacings="[50, 50, 50]"
 			rowItemSpacing="[[30, 0]]"
 			rowItemSize="[[300, 150]]"
-			translation="[150, 700]">
-		</RowList>
+			translation="[150, 700]" />
+		<MarkupGrid
+			id="markupGrid"
+			itemComponentName="MarkupGridItemComponent"
+			itemSize="[150, 150]"
+			numRows="2"
+			numColumns="4"
+			itemSpacing="[15, 15]"
+			translation="[500, 100]" />
 	</children>
 </component>

@@ -229,7 +229,6 @@ describe('OnDeviceComponent', function () {
 			const fieldName = 'myCustomBooleanField';
 
 			await setAndVerifyValue({
-				base: 'scene',
 				keyPath: `pagesContainer.0.${fieldName}`,
 				value: fieldValue
 			});
@@ -252,7 +251,6 @@ describe('OnDeviceComponent', function () {
 			const fieldValue = utils.addRandomPostfix('myCustomStringFieldValue');
 			const fieldName = 'myCustomStringField';
 			await setAndVerifyValue({
-				base: 'scene',
 				keyPath: `pagesContainer.0.${fieldName}`,
 				value: fieldValue + 'ExtraToTestInWorksCorrect'
 			});
@@ -403,9 +401,19 @@ describe('OnDeviceComponent', function () {
 
 	describe('getValue', function () {
 		it('found should be true if key path was found and has timeTaken as a number', async () => {
-			const {found, timeTaken} = await odc.getValue({base: 'scene', keyPath: 'subchild3'});
+			const {found, timeTaken} = await odc.getValue({base: 'scene', keyPath: ''});
 			expect(found).to.be.true;
 			expect(timeTaken).to.be.a('number');
+		});
+
+		it('should still work if keyPath was not provided', async () => {
+			const {value} = await odc.getValue({base: 'scene'});
+			expect(value.subtype).to.equal('MainScene');
+		});
+
+		it('should default to having scene as base', async () => {
+			const {value} = await odc.getValue({});
+			expect(value.subtype).to.equal('MainScene');
 		});
 
 		it('found should be false if key path was not found', async () => {
@@ -413,28 +421,38 @@ describe('OnDeviceComponent', function () {
 			expect(found).to.be.false;
 		});
 
+		it('should work with getChild', async () => {
+			const {value} = await odc.getValue({base: 'scene', keyPath: '1'});
+			expect(value.id).to.eq('poster');
+		});
+
+		it('should work with negative getChild', async () => {
+			const {value} = await odc.getValue({base: 'scene', keyPath: '-1'});
+			expect(value.id).to.eq('pagesContainerGroup');
+		});
+
 		it('should work with findnode', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'subchild3'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '#subchild3'});
 			expect(value.id).to.eq('subchild3');
 		});
 
 		it('should not find a child if it is not beneath the parent node', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'subchild3.testTarget'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '#subchild3.#testTarget'});
 			expect(value?.id).to.be.undefined;
 		});
 
 		it('should work with findNode.getChild', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.0'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '#testTarget.0'});
 			expect(value.id).to.eq('child1');
 		});
 
 		it('should work with findNode.getChild.getChild', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.1.1'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '#testTarget.1.1'});
 			expect(value.id).to.eq('subchild2');
 		});
 
 		it('should work with findNode.getChild.findNode', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.1.subchild1'});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '#testTarget.1.#subchild1'});
 			expect(value.id).to.eq('subchild1');
 		});
 
@@ -483,10 +501,39 @@ describe('OnDeviceComponent', function () {
 			expect(value.subtype).to.equal(storeNode.subtype);
 		});
 
+		it('should be able to retrieve a RowList item component', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.items.2'
+			});
+			expect(value.subtype).to.equal('RowListItemComponent');
+		});
+
+		it('should be able to retrieve a RowList item component\'s children', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.items.2.#rect'
+			});
+
+			expect(value.id).to.equal('rect');
+		});
+
+		it('should be able to retrieve a RowList title component', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.title'
+			});
+			expect(value.subtype).to.equal('RowListRowTitleComponent');
+		});
+
+		it('should be able to retrieve a MarkupGrid item component', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#markupGrid.1'
+			});
+			expect(value.itemContent.id).to.equal('item 1');
+		});
+
 		describe('Brightscript interface function calls', function () {
 			describe('getParent()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'poster.getParent()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: '#poster.getParent()'});
 					expect(value.subtype).to.equal('MainScene');
 				});
 
@@ -621,7 +668,7 @@ describe('OnDeviceComponent', function () {
 
 			describe('subtype()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.subtype()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: '#rowListWithCustomTitleComponent.subtype()'});
 					expect(value).to.equal('RowList');
 				});
 
@@ -633,7 +680,7 @@ describe('OnDeviceComponent', function () {
 
 			describe('boundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.boundingRect()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: '#rowListWithCustomTitleComponent.boundingRect()'});
 					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
@@ -648,7 +695,7 @@ describe('OnDeviceComponent', function () {
 
 			describe('localBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.localBoundingRect()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()'});
 					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(-19);
@@ -663,7 +710,7 @@ describe('OnDeviceComponent', function () {
 
 			describe('sceneBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.sceneBoundingRect()'});
+					const {value} = await odc.getValue({base: 'scene', keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()'});
 					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
@@ -681,8 +728,8 @@ describe('OnDeviceComponent', function () {
 	describe('getValues', function () {
 		it('should work with multiple values and should return the timeTaken value', async () => {
 			const {results, timeTaken} = await odc.getValues({requests: {
-					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
-					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
+					subchild1: {base: 'scene', keyPath: '#testTarget.1.#subchild1'},
+					subchild2: {base: 'scene', keyPath: '#testTarget.1.1'}
 				}
 			});
 			expect(results.subchild1.value.id).to.eq('subchild1');
@@ -694,8 +741,7 @@ describe('OnDeviceComponent', function () {
 	describe('getFocusedNode', function () {
 		it('should return currently focused node', async () => {
 			await odc.focusNode({
-				base: 'scene',
-				keyPath: 'pagesContainer.loginButton'
+				keyPath: '#pagesContainerGroup.#loginButton'
 			});
 			const {node} = await odc.getFocusedNode();
 			expect(node.id).to.equal('loginButton');
@@ -746,8 +792,7 @@ describe('OnDeviceComponent', function () {
 		it('should return focused arrayGrid child if requested', async () => {
 			const storeResult = await odc.storeNodeReferences({includeArrayGridChildren: true});
 			await odc.focusNode({
-				base: 'scene',
-				keyPath: 'rowListWithCustomTitleComponent'
+				keyPath: '#rowListWithCustomTitleComponent'
 			});
 			const {node, ref} = await odc.getFocusedNode({
 				includeRef: true,
@@ -759,41 +804,40 @@ describe('OnDeviceComponent', function () {
 
 			// Reset back to login button for focus
 			await odc.focusNode({
-				base: 'scene',
-				keyPath: 'pagesContainer.loginButton'
+				keyPath: '#pagesContainerGroup.#loginButton'
 			});
 		});
 	});
 
 	describe('hasFocus', function () {
 		it('should return true when current node has focus', async () => {
-			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer.loginButton'};
+			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: '#pagesContainerGroup.#loginButton'};
 			await odc.focusNode(args);
 			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
 		});
 
 		it('should return false when current node does not have focus', async () => {
-			expect(await odc.hasFocus({base: 'scene', keyPath: 'child1'})).to.be.false;
+			expect(await odc.hasFocus({base: 'scene', keyPath: '#child1'})).to.be.false;
 		});
 	});
 
 	describe('isInFocusChain', function () {
 		it('should return true when current node is in focus chain', async () => {
-			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer.loginButton'};
+			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: '#pagesContainerGroup.#loginButton'};
 			await odc.focusNode(args);
 			const isInFocusChain = await odc.isInFocusChain(args);
 			expect(isInFocusChain).to.be.true;
 		});
 
 		it('should return false when current node is not in focus chain', async () => {
-			expect(await odc.isInFocusChain({base: 'scene', keyPath: 'child1'})).to.be.false;
+			expect(await odc.isInFocusChain({base: 'scene', keyPath: '#child1'})).to.be.false;
 		});
 	});
 
 	describe('focusNode', function () {
 		it('should successfully set focus on the requested node', async () => {
-			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer'};
+			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: '#pagesContainerGroup'};
 			await odc.focusNode(args);
 			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
@@ -884,8 +928,6 @@ describe('OnDeviceComponent', function () {
 			};
 
 			await odc.setValue({
-				base: 'scene',
-				keyPath: '',
 				value: updateValue
 			});
 
@@ -906,13 +948,12 @@ describe('OnDeviceComponent', function () {
 			};
 
 			await odc.setValue({
-				base: 'scene',
-				keyPath: 'pagesContainer',
+				keyPath: '#pagesContainerGroup',
 				field: '',
 				value: updateValue
 			});
 
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'pagesContainer', responseMaxChildDepth: 1});
+			const {value} = await odc.getValue({base: 'scene', keyPath: '#pagesContainerGroup', responseMaxChildDepth: 1});
 
 			const lastNode = value.children.pop();
 			expect(lastNode.id).to.equal(nodeKey);

@@ -355,6 +355,8 @@ export class OnDeviceComponent {
 	}
 
 	public async focusNode(args: ODC.FocusNodeArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
+		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest('focusNode', args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
@@ -457,6 +459,9 @@ export class OnDeviceComponent {
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
 	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.OnFieldChangeOnceArgs | ODC.SetValueArgs) {
+		if (!args.keyPath) {
+			args.keyPath = '';
+		}
 		const keyPathParts = args.keyPath.split('.');
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}

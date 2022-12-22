@@ -383,22 +383,34 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 			level = callBrightscriptInterfaceFunction(key, level)
 		else if isKeyedValueType(level) then
 			nextLevel = level[key]
-			if nextLevel = Invalid and isNode(level) then
-				index = key.toInt()
-				if index = 0 AND key <> "0" then
-					level = findChildNodeWithId(level, key)
+			if nextLevel = Invalid AND isNode(level) then
+				if key.left(1) = "#" then
+					id = key.mid(1)
+					nextLevel = findChildNodeWithId(level, id)
 				else
-					level = level.getChild(index)
+					index = key.toInt()
+					if index <> 0 OR key = "0" then
+						if index < 0 then
+							index = level.getChildCount() + index ' It's a negative number so we add it to subtract
+						end if
+						nextLevel = level.getChild(index)
+					end if
 				end if
-			else
-				level = nextLevel
+
+				if nextLevel = Invalid then
+					keys.unshift(key)
+					nextLevel = getArrayGridChild(level, keys)
+				end if
 			end if
+			level = nextLevel
 		else if isNonEmptyArray(level) then
-			key = key.toInt()
-			if key < 0 then
-				key = level.count() + key ' It's a negative number so we add it to subtract
+			index = key.toInt()
+			if index <> 0 OR key = "0" then
+				if index < 0 then
+					index = level.count() + index ' It's a negative number so we add it to subtract
+				end if
+				level = level[index]
 			end if
-			level = level[key]
 		else
 			return fallback
 		end if
@@ -407,6 +419,60 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 	if NOT validator(level) then return fallback
 
 	return level
+end function
+
+function getArrayGridChild(node as Object, keys as Object) as Dynamic
+	if NOT node.isSubtype("ArrayGrid") OR NOT isNode(node.content) then
+		return Invalid
+	end if
+
+	arrayGridContent = node.content
+	key = keys.shift()
+	index = key.toInt()
+	' Make sure we have a valid first index as we always need that
+	if index = 0 AND key <> "0" then
+		return Invalid
+	end if
+
+	' Make sure we have a content node at the specified index
+	childContent = arrayGridContent.getChild(index)
+	if childContent = Invalid then
+		return Invalid
+	end if
+
+	matchingContentNode = childContent
+	nodeSubtypeToCheck = ""
+	contentField = "itemContent"
+
+	' We treat RowList differently as it can have multiple types of nodes we're interested in
+	if NOT node.isSubtype("RowList") then
+		nodeSubtypeToCheck = node.itemComponentName
+	else
+		key = keys.shift()
+		' Here we get to our magic values to know if we want to look at the items or the title
+		if key = "items" then
+			nodeSubtypeToCheck = node.itemComponentName
+			key = keys.shift()
+			index = key.toInt()
+			if index <> 0 OR key = "0" then
+				matchingContentNode = childContent.getChild(index)
+			end if
+		else if key = "title" then
+			nodeSubtypeToCheck = node.rowTitleComponentName
+			contentField = "content"
+		end if
+	end if
+
+	if nodeSubtypeToCheck <> "" AND matchingContentNode <> Invalid then
+		for each possibleMatchingNode in m.top.getAll()
+			if possibleMatchingNode.subtype() = nodeSubtypeToCheck then
+				if matchingContentNode.isSameNode(possibleMatchingNode[contentField]) then
+					return possibleMatchingNode
+				end if
+			end if
+		end for
+	end if
+	return Invalid
 end function
 
 ' /**
@@ -421,7 +487,7 @@ function getNumberAtKeyPath(aa as Object, keyPath as String, fallback = 0 as Dyn
 end function
 
 ' /**
-' * @description Used to set a nested String value in the supplied object
+' * @description Used to set a value on the supplied key path
 ' * @param {Object} base - Object to drill down into.
 ' * @param {String} keyPath - A dot notation based string to the expected value.
 ' * @param {Dynamic} value - The value to be set.

@@ -53,7 +53,7 @@ export namespace ODC {
 
 	export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
 		/** Holds the hierarchy value with each level separated by dot for ex: videoNode.title to what you are interested in getting the value from or written to. */
-		keyPath: string;
+		keyPath?: string;
 
 		/** We have to convert nodes before converting to json. If this isn't needed then it causes a fairly significant overhead */
 		convertResponseToJsonCompatible?: boolean;
