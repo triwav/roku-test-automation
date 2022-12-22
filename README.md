@@ -15,6 +15,7 @@
     - [`hasFocus`](#hasfocus)
     - [`isInFocusChain`](#isinfocuschain)
     - [`onFieldChangeOnce`](#onfieldchangeonce)
+    - [`getNodesWithProperties`](#getnodeswithproperties)
     - [`storeNodeReferences`](#storenodereferences)
     - [`deleteNodeReferences`](#deletenodereferences)
     - [`disableScreenSaver`](#disablescreensaver)
@@ -40,14 +41,14 @@ Some incompatibility changes were made in v2.0. These include:
 
 - Use of `AtKeyPath` was removed from all functions to shorten function call length
 - `observeField()` has been renamed to `onFieldChangeOnce()`
-- The default base has been changed from `global` to `scene`. A config value `defaultBase` has been added to `OnDeviceComponent` allow switching this
+- The default base has been changed from `global` to `scene`. A config value `defaultBase` has been added to the `OnDeviceComponent` config to allow switching this
 - `getFocusedNode()` now returns an object like all the ODC commands other than `hasFocus()` and `isInFocusChain()`
 - While never documented or designed to be used externally, the `getNodeReferences()` function was removed and replaced with `getNodesInfo`
 - `callFunc()` will no longer automatically inject an `invalid` param if a `params` array was not provided.
 - `getValues()` now returns each result inside a `results` object to avoid potential variable collision
 - In v1.0 server was used to refer to the computer connecting to the Roku device. This is now the client and config settings related to this has been changed to reflect this
 - ECPKeys was switched from upper case key names to pascal case key names
-- In an effort to provide clarity and to avoid shadowing cases, keys in keyPaths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a node with an id of `poster` you will now need to have a keyPath of `0.#poster`
+- In an effort to provide clarity and to avoid shadowing cases, keys in keyPaths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a child node with an id of `poster` you will now need to have a keyPath of `0.#poster`
 
 v2.0 also includes changing to using TCP sockets for all communication which should simplify setup communicating with Roku devices not on the same local network.
 
@@ -342,6 +343,40 @@ const result = await odc.onFieldChangeOnce(...);
 ```
 
 to help distinguish if the observer actually fired the property `observerFired` is returned in the response object
+
+#### `getNodesWithProperties`
+
+> getNodesWithProperties(args: [ODC.GetNodesWithPropertiesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20OnGetNodesWithPropertiesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {nodes: ODC.NodeRepresentation[], nodeRefs, number[]}
+
+If you are trying to find a node but are unsure of where it is in the tree you can use `getNodesWithProperties`. As an example, let's say you wanted to find all nodes with the a text field with the value of `Play Movie` you could do:
+
+```ts
+const result = await odc.getNodesWithProperties({
+  properties: [{
+    value: 'Play Movie',
+    field: 'text'
+  }]
+});
+```
+
+You'll notice that `properties` is an array. If more than object is provided then each check will be done one after the other. Only nodes that match all properties will be returned.
+
+By default an equal to check is performed. Let's take the previous case and say we wanted to match anything that just has `Play` in its text field we could do:
+
+```ts
+const result = await odc.getNodesWithProperties({
+  properties: [{
+    value: 'Play',
+    operator: 'in',
+    field: 'text'
+  }]
+});
+```
+
+There are number of comparison operators that can be used:
+'=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo'
+
+**NOTE** Not all comparison types can be used on all types. For example `>=` can only be used on number types.
 
 #### `storeNodeReferences`
 
