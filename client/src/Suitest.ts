@@ -60,16 +60,16 @@ export class Suitest {
 
 	/** Maps between ST button id and our own ECP key value */
 	private buttonIdToKeyMap = {
-		LEFT: ECP.Key.LEFT,
-		RIGHT: ECP.Key.RIGHT,
-		UP: ECP.Key.UP,
-		DOWN: ECP.Key.DOWN,
-		ENTER: ECP.Key.OK,
-		BACK: ECP.Key.BACK,
-		FAST_FWD: ECP.Key.FORWARD,
-		REWIND: ECP.Key.REWIND,
-		PLAY_PAUSE: ECP.Key.PLAY,
-		EXIT: ECP.Key.HOME
+		LEFT: ECP.Key.Left,
+		RIGHT: ECP.Key.Right,
+		UP: ECP.Key.Up,
+		DOWN: ECP.Key.Down,
+		ENTER: ECP.Key.Ok,
+		BACK: ECP.Key.Back,
+		FAST_FWD: ECP.Key.Forward,
+		REWIND: ECP.Key.Rewind,
+		PLAY_PAUSE: ECP.Key.Play,
+		EXIT: ECP.Key.Home
 	};
 
 	private logIndentLevel = 0;
