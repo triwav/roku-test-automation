@@ -186,7 +186,10 @@ await odc.getValue({
 });
 ```
 
-As of v2.0 you can now access ArrayGrid children. As an example to access the 3rd item component in the second row you would do:
+As of v2.0 you can now access ArrayGrid children. To do this, we have added two special keywords in the keyPath: `items` and `title`. These don't actually exist at runtime, but RTA understands how to translate them into the proper lookup mechanisms on-device. 
+
+
+Here's an example showing how to access the 3rd item component in the second row:
 
 ```ts
 await odc.getValue({
