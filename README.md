@@ -46,6 +46,8 @@ Some incompatibility changes were made in v2.0. These include:
 - `callFunc()` will no longer automatically inject an `invalid` param if a `params` array was not provided.
 - `getValues()` now returns each result inside a `results` object to avoid potential variable collision
 - In v1.0 server was used to refer to the computer connecting to the Roku device. This is now the client and config settings related to this has been changed to reflect this
+- ECPKeys was switched from upper case key names to pascal case key names
+- In an effort to provide clarity and to avoid shadowing cases, keys in keyPaths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a node with an id of `poster` you will now need to have a keyPath of `0.#poster`
 
 v2.0 also includes changing to using TCP sockets for all communication which should simplify setup communicating with Roku devices not on the same local network.
 
@@ -155,8 +157,8 @@ At the heart of almost all requests internally is `getValue`. It serves as your 
 Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.idOfChildNodeToInspect`. The [`getValue` unit tests](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provide a full list of what is possible for a key path.
 
 ```ts
-odc.getValue({
-  base: 'scene',
+await odc.getValue({
+  base: 'global',
   keyPath: 'AuthManager.isLoggedIn',
 });
 ```
@@ -178,11 +180,41 @@ odc.getValue({
 as an example:
 
 ```ts
-odc.getValue({
-  base: 'scene',
-  keyPath: 'rowList.boundingRect()',
+await odc.getValue({
+  keyPath: '#rowList.boundingRect()',
 });
 ```
+
+As of v2.0 you can now access ArrayGrid children. As an example to access the 3rd item component in the second row you would do:
+
+```ts
+await odc.getValue({
+  keyPath: '#rowList.1.items.2',
+});
+```
+
+Notice the special keyword `items` to identify we are accessing an item.
+
+If you wanted to access the row title component for the second row you would do:
+
+```ts
+await odc.getValue({
+  keyPath: '#rowList.1.title',
+});
+
+Again notice the special keyword `title` to identify we are accessing a title component.
+
+For other single level ArrayGrid types like MarkupGrid you can simply do:
+
+```ts
+await odc.getValue({
+  keyPath: '#markupGrid.1',
+});
+```
+
+This would retrieve the second item component in the grid.
+
+In addition as of v2.0 `keyPath` is no longer required if just accessing the base node
 
 #### `getValues`
 
@@ -222,8 +254,8 @@ Allows you to set a value at a key path. It takes the standard `base` and `keyPa
 - `value: any` The value you want to set at the supplied `keyPath`. Setting is always done through [`update(value, true)`](https://developer.roku.com/en-ca/docs/references/brightscript/interfaces/ifsgnodechildren.md#updatefields-as-roassociativearray-addfields-as-boolean-as-void) so anything you can do there should be possible here as well.
 
 ```ts
-odc.setValue({
-  base: 'scene',
+await odc.setValue({
+  base: 'global',
   keyPath: 'AuthManager.isLoggedIn',
   value: false,
 });
@@ -239,8 +271,8 @@ Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-p
 - `funcParams?: any[]` an array of params to pass to the function.
 
 ```ts
-odc.callFunc({
-  base: 'scene',
+await odc.callFunc({
+  base: 'global',
   keyPath: 'AuthManager',
   funcName: 'login',
   funcParams: [{ username: 'AzureDiamond', password: 'hunter2' }],
@@ -274,8 +306,7 @@ Check if the node at the supplied key path is in the focus chain. It takes the s
 
 ```ts
 const isBtnInFocusChain = await odc.isInFocusChain({
-  base: 'scene',
-  keyPath: 'Home.mainButton',
+  keyPath: '#homePage.#mainButton',
 });
 ```
 
