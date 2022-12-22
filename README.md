@@ -318,7 +318,7 @@ const isBtnInFocusChain = await odc.isInFocusChain({
 
 > onFieldChangeOnce(args: [ODC.OnFieldChangeOnceArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20OnFieldChangeOnceArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
 
-Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use onFieldChangeOnce to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
+Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use `onFieldChangeOnce` to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
 - `match?: any | {base, keyPath, value}`
 
