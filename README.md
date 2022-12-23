@@ -199,7 +199,7 @@ await odc.getValue({
 
 Notice the special keyword `items` to identify we are accessing an item.
 
-If you wanted to access the row title component for the second row you would do:
+If you wanted to access the `title` component for the second row, you would do:
 
 ```ts
 await odc.getValue({

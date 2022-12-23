@@ -467,7 +467,15 @@ export class OnDeviceComponent {
 	}
 
 	private setupClientSocket(options: ODC.RequestOptions) {
-		return new Promise<net.Socket>((resolve, reject) => {
+		if (this.clientSocket) {
+			return this.clientSocket;
+		}
+
+		if (this.clientSocketPromise) {
+			return this.clientSocketPromise;
+		}
+
+		this.clientSocketPromise = new Promise<net.Socket>((resolve, reject) => {
 			const port = 9000;
 			const host = this.device.getCurrentDeviceConfig().host;
 			const timeout = this.getTimeOut(options);
@@ -573,6 +581,7 @@ export class OnDeviceComponent {
 
 			socketConnect();
 		});
+		return this.clientSocketPromise;
 	}
 
 	private async sendRequest(type: ODC.RequestTypes, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
@@ -610,15 +619,7 @@ export class OnDeviceComponent {
 			requestBuffers.push(binaryBuffer);
 		}
 
-		if (this.clientSocketPromise) {
-			await this.clientSocketPromise;
-		}
-
-		if (!this.clientSocket) {
-			this.clientSocketPromise = this.setupClientSocket(options);
-			this.clientSocket = await this.clientSocketPromise;
-			this.clientSocketPromise = undefined;
-		}
+		this.clientSocket = await this.setupClientSocket(options);
 
 		if (this.getConfig()?.restoreRegistry && !this.storedDeviceRegistry) {
 			this.debugLog('Storing original device registry state');
