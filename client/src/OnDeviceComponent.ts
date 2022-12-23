@@ -581,6 +581,11 @@ export class OnDeviceComponent {
 
 			socketConnect();
 		});
+
+		this.clientSocketPromise.finally(() => {
+			this.clientSocketPromise = undefined;
+		});
+
 		return this.clientSocketPromise;
 	}
 
