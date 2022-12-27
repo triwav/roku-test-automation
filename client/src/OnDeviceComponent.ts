@@ -468,7 +468,7 @@ export class OnDeviceComponent {
 
 	private setupClientSocket(options: ODC.RequestOptions) {
 		if (this.clientSocket) {
-			return this.clientSocket;
+			return Promise.resolve(this.clientSocket);
 		}
 
 		if (this.clientSocketPromise) {
