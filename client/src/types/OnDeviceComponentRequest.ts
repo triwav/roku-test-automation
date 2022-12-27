@@ -53,7 +53,7 @@ export namespace ODC {
 
 	export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
 		/** Holds the hierarchy value with each level separated by dot for ex: videoNode.title to what you are interested in getting the value from or written to. */
-		keyPath: string;
+		keyPath?: string;
 
 		/** We have to convert nodes before converting to json. If this isn't needed then it causes a fairly significant overhead */
 		convertResponseToJsonCompatible?: boolean;
@@ -162,7 +162,7 @@ export namespace ODC {
 	}
 
 	// IMPROVEMENT build out to support more complicated types
-	type ComparableValueTypes = string | number | boolean;
+	export type ComparableValueTypes = string | number | boolean;
 
 	export type ComparisonOperators = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo';
 
@@ -196,7 +196,7 @@ export namespace ODC {
 		value: ComparableValueTypes;
 	}
 
-	export interface ObserveFieldArgs extends BaseKeyPath {
+	export interface OnFieldChangeOnceArgs extends BaseKeyPath {
 		/** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
 		retryInterval?: number;
 
@@ -241,7 +241,7 @@ export namespace ODC {
 
 	export interface GetServerHostArgs {}
 
-	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | ObserveFieldArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs;
+	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs;
 
 	export interface RequestOptions {
 		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */

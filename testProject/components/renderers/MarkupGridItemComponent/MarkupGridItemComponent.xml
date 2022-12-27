@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MarkupGridItemComponent" extends="Group">
+	<interface>
+		<field id="width" type="float" alias="rect.width" />
+		<field id="height" type="float" alias="rect.height" />
+		<field id="gridHasFocus" type="boolean" />
+		<field id="focusPercent" type="float" />
+		<field id="itemContent" type="node" />
+	</interface>
+	<children>
+		<Rectangle id="rect" color="#0000BB" />
+	</children>
+</component>

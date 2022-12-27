@@ -51,6 +51,16 @@
                     "description": "Enable debug logging on the client side",
                     "type": "boolean"
                 },
+                "defaultBase": {
+                    "description": "Allows specifying the default base that will be used if one was not provided in the args for a request",
+                    "enum": [
+                        "focusedNode",
+                        "global",
+                        "nodeRef",
+                        "scene"
+                    ],
+                    "type": "string"
+                },
                 "disableCallOriginationLine": {
                     "description": "We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line",
                     "type": "boolean"

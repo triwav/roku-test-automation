@@ -206,6 +206,7 @@ describe('OnDeviceComponent', function () {
 				await odc.getNodesInfo({
 					requests: {
 						firstItem: {
+							base: 'nodeRef',
 							keyPath: '0'
 						}
 					}
@@ -228,7 +229,6 @@ describe('OnDeviceComponent', function () {
 			const fieldName = 'myCustomBooleanField';
 
 			await setAndVerifyValue({
-				base: 'scene',
 				keyPath: `pagesContainer.0.${fieldName}`,
 				value: fieldValue
 			});
@@ -251,7 +251,6 @@ describe('OnDeviceComponent', function () {
 			const fieldValue = utils.addRandomPostfix('myCustomStringFieldValue');
 			const fieldName = 'myCustomStringField';
 			await setAndVerifyValue({
-				base: 'scene',
 				keyPath: `pagesContainer.0.${fieldName}`,
 				value: fieldValue + 'ExtraToTestInWorksCorrect'
 			});
@@ -402,9 +401,19 @@ describe('OnDeviceComponent', function () {
 
 	describe('getValue', function () {
 		it('found should be true if key path was found and has timeTaken as a number', async () => {
-			const {found, timeTaken} = await odc.getValue({base: 'scene', keyPath: 'subchild3'});
+			const {found, timeTaken} = await odc.getValue({base: 'scene', keyPath: ''});
 			expect(found).to.be.true;
 			expect(timeTaken).to.be.a('number');
+		});
+
+		it('should still work if keyPath was not provided', async () => {
+			const {value} = await odc.getValue({base: 'scene'});
+			expect(value.subtype).to.equal('MainScene');
+		});
+
+		it('should default to having scene as base', async () => {
+			const {value} = await odc.getValue({});
+			expect(value.subtype).to.equal('MainScene');
 		});
 
 		it('found should be false if key path was not found', async () => {
@@ -412,58 +421,68 @@ describe('OnDeviceComponent', function () {
 			expect(found).to.be.false;
 		});
 
+		it('should work with getChild', async () => {
+			const {value} = await odc.getValue({keyPath: '1'});
+			expect(value.id).to.eq('poster');
+		});
+
+		it('should work with negative getChild', async () => {
+			const {value} = await odc.getValue({keyPath: '-1'});
+			expect(value.id).to.eq('pagesContainerGroup');
+		});
+
 		it('should work with findnode', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'subchild3'});
+			const {value} = await odc.getValue({keyPath: '#subchild3'});
 			expect(value.id).to.eq('subchild3');
 		});
 
 		it('should not find a child if it is not beneath the parent node', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'subchild3.testTarget'});
+			const {value} = await odc.getValue({keyPath: '#subchild3.#testTarget'});
 			expect(value?.id).to.be.undefined;
 		});
 
 		it('should work with findNode.getChild', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.0'});
+			const {value} = await odc.getValue({keyPath: '#testTarget.0'});
 			expect(value.id).to.eq('child1');
 		});
 
 		it('should work with findNode.getChild.getChild', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.1.1'});
+			const {value} = await odc.getValue({keyPath: '#testTarget.1.1'});
 			expect(value.id).to.eq('subchild2');
 		});
 
 		it('should work with findNode.getChild.findNode', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'testTarget.1.subchild1'});
+			const {value} = await odc.getValue({keyPath: '#testTarget.1.#subchild1'});
 			expect(value.id).to.eq('subchild1');
 		});
 
 		it('should be able to get a value on a valid field', async () => {
-			const {value} = await odc.getValue({keyPath: 'AuthManager.isLoggedIn'});
+			const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.isLoggedIn'});
 			expect(value).to.be.false;
 		});
 
 		it('should work with array values', async () => {
-			const {value} = await odc.getValue({keyPath: 'arrayValue.0.name'});
+			const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.name'});
 			expect(value).to.equal('firstItem');
 		});
 
 		it('should work with negative array values', async () => {
-			const {value} = await odc.getValue({keyPath: 'arrayValue.-1.name'});
+			const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.-1.name'});
 			expect(value).to.equal('lastItem');
 		});
 
 		it('should not include children by default', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: ''});
+			const {value} = await odc.getValue({});
 			expect(value.children).to.be.undefined;
 		});
 
 		it('should not include children if maxChildDepth set to zero', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: '', responseMaxChildDepth: 0});
+			const {value} = await odc.getValue({responseMaxChildDepth: 0});
 			expect(value.children).to.be.undefined;
 		});
 
 		it('should include children to specified depth', async () => {
-			const {value} = await odc.getValue({base: 'scene', keyPath: '', responseMaxChildDepth: 2});
+			const {value} = await odc.getValue({responseMaxChildDepth: 2});
 			expect(value.children).to.not.be.empty;
 			for (const child of value.children) {
 				for (const subchild of child.children) {
@@ -482,10 +501,39 @@ describe('OnDeviceComponent', function () {
 			expect(value.subtype).to.equal(storeNode.subtype);
 		});
 
+		it('should be able to retrieve a RowList item component', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.items.2'
+			});
+			expect(value.subtype).to.equal('RowListItemComponent');
+		});
+
+		it('should be able to retrieve a RowList item component\'s children', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.items.2.#rect'
+			});
+
+			expect(value.id).to.equal('rect');
+		});
+
+		it('should be able to retrieve a RowList title component', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.title'
+			});
+			expect(value.subtype).to.equal('RowListRowTitleComponent');
+		});
+
+		it('should be able to retrieve a MarkupGrid item component', async () => {
+			const {value} = await odc.getValue({
+				keyPath: '#pagesContainerGroup.0.#markupGrid.1'
+			});
+			expect(value.itemContent.id).to.equal('item 1');
+		});
+
 		describe('Brightscript interface function calls', function () {
 			describe('getParent()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'poster.getParent()'});
+					const {value} = await odc.getValue({keyPath: '#poster.getParent()'});
 					expect(value.subtype).to.equal('MainScene');
 				});
 
@@ -497,86 +545,86 @@ describe('OnDeviceComponent', function () {
 
 			describe('count()', async () => {
 				it('should work on array item', async () => {
-					const {value} = await odc.getValue({keyPath: 'arrayValue.count()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.count()'});
 					expect(value).to.equal(3);
 				});
 
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValue({keyPath: 'arrayValue.0.count()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.count()'});
 					expect(value).to.equal(1);
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: 'AuthManager.count()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.count()'});
 					expect(value).to.equal(6);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.count()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.count()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('keys()', async () => {
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValue({keyPath: 'arrayValue.0.keys()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.keys()'});
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('name');
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: 'AuthManager.keys()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.keys()'});
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('change');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.keys()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.keys()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('len()', async () => {
 				it('should work on string item', async () => {
-					const {value} = await odc.getValue({keyPath: 'stringValue.len()'});
+					const {value} = await odc.getValue({base: 'global', keyPath: 'stringValue.len()'});
 					expect(value).to.equal(11);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.len()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.len()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('getChildCount()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'getChildCount()'});
+					const {value} = await odc.getValue({keyPath: 'getChildCount()'});
 					expect(value).to.equal(3);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.getChildCount()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.getChildCount()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('threadinfo()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'threadinfo()'});
+					const {value} = await odc.getValue({keyPath: 'threadinfo()'});
 					const currentThread = value.currentThread;
 					expect(currentThread.name).to.equal('MainScene');
 					expect(currentThread.type).to.equal('Render');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.threadinfo()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.threadinfo()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('getFieldTypes()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'getFieldTypes()'});
+					const {value} = await odc.getValue({keyPath: 'getFieldTypes()'});
 					const expectedValues = {
 						allowBackgroundTask:'boolean',
 						backExitsScene:'boolean',
@@ -613,26 +661,26 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.getFieldTypes()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.getFieldTypes()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('subtype()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.subtype()'});
+					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.subtype()'});
 					expect(value).to.equal('RowList');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.subtype()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.subtype()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('boundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.boundingRect()'});
+					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.boundingRect()'});
 					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
@@ -640,14 +688,14 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.boundingRect()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.boundingRect()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('localBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.localBoundingRect()'});
+					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()'});
 					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(-19);
@@ -655,14 +703,14 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.localBoundingRect()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.localBoundingRect()'});
 					expect(found).to.false;
 				});
 			});
 
 			describe('sceneBoundingRect()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'scene', keyPath: 'rowListWithCustomTitleComponent.sceneBoundingRect()'});
+					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()'});
 					expect(value.height).to.equal(438);
 					expect(value.width).to.equal(1958);
 					expect(value.x).to.equal(131);
@@ -670,7 +718,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.sceneBoundingRect()'});
+					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.sceneBoundingRect()'});
 					expect(found).to.false;
 				});
 			});
@@ -680,8 +728,8 @@ describe('OnDeviceComponent', function () {
 	describe('getValues', function () {
 		it('should work with multiple values and should return the timeTaken value', async () => {
 			const {results, timeTaken} = await odc.getValues({requests: {
-					subchild1: {base: 'scene', keyPath: 'testTarget.1.subchild1'},
-					subchild2: {base: 'scene', keyPath: 'testTarget.1.1'}
+					subchild1: {keyPath: '#testTarget.1.#subchild1'},
+					subchild2: {keyPath: '#testTarget.1.1'}
 				}
 			});
 			expect(results.subchild1.value.id).to.eq('subchild1');
@@ -693,8 +741,7 @@ describe('OnDeviceComponent', function () {
 	describe('getFocusedNode', function () {
 		it('should return currently focused node', async () => {
 			await odc.focusNode({
-				base: 'scene',
-				keyPath: 'pagesContainer.loginButton'
+				keyPath: '#pagesContainerGroup.#loginButton'
 			});
 			const {node} = await odc.getFocusedNode();
 			expect(node.id).to.equal('loginButton');
@@ -745,8 +792,7 @@ describe('OnDeviceComponent', function () {
 		it('should return focused arrayGrid child if requested', async () => {
 			const storeResult = await odc.storeNodeReferences({includeArrayGridChildren: true});
 			await odc.focusNode({
-				base: 'scene',
-				keyPath: 'rowListWithCustomTitleComponent'
+				keyPath: '#rowListWithCustomTitleComponent'
 			});
 			const {node, ref} = await odc.getFocusedNode({
 				includeRef: true,
@@ -758,41 +804,40 @@ describe('OnDeviceComponent', function () {
 
 			// Reset back to login button for focus
 			await odc.focusNode({
-				base: 'scene',
-				keyPath: 'pagesContainer.loginButton'
+				keyPath: '#pagesContainerGroup.#loginButton'
 			});
 		});
 	});
 
 	describe('hasFocus', function () {
 		it('should return true when current node has focus', async () => {
-			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer.loginButton'};
+			const args: ODC.FocusNodeArgs = {keyPath: '#pagesContainerGroup.#loginButton'};
 			await odc.focusNode(args);
 			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
 		});
 
 		it('should return false when current node does not have focus', async () => {
-			expect(await odc.hasFocus({base: 'scene', keyPath: 'child1'})).to.be.false;
+			expect(await odc.hasFocus({keyPath: '#child1'})).to.be.false;
 		});
 	});
 
 	describe('isInFocusChain', function () {
 		it('should return true when current node is in focus chain', async () => {
-			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer.loginButton'};
+			const args: ODC.FocusNodeArgs = {keyPath: '#pagesContainerGroup.#loginButton'};
 			await odc.focusNode(args);
 			const isInFocusChain = await odc.isInFocusChain(args);
 			expect(isInFocusChain).to.be.true;
 		});
 
 		it('should return false when current node is not in focus chain', async () => {
-			expect(await odc.isInFocusChain({base: 'scene', keyPath: 'child1'})).to.be.false;
+			expect(await odc.isInFocusChain({keyPath: '#child1'})).to.be.false;
 		});
 	});
 
 	describe('focusNode', function () {
 		it('should successfully set focus on the requested node', async () => {
-			const args: ODC.FocusNodeArgs = {base: 'scene', keyPath: 'pagesContainer'};
+			const args: ODC.FocusNodeArgs = {keyPath: '#pagesContainerGroup'};
 			await odc.focusNode(args);
 			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
@@ -800,7 +845,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should return an error when keypath does not point to a node', async () => {
 			try {
-				await odc.focusNode({base: 'scene', keyPath: 'stringValue'});
+				await odc.focusNode({keyPath: 'stringValue'});
 			} catch(e) {
 				// failed as expected
 				return;
@@ -812,6 +857,7 @@ describe('OnDeviceComponent', function () {
 	describe('setValue', function () {
 		it('should be able to set a key on global', async () => {
 			await setAndVerifyValue({
+				base: 'global',
 				keyPath: 'booleanValue',
 				value: false,
 				expectedStartingValue: true
@@ -820,6 +866,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should be able set a value on a node and succeed', async () => {
 			await setAndVerifyValue({
+				base: 'global',
 				keyPath: 'AuthManager.isLoggedIn',
 				value: true,
 				expectedStartingValue: false
@@ -828,6 +875,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should be able to set a key on an AA stored on a node', async () => {
 			await setAndVerifyValue({
+				base: 'global',
 				keyPath: 'AuthManager.profiles.profile1.settings.personalization.showContinueWatching',
 				value: false,
 				expectedStartingValue: true
@@ -880,12 +928,10 @@ describe('OnDeviceComponent', function () {
 			};
 
 			await odc.setValue({
-				base: 'scene',
-				keyPath: '',
 				value: updateValue
 			});
 
-			const {value} = await odc.getValue({base: 'scene', keyPath: '', responseMaxChildDepth: 1});
+			const {value} = await odc.getValue({responseMaxChildDepth: 1});
 
 			const lastNode = value.children.pop();
 			expect(lastNode.id).to.equal(nodeKey);
@@ -902,13 +948,12 @@ describe('OnDeviceComponent', function () {
 			};
 
 			await odc.setValue({
-				base: 'scene',
-				keyPath: 'pagesContainer',
+				keyPath: '#pagesContainerGroup',
 				field: '',
 				value: updateValue
 			});
 
-			const {value} = await odc.getValue({base: 'scene', keyPath: 'pagesContainer', responseMaxChildDepth: 1});
+			const {value} = await odc.getValue({keyPath: '#pagesContainerGroup', responseMaxChildDepth: 1});
 
 			const lastNode = value.children.pop();
 			expect(lastNode.id).to.equal(nodeKey);
@@ -918,7 +963,7 @@ describe('OnDeviceComponent', function () {
 	describe('observeField', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
-				await odc.observeField({keyPath: 'does.not.exist', retryTimeout: 200});
+				await odc.onFieldChangeOnce({keyPath: 'does.not.exist', retryTimeout: 200});
 			} catch (e) {
 				// failed as expected
 				return;
@@ -927,9 +972,9 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should succeed if given a valid node for its parent keyPath and should return timeTaken value', async () => {
-			const args = {keyPath: 'AuthManager.isLoggedIn'};
+			const args = {base: 'global', keyPath: 'AuthManager.isLoggedIn'} as ODC.BaseKeyPath;
 			await setAndVerifyValue({...args, value: false});
-			const observePromise = odc.observeField({...args});
+			const observePromise = odc.onFieldChangeOnce({...args});
 			await setAndVerifyValue({...args, value: true});
 			const {value, observerFired, timeTaken} = await observePromise;
 			expect(value).to.be.true;
@@ -938,9 +983,9 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should wait for value to match if requested and should work with simple match property', async () => {
-			const args = {keyPath: 'stringValue'};
+			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			const observePromise = odc.observeField({...args, match: expectedValue});
+			const observePromise = odc.onFieldChangeOnce({...args, match: expectedValue});
 			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
 			await setAndVerifyValue({...args, value: expectedValue});
 			const {value, observerFired} = await observePromise;
@@ -949,8 +994,8 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('if the match key path does not exist it should throw an error', async () => {
-			const args = {keyPath: 'stringValue'};
-			const observePromise = odc.observeField({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}});
+			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
+			const observePromise = odc.onFieldChangeOnce({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}}, {timeout: 400});
 			const setValuePromise = setAndVerifyValue({...args, value: utils.addRandomPostfix('trigger')});
 			try {
 				await Promise.all([observePromise, setValuePromise]);
@@ -961,19 +1006,22 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('it should allow match on other key paths and wait until that value matches', async () => {
-			const args = {
-				keyPath: 'stringValue',
-				match: {
-					keyPath: 'intValue',
-					value: 42
-				}
+			const stringKeyPath = {
+				base: 'global' as ODC.BaseTypes,
+				keyPath: 'stringValue'
 			};
-			await setAndVerifyValue({...args.match, value: 0});
-			const observePromise = odc.observeField(args);
-			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
+
+			const match = {
+				base: 'global' as ODC.BaseTypes,
+				keyPath: 'intValue',
+				value: utils.randomInteger()
+			};
+			await setAndVerifyValue({...match, value: utils.randomInteger()});
+			const observePromise = odc.onFieldChangeOnce({...stringKeyPath, match: match});
+			await setAndVerifyValue({...stringKeyPath, value: utils.addRandomPostfix('firstValue')});
+			await setAndVerifyValue(match);
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			await setAndVerifyValue(args.match);
-			await setAndVerifyValue({...args, value: expectedValue});
+			await setAndVerifyValue({...stringKeyPath, value: expectedValue} as any);
 			const {value, observerFired} = await observePromise;
 			expect(value).to.equal(expectedValue);
 			expect(observerFired).to.be.true;
@@ -981,14 +1029,16 @@ describe('OnDeviceComponent', function () {
 
 		it('if a match value is provided and the value already equals what we are looking for, it should return right away', async () => {
 			const args = {
+				base: 'global' as ODC.BaseTypes,
 				keyPath: 'stringValue',
 				match: {
+					base: 'global' as ODC.BaseTypes,
 					keyPath: 'intValue',
-					value: 42
+					value: utils.randomInteger()
 				}
 			};
 			await setAndVerifyValue(args.match);
-			const {observerFired} = await odc.observeField(args);
+			const {observerFired} = await odc.onFieldChangeOnce(args);
 			expect(observerFired).to.be.false;
 		});
 
@@ -998,7 +1048,8 @@ describe('OnDeviceComponent', function () {
 				launchParameters: {contentId: 'deeplink'},
 				verifyLaunch: false
 			});
-			const {observerFired} = await odc.observeField({
+			const {observerFired} = await odc.onFieldChangeOnce({
+				base: 'global',
 				keyPath: 'launchComplete'
 			});
 			expect(observerFired).to.be.true;
@@ -1017,15 +1068,15 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it(`should work with funcs that don't take any arguments`, async () => {
-			const args = {keyPath: 'AuthManager.isLoggedIn'};
+			const args = {base: 'global', keyPath: 'AuthManager.isLoggedIn'} as ODC.BaseKeyPath;
 			await setAndVerifyValue({...args, value: false});
-			await odc.callFunc({keyPath: 'AuthManager', funcName: 'loginUserNoArgs'});
+			await odc.callFunc({base: 'global', keyPath: 'AuthManager', funcName: 'loginUserNoArgs'});
 			const {value} = await odc.getValue(args);
 			expect(value).to.be.true;
 		});
 
 		it('should work with funcs taking params and has timeTaken as a number', async () => {
-			const {value, timeTaken} = await odc.callFunc({base: 'scene', keyPath: '', funcName: 'multiplyNumbers', funcParams: [3, 5]});
+			const {value, timeTaken} = await odc.callFunc({funcName: 'multiplyNumbers', funcParams: [3, 5]});
 			expect(value).to.be.equal(15);
 			expect(timeTaken).to.be.a('number');
 		});
@@ -1190,11 +1241,17 @@ describe('OnDeviceComponent', function () {
 
 		describe('restoreRegistry', function () {
 			it('should properly restore if configured to do so', async () => {
-				(odc as any).config.OnDeviceComponent.restoreRegistry = true;
+				const odcConfig = odc['config'];
+				if (odcConfig?.OnDeviceComponent) {
+					odcConfig.OnDeviceComponent.restoreRegistry = true;
+				}
+
 				// This also triggers storing of the current values first
 				await odc.deleteEntireRegistry();
 				await odc.shutdown();
-				(odc as any).config.OnDeviceComponent.restoreRegistry = false;
+				if (odcConfig?.OnDeviceComponent) {
+					odcConfig.OnDeviceComponent.restoreRegistry = false;
+				}
 				const {values} = await odc.readRegistry();
 				expect(values.rtaFirstSectionName.firstItem).to.equal(firstKeyValue);
 				expect(values.rtaFirstSectionName.secondItem).to.equal(secondKeyValue);

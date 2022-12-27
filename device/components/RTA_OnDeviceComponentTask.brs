@@ -439,9 +439,12 @@ sub sendResponseToClient(request as Object, response as Object, binaryPayloadByt
 		response.id = json.id
 	end if
 
-	response["requestType"] = json.type  ' TODO See if we can't work around sending this for performance
 	stringPayload = formatJson(response)
-	logDebug("Sending back response: " + stringPayload)
+	if stringPayload.len() < 1024 then
+		logDebug("Sending back response for requestType: " + json.type, stringPayload)
+	else
+		logDebug("Sending back large response (id: " + json.id + ", requestType: " + json.type + ", success: " + response.success.toStr() + ", timeTaken: " + response.timeTaken.toStr() + ")")
+	end if
 
 	ba = createObject("roByteArray")
 	ba[m.requestHeaderSize - 1] = 0

@@ -18,6 +18,7 @@ export class OnDeviceComponent {
 	private activeRequests: { [key: string]: ODC.Request } = {};
 	private receivingRequestResponse?: ODC.RequestResponse;
 	private clientSocket?: net.Socket;
+	private clientSocketPromise?: Promise<net.Socket>;
 	private defaultNodeReferencesKey = utils.randomStringGenerator();
 
 	constructor(device: RokuDevice, config?: ConfigOptions) {
@@ -133,7 +134,7 @@ export class OnDeviceComponent {
 		return result.json.isInFocusChain as boolean;
 	}
 
-	public async observeField(args: ODC.ObserveFieldArgs, options: ODC.RequestOptions = {}) {
+	public async onFieldChangeOnce(args: ODC.OnFieldChangeOnceArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
@@ -197,14 +198,12 @@ export class OnDeviceComponent {
 
 	private conditionallyAddDefaultBase(args: ODC.BaseArgs) {
 		if (!args.base) {
-			// IMPROVEMENT: Could probably allow users to change this to a different default in their config
-			args.base = 'global';
+			args.base = (this.getConfig()?.defaultBase) ?? 'scene';
 		}
 	}
 
 	private conditionallyAddDefaultNodeReferenceKey(args: ODC.BaseArgs) {
 		if (!args.key) {
-			// TODO test if we need to add if no base provided
 			if (!args.base || args.base === 'nodeRef') {
 				args.key = this.defaultNodeReferencesKey;
 			}
@@ -356,6 +355,8 @@ export class OnDeviceComponent {
 	}
 
 	public async focusNode(args: ODC.FocusNodeArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
+		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest('focusNode', args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
@@ -457,13 +458,24 @@ export class OnDeviceComponent {
 	//#endregion
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
-	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.ObserveFieldArgs | ODC.SetValueArgs) {
+	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.OnFieldChangeOnceArgs | ODC.SetValueArgs) {
+		if (!args.keyPath) {
+			args.keyPath = '';
+		}
 		const keyPathParts = args.keyPath.split('.');
 		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
 	}
 
 	private setupClientSocket(options: ODC.RequestOptions) {
-		return new Promise<net.Socket>((resolve, reject) => {
+		if (this.clientSocket) {
+			return Promise.resolve(this.clientSocket);
+		}
+
+		if (this.clientSocketPromise) {
+			return this.clientSocketPromise;
+		}
+
+		this.clientSocketPromise = new Promise<net.Socket>((resolve, reject) => {
 			const port = 9000;
 			const host = this.device.getCurrentDeviceConfig().host;
 			const timeout = this.getTimeOut(options);
@@ -569,6 +581,12 @@ export class OnDeviceComponent {
 
 			socketConnect();
 		});
+
+		this.clientSocketPromise.finally(() => {
+			this.clientSocketPromise = undefined;
+		});
+
+		return this.clientSocketPromise;
 	}
 
 	private async sendRequest(type: ODC.RequestTypes, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
@@ -606,9 +624,7 @@ export class OnDeviceComponent {
 			requestBuffers.push(binaryBuffer);
 		}
 
-		if (!this.clientSocket) {
-			this.clientSocket = await this.setupClientSocket(options);
-		}
+		this.clientSocket = await this.setupClientSocket(options);
 
 		if (this.getConfig()?.restoreRegistry && !this.storedDeviceRegistry) {
 			this.debugLog('Storing original device registry state');
@@ -697,7 +713,9 @@ export class OnDeviceComponent {
 
 	private debugLog(message: string, ...args) {
 		if (this.getConfig()?.clientDebugLogging) {
-			console.log(`[ODC] ${message}`, ...args);
+			const date = new Date;
+			const formattedDate = `${utils.lpad(date.getMonth())}-${utils.lpad(date.getDate())} ${utils.lpad(date.getHours())}:${utils.lpad(date.getMinutes())}:${utils.lpad(date.getSeconds())}:${utils.lpad(date.getMilliseconds(), 3)}`;
+			console.log(`${formattedDate} [ODC] ${message}`, ...args);
 		}
 	}
 }

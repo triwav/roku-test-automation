@@ -167,7 +167,7 @@ function processGetValueRequest(args as Object) as Object
 
 	keyPath = getStringAtKeyPath(args, "keyPath")
 
-	if keyPath <> "" then
+	if isNonEmptyString(keyPath) then
 		value = getValueAtKeyPath(base, keyPath, "[[VALUE_NOT_FOUND]]")
 		found = NOT isString(value) OR value <> "[[VALUE_NOT_FOUND]]"
 	else
@@ -374,10 +374,24 @@ function processObserveFieldRequest(request as Object) as Dynamic
 		end if
 	end if
 
-	if node.observeFieldScoped(field, "observeFieldCallback") then
-		logDebug("Now observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
-	else
-		return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+	' Only want to observe if we weren't already observing this node field
+	alreadyObserving = false
+	for each requestId in m.activeObserveFieldRequests
+		activeObserveFieldRequest = m.activeObserveFieldRequests[requestId]
+
+		if activeObserveFieldRequest.node.isSameNode(node) AND activeObserveFieldRequest.args.field = field then
+			logDebug("Already observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+			alreadyObserving = true
+			exit for
+		end if
+	end for
+
+	if NOT alreadyObserving then
+		if node.observeFieldScoped(field, "observeFieldCallback") then
+			logDebug("Now observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+		else
+			return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+		end if
 	end if
 
 	request.node = node
@@ -401,11 +415,13 @@ sub observeFieldCallback(event as Object)
 	field = event.getField()
 	data = event.getData()
 	logDebug("Received callback for node field '" + field + "' with value ", data)
+	nodeFound = false
 	for each requestId in m.activeObserveFieldRequests
 		request = m.activeObserveFieldRequests[requestId]
 		args = request.args
-		keyPath = getStringAtKeyPath(args, "keyPath")
 		if node.isSameNode(request.node) AND args.field = field then
+			logVerbose("Found matching requestId: " + requestId)
+			nodeFound = true
 			match = args.match
 			if isAA(match) then
 				result = processGetValueRequest(match)
@@ -419,16 +435,22 @@ sub observeFieldCallback(event as Object)
 					return
 				end if
 			end if
-			logDebug("Unobserved '" + field + "' at key path '" + keyPath + "'")
-			node.unobserveFieldScoped(field)
+
 			m.activeObserveFieldRequests.delete(requestId)
 			sendResponseToTask(request, {
 				"value": data
 				"observerFired": true
 			})
-			return
 		end if
 	end for
+
+	if nodeFound then
+		' If we got to here then we sent back all responses for this field so we can remove our observer now
+		logDebug("Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
+		node.unobserveFieldScoped(field)
+		return
+	end if
+
 	logError("Received callback for unknown node or field ", node)
 end sub
 

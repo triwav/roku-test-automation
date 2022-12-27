@@ -14,7 +14,8 @@
     - [`getFocusedNode`](#getfocusednode)
     - [`hasFocus`](#hasfocus)
     - [`isInFocusChain`](#isinfocuschain)
-    - [`observeField`](#observefield)
+    - [`onFieldChangeOnce`](#onfieldchangeonce)
+    - [`getNodesWithProperties`](#getnodeswithproperties)
     - [`storeNodeReferences`](#storenodereferences)
     - [`deleteNodeReferences`](#deletenodereferences)
     - [`disableScreenSaver`](#disablescreensaver)
@@ -39,11 +40,15 @@ Roku Test Automation (RTA from here on out) helps with automating functional tes
 Some incompatibility changes were made in v2.0. These include:
 
 - Use of `AtKeyPath` was removed from all functions to shorten function call length
+- `observeField()` has been renamed to `onFieldChangeOnce()`
+- The default base has been changed from `global` to `scene`. A config value `defaultBase` has been added to the `OnDeviceComponent` config to allow switching this
 - `getFocusedNode()` now returns an object like all the ODC commands other than `hasFocus()` and `isInFocusChain()`
 - While never documented or designed to be used externally, the `getNodeReferences()` function was removed and replaced with `getNodesInfo`
 - `callFunc()` will no longer automatically inject an `invalid` param if a `params` array was not provided.
 - `getValues()` now returns each result inside a `results` object to avoid potential variable collision
 - In v1.0 server was used to refer to the computer connecting to the Roku device. This is now the client and config settings related to this has been changed to reflect this
+- ECPKeys was switched from upper case key names to pascal case key names and `OPTIONS` is now `Option`
+- In an effort to provide clarity and to avoid shadowing cases, keys in keyPaths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a child node with an id of `poster` you will now need to have a keyPath of `0.#poster`
 
 v2.0 also includes changing to using TCP sockets for all communication which should simplify setup communicating with Roku devices not on the same local network.
 
@@ -153,8 +158,8 @@ At the heart of almost all requests internally is `getValue`. It serves as your 
 Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.idOfChildNodeToInspect`. The [`getValue` unit tests](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provide a full list of what is possible for a key path.
 
 ```ts
-odc.getValue({
-  base: 'scene',
+await odc.getValue({
+  base: 'global',
   keyPath: 'AuthManager.isLoggedIn',
 });
 ```
@@ -176,11 +181,44 @@ odc.getValue({
 as an example:
 
 ```ts
-odc.getValue({
-  base: 'scene',
-  keyPath: 'rowList.boundingRect()',
+await odc.getValue({
+  keyPath: '#rowList.boundingRect()',
 });
 ```
+
+As of v2.0 you can now access ArrayGrid children. To do this, we have added two special keywords in the keyPath: `items` and `title`. These don't actually exist at runtime, but RTA understands how to translate them into the proper lookup mechanisms on-device. 
+
+
+Here's an example showing how to access the 3rd item component in the second row:
+
+```ts
+await odc.getValue({
+  keyPath: '#rowList.1.items.2',
+});
+```
+
+Notice the special keyword `items` to identify we are accessing an item.
+
+If you wanted to access the `title` component for the second row, you would do:
+
+```ts
+await odc.getValue({
+  keyPath: '#rowList.1.title',
+});
+
+Again notice the special keyword `title` to identify we are accessing a title component.
+
+For other single level ArrayGrid types like MarkupGrid you can simply do:
+
+```ts
+await odc.getValue({
+  keyPath: '#markupGrid.1',
+});
+```
+
+This would retrieve the second item component in the grid.
+
+In addition as of v2.0 `keyPath` is no longer required if just accessing the base node
 
 #### `getValues`
 
@@ -220,8 +258,8 @@ Allows you to set a value at a key path. It takes the standard `base` and `keyPa
 - `value: any` The value you want to set at the supplied `keyPath`. Setting is always done through [`update(value, true)`](https://developer.roku.com/en-ca/docs/references/brightscript/interfaces/ifsgnodechildren.md#updatefields-as-roassociativearray-addfields-as-boolean-as-void) so anything you can do there should be possible here as well.
 
 ```ts
-odc.setValue({
-  base: 'scene',
+await odc.setValue({
+  base: 'global',
   keyPath: 'AuthManager.isLoggedIn',
   value: false,
 });
@@ -237,8 +275,8 @@ Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-p
 - `funcParams?: any[]` an array of params to pass to the function.
 
 ```ts
-odc.callFunc({
-  base: 'scene',
+await odc.callFunc({
+  base: 'global',
   keyPath: 'AuthManager',
   funcName: 'login',
   funcParams: [{ username: 'AzureDiamond', password: 'hunter2' }],
@@ -272,23 +310,22 @@ Check if the node at the supplied key path is in the focus chain. It takes the s
 
 ```ts
 const isBtnInFocusChain = await odc.isInFocusChain({
-  base: 'scene',
-  keyPath: 'Home.mainButton',
+  keyPath: '#homePage.#mainButton',
 });
 ```
 
-#### `observeField`
+#### `onFieldChangeOnce`
 
-> observeField(args: [ODC.ObserveFieldArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20ObserveFieldArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
+> onFieldChangeOnce(args: [ODC.OnFieldChangeOnceArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20OnFieldChangeOnceArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
 
-Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use observeField to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
+Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use `onFieldChangeOnce` to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
 - `match?: any | {base, keyPath, value}`
 
-Sometimes when you are observing a field you don't just want the first change. You're looking for a specific value. In this case you can pass the value you're looking for the match like:
+Sometimes when you are observing a field you don't just want the first change. If you're looking for a specific value you can pass it for the match like:
 
 ```ts
-await odc.observeField({ keyPath: 'AuthManager.isLoggedIn', match: true });
+await odc.onFieldChangeOnce({ keyPath: 'AuthManager.isLoggedIn', match: true });
 ```
 
 In this case, `base` and `keyPath` for match are the same as those for the base level args. It's even more powerful than that though. You can also supply an object where the value your matching against actually comes from a totally different node than the one being observed.
@@ -296,19 +333,53 @@ In this case, `base` and `keyPath` for match are the same as those for the base 
 One note, to simplify writing tests, if `match` is supplied and the value already matches it will not setup an observer but will just return right away. Without this you'd have to write something like:
 
 ```ts
-const observePromise = odc.observeField(...);
+const onFieldChangeOncePromise = odc.onFieldChangeOnce(...);
 await odc.setValue(...);
-const result = await observePromise;
+const result = await onFieldChangeOncePromise;
 ```
 
 to avoid a race condition that the value already changed by the time you setup your observer. Instead you can write your test like:
 
 ```ts
 await odc.setValue(...);
-const result = await odc.observeField(...);
+const result = await odc.onFieldChangeOnce(...);
 ```
 
 to help distinguish if the observer actually fired the property `observerFired` is returned in the response object
+
+#### `getNodesWithProperties`
+
+> getNodesWithProperties(args: [ODC.GetNodesWithPropertiesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20OnGetNodesWithPropertiesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {nodes: ODC.NodeRepresentation[], nodeRefs, number[]}
+
+If you are trying to find a node but are unsure of where it is in the tree you can use `getNodesWithProperties`. As an example, let's say you wanted to find all nodes with the a text field with the value of `Play Movie` you could do:
+
+```ts
+const result = await odc.getNodesWithProperties({
+  properties: [{
+    value: 'Play Movie',
+    field: 'text'
+  }]
+});
+```
+
+You'll notice that `properties` is an array. If more than object is provided then each check will be done one after the other. Only nodes that match all properties will be returned.
+
+By default an equal to check is performed. Let's take the previous case and say we wanted to match anything that just has `Play` in its text field we could do:
+
+```ts
+const result = await odc.getNodesWithProperties({
+  properties: [{
+    value: 'Play',
+    operator: 'in',
+    field: 'text'
+  }]
+});
+```
+
+There are number of comparison operators that can be used:
+'=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo'
+
+**NOTE** Not all comparison types can be used on all types. For example `>=` can only be used on number types.
 
 #### `storeNodeReferences`
 
@@ -406,7 +477,7 @@ A lot of times with tests it's useful to to append something to it to make sure 
 
 > sleep(milliseconds: number)
 
-While doing arbitrary waiting is almost never needed thanks to [`observeField`](#observefield), there might be some use cases for this.
+While doing arbitrary waiting is almost never needed thanks to [`onFieldChangeOnce`](#onFieldChangeOnce), there might be some use cases for this.
 
 ```ts
 import { utils } from 'roku-test-automation';

@@ -81,36 +81,38 @@ export class ECP {
 
 	private convertKeyToRaspEquivalent(key: ECPKeys) {
 		switch (key) {
-			case ECPKeys.BACK:
+			case ECPKeys.Back:
 				return 'back';
-			case ECPKeys.BACKSPACE:
+			case ECPKeys.Backspace:
 				return console.log('Roku Remote Tool does not handle Backspace ECP request. Skipping');
-			case ECPKeys.DOWN:
+			case ECPKeys.Down:
 				return 'down';
-			case ECPKeys.ENTER:
+			case ECPKeys.Enter:
 				return console.log('Roku Remote Tool does not handle Enter ECP request. Skipping');
-			case ECPKeys.FORWARD:
+			case ECPKeys.Forward:
 				return 'forward';
-			case ECPKeys.HOME:
+			case ECPKeys.Home:
 				return 'home';
-			case ECPKeys.LEFT:
+			case ECPKeys.Left:
 				return 'left';
-			case ECPKeys.OK:
+			case ECPKeys.Ok:
 				return 'ok';
-			case ECPKeys.OPTIONS:
+			case ECPKeys.Option:
 				return 'info';
-			case ECPKeys.PLAY:
+			case ECPKeys.Play:
 				return 'play';
-			case ECPKeys.REPLAY:
+			case ECPKeys.Replay:
 				return 'repeat';
-			case ECPKeys.REWIND:
+			case ECPKeys.Rewind:
 				return 'reverse';
-			case ECPKeys.RIGHT:
+			case ECPKeys.Right:
 				return 'right';
-			case ECPKeys.SEARCH:
-				return console.log('Roku Remote Tool does not handle Search ECP request. Skipping');
-			case ECPKeys.UP:
+			case ECPKeys.Up:
 				return 'up';
+			case ECPKeys.Search:
+			case ECPKeys.PowerOff:
+			case ECPKeys.PowerOn:
+				return console.log(`Roku Remote Tool does not handle ${key} ECP request. Skipping`);
 		}
 	}
 

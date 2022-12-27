@@ -2,6 +2,15 @@ sub init()
 	m.loginButton = m.top.findNode("loginButton")
 	m.rowListWithoutCustomTitleComponent = m.top.findNode("rowListWithoutCustomTitleComponent")
 	m.rowListWithCustomTitleComponent = m.top.findNode("rowListWithCustomTitleComponent")
+	m.markupGrid = m.top.findNode("markupGrid")
+
+	content = createObject("roSGNode", "ContentNode")
+	for index = 0 to 7
+		row = content.createChild("ContentNode")
+		row.title = "item " + index.toStr()
+		row.id = row.title
+	end for
+	m.markupGrid.content = content
 
 	m.rowListWithoutCustomTitleComponent.content = makeRowListContent()
 	m.rowListWithCustomTitleComponent.content = makeRowListContent()
