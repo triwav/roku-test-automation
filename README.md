@@ -16,6 +16,8 @@
     - [`isInFocusChain`](#isinfocuschain)
     - [`onFieldChangeOnce`](#onfieldchangeonce)
     - [`getNodesWithProperties`](#getnodeswithproperties)
+    - [`getAllCount`](#getallcount)
+    - [`getRootsCount`](#getrootscount)
     - [`storeNodeReferences`](#storenodereferences)
     - [`deleteNodeReferences`](#deletenodereferences)
     - [`disableScreenSaver`](#disablescreensaver)
@@ -380,6 +382,18 @@ There are number of comparison operators that can be used:
 '=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo'
 
 **NOTE** Not all comparison types can be used on all types. For example `>=` can only be used on number types.
+
+#### `getAllCount`
+
+> getAllCount(args: [ODC.GetAllCountArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetAllCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Returns both the total number of nodes as returned by `getAll()` on the field `totalNodes` as well as the total count of each node subtype on the field `nodeCountByType`.
+
+#### `getRootsCount`
+
+> getRootsCount(args: [ODC.GetRootsCountArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetRootsCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Returns both the total number of nodes as returned by `getRoots()` on the field `totalNodes` as well as the total count of each node subtype on the field `nodeCountByType`.
 
 #### `storeNodeReferences`
 

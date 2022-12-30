@@ -7,10 +7,12 @@ export namespace ODC {
 		deleteRegistrySections,
 		disableScreenSaver,
 		focusNode,
+		getAllCount,
 		getDirectoryListing,
 		getFocusedNode,
 		getNodesInfo,
 		getNodesWithProperties,
+		getRootsCount,
 		getServerHost,
 		getValue,
 		getValues,
@@ -135,6 +137,10 @@ export namespace ODC {
 		/** Set to false to take away focus from the node. Defaults to true */
 		on?: boolean;
 	}
+
+	export interface GetAllCountArgs {}
+
+	export interface GetRootsCountArgs {}
 
 	export interface GetVolumeListArgs {}
 
@@ -309,6 +315,9 @@ export namespace ODC {
 
 		/** Used to determine the position of this node in its parent if applicable */
 		position: number;
+
+		/** keyPath that can be used to access this node */
+		keyPath: string;
 
 		children: NodeTree[];
 	}

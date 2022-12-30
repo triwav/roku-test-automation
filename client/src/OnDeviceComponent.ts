@@ -210,6 +210,22 @@ export class OnDeviceComponent {
 		}
 	}
 
+	public async getAllCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('getAllCount', {...args, convertResponseToJsonCompatible: false}, options);
+		return result.json as {
+			totalNodes: number;
+			nodeCountByType: {[key: string]: number}
+		} & ODC.ReturnTimeTaken;
+	}
+
+	public async getRootsCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest('getRootsCount', {...args, convertResponseToJsonCompatible: false}, options);
+		return result.json as {
+			totalNodes: number;
+			nodeCountByType: {[key: string]: number}
+		} & ODC.ReturnTimeTaken;
+	}
+
 	public async storeNodeReferences(args: ODC.StoreNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest('storeNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
@@ -240,11 +256,56 @@ export class OnDeviceComponent {
 		}
 		body.rootTree = rootTree;
 
-		// sort children by position to make output more logical
+		this.buildKeyPathsRecursively(rootTree);
+
+		// sort children by position to make output more logical and add our keyPath on
 		for (const tree of body.flatTree) {
 			tree.children.sort((a, b) => a.position - b.position);
 		}
 		return body;
+	}
+
+	private buildKeyPathsRecursively(nodeTrees: ODC.NodeTree[], keyPathParts = [] as string[], parentIsRowlistItem = false, parentIsTitleGroup = false) {
+		for (const nodeTree of nodeTrees) {
+			let keyPathPostfix = '';
+			const currentNodeTreeKeyPathParts = [...keyPathParts];
+			let isRowlistItem = false;
+			let isTitleGroup = false;
+			if (nodeTree.subtype === 'RowListItem') {
+				currentNodeTreeKeyPathParts.push(nodeTree.position.toString());
+				isRowlistItem = true;
+
+				// We are supplying a keyPath for the Roku ArrayGrid internal components although they likely aren't needed
+				keyPathPostfix = '.items.0.getParent().getParent()';
+			} else if (parentIsRowlistItem) {
+				if (nodeTree.subtype === 'MarkupGrid') {
+					currentNodeTreeKeyPathParts.push('items');
+					// We are supplying a keyPath for the Roku ArrayGrid internal components although they likely aren't needed
+					keyPathPostfix = '.0.getParent()';
+				} else if (nodeTree.subtype === 'Group') {
+					currentNodeTreeKeyPathParts.push('title');
+					isTitleGroup = true;
+
+					// We are supplying a keyPath for the Roku ArrayGrid internal components although they likely aren't needed
+					keyPathPostfix = '.getParent()';
+				} else if (nodeTree.subtype === 'Label') {
+					// This is a Roku generated label. We do our best effort to get a keyPath that will work with it
+					currentNodeTreeKeyPathParts.push(`items.0.getParent().getParent().${nodeTree.position}`);
+				} else {
+					console.log('Encountered unexpected subtype ' + nodeTree.subtype);
+				}
+			} else if(parentIsTitleGroup) {
+				// We don't want to append to currentNodeTreeKeyPathParts in this case
+			} else if (nodeTree.id) {
+				currentNodeTreeKeyPathParts.push('#' + nodeTree.id);
+			} else if (nodeTree.position >= 0) {
+				currentNodeTreeKeyPathParts.push(nodeTree.position.toString());
+			}
+
+			nodeTree.keyPath = currentNodeTreeKeyPathParts.join('.') + keyPathPostfix;
+
+			this.buildKeyPathsRecursively(nodeTree.children, currentNodeTreeKeyPathParts, isRowlistItem, isTitleGroup);
+		}
 	}
 
 	public async deleteNodeReferences(args: ODC.DeleteNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
