@@ -35,6 +35,10 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processObserveFieldRequest(request)
 	else if requestType = "setValue" then
 		response = processSetValueRequest(args)
+	else if requestType = "getAllCount" then
+		response = processGetAllCountRequest(args)
+	else if requestType = "getRootsCount" then
+		response = processGetRootsCountRequest(args)
 	else if requestType = "storeNodeReferences" then
 		response = processStoreNodeReferencesRequest(args)
 	else if requestType = "deleteNodeReferences" then
@@ -514,6 +518,32 @@ function processSetValueRequest(args as Object) as Object
 
 	nodeParent.update(updateAA, true)
 	return {}
+end function
+
+function processGetAllCountRequest(args as Object) as Object
+	return calculateNodeCount(m.top.getAll())
+end function
+
+function processGetRootsCountRequest(args as Object) as Object
+	return calculateNodeCount(m.top.getRoots())
+end function
+
+function calculateNodeCount(nodes) as Object
+	result = {}
+	nodeCountByType = {}
+
+	result["totalNodes"] = nodes.count()
+	result["nodeCountByType"] = nodeCountByType
+
+	for each node in nodes
+		nodeType = node.subtype()
+		if nodeCountByType[nodeType] = Invalid then
+			nodeCountByType[nodeType] = 0
+		end if
+		nodeCountByType[nodeType]++
+	end for
+
+	return result
 end function
 
 function processStoreNodeReferencesRequest(args as Object) as Object

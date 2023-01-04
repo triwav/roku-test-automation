@@ -21,6 +21,28 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('getAllCount', function () {
+		it('should have the correct fields and return a known node subtype', async () => {
+			const {totalNodes, nodeCountByType} = await odc.getAllCount();
+			expect(totalNodes).to.be.greaterThan(0);
+			expect(nodeCountByType['MainScene']).to.equal(1);
+			for (const nodeSubtype in nodeCountByType) {
+				expect(nodeCountByType[nodeSubtype]).to.be.greaterThan(0);
+			}
+		});
+	});
+
+	describe('getRootsCount', function () {
+		it('should have the correct fields and return a known node subtype', async () => {
+			const {totalNodes, nodeCountByType} = await odc.getRootsCount();
+			expect(totalNodes).to.be.greaterThan(0);
+			expect(nodeCountByType['MainScene']).to.equal(1);
+			for (const nodeSubtype in nodeCountByType) {
+				expect(nodeCountByType[nodeSubtype]).to.be.greaterThan(0);
+			}
+		});
+	});
+
 	describe('storeNodeReferences', function () {
 		let storeResult: Unwrap<typeof odc.storeNodeReferences>;
 		before(async () => {
@@ -60,6 +82,11 @@ describe('OnDeviceComponent', function () {
 			expect(storeResult.nodeCountByType).to.not.be.ok;
 		});
 
+		it('should include correct keyPaths for both findNode and index based key paths', async () => {
+			expect(storeResult.rootTree[0].children[2].keyPath).to.equal('#pagesContainerGroup');
+			expect(storeResult.rootTree[0].children[2].children[0].keyPath).to.equal('#pagesContainerGroup.0');
+		});
+
 		describe('nodeCountInfo', function () {
 			before(async () => {
 				storeResult = await odc.storeNodeReferences({
@@ -86,11 +113,19 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			it('should include ArrayGrid children if requested', () => {
+			it('should include ArrayGrid children and keyPaths if requested', () => {
 				let arrayGridChildrenCount = 0;
 				for (const nodeTree of storeResult.flatTree) {
+					if (nodeTree.parentRef === -1) {
+						continue;
+					}
+
 					if (nodeTree.subtype === 'RowListItem') {
 						arrayGridChildrenCount++;
+					} else if (nodeTree.subtype === 'RowListItemComponent') {
+						expect(nodeTree.keyPath.endsWith(`items.${nodeTree.position}`)).to.be.true;
+					} else if (nodeTree.subtype === 'RowListRowTitleComponent') {
+						expect(nodeTree.keyPath.endsWith(`title`)).to.be.true;
 					}
 				}
 				expect(arrayGridChildrenCount).to.be.greaterThan(0);
@@ -960,7 +995,7 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe('observeField', function () {
+	describe('onFieldChangeOnce', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
 				await odc.onFieldChangeOnce({keyPath: 'does.not.exist', retryTimeout: 200});
