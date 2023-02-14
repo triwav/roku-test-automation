@@ -1,6 +1,8 @@
 sub init()
 	#if ENABLE_RTA
 		m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
+	#else
+		' vscode_rdb_on_device_component_entry
 	#end if
 
 	m.top.pagesContainer = m.top.findNode("pagesContainerGroup")

@@ -13,6 +13,7 @@
 			"host": "${env:LAUNCH_HOST_OVERRIDE}",
 			"password": "${env:ROKU_PASSWORD}",
 			"internalConsoleOptions": "neverOpen",
+			"logLevel": "error",
 			"stopDebuggerOnAppExit": true,
 			"injectRaleTrackerTask": false,
 			"injectRdbOnDeviceComponent": true,

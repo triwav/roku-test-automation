@@ -52,8 +52,14 @@ describe('OnDeviceComponent', function () {
 		it('should have the correct fields for flatTree', async () => {
 			expect(storeResult.flatTree).to.be.an('array');
 			for (const tree of storeResult.flatTree) {
+				expect(tree.subtype).to.be.a.string;
+				expect(tree.id).to.be.a.string;
+				if (tree.id !== 'animation') {
+					expect(tree.visible).to.be.a('boolean');
+					expect(tree.opacity).to.be.a('number');
+					expect(tree.translation).to.be.an('array');
+				}
 				expect(tree.id).to.be.string;
-				expect(tree.subtype).to.be.string;
 				expect(tree.ref).to.be.a('number');
 				expect(tree.parentRef).to.be.a('number');
 			}
@@ -61,13 +67,16 @@ describe('OnDeviceComponent', function () {
 
 		it('should have the correct fields for rootTree', async () => {
 			expect(storeResult.rootTree).to.be.an('array');
-			for (const tree of storeResult.rootTree) {
-				expect(tree.id).to.be.string;
-				expect(tree.subtype).to.be.string;
-				expect(tree.ref).to.be.a('number');
-				expect(tree.parentRef).to.be.a('number');
-				expect(tree.children).to.be.an('array');
-			}
+			const tree = storeResult.rootTree[0];
+
+			expect(tree.subtype).to.be.a.string;
+			expect(tree.id).to.be.a.string;
+			expect(tree.visible).to.be.a('boolean');
+			expect(tree.opacity).to.be.a('number');
+			expect(tree.translation).to.be.an('array');
+			expect(tree.ref).to.be.a('number');
+			expect(tree.parentRef).to.be.a('number');
+			expect(tree.children).to.be.an('array');
 		});
 
 		it('each tree should have a children array field', async () => {
@@ -83,11 +92,11 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should include correct keyPaths for both findNode and index based key paths', async () => {
-			expect(storeResult.rootTree[0].children[2].keyPath).to.equal('#pagesContainerGroup');
-			expect(storeResult.rootTree[0].children[2].children[0].keyPath).to.equal('#pagesContainerGroup.0');
+			expect(storeResult.rootTree[0].children[4].keyPath).to.equal('#pagesContainerGroup');
+			expect(storeResult.rootTree[0].children[4].children[0].keyPath).to.equal('#pagesContainerGroup.0');
 		});
 
-		describe('nodeCountInfo', function () {
+		describe('includeNodeCountInfo', function () {
 			before(async () => {
 				storeResult = await odc.storeNodeReferences({
 					includeNodeCountInfo: true
@@ -106,7 +115,7 @@ describe('OnDeviceComponent', function () {
 			});
 		});
 
-		describe('arrayGridChildren', function () {
+		describe('includeArrayGridChildren', function () {
 			before(async () => {
 				storeResult = await odc.storeNodeReferences({
 					includeArrayGridChildren: true
@@ -143,6 +152,24 @@ describe('OnDeviceComponent', function () {
 				expect(markupGrid?.subtype).to.equal('MarkupGrid');
 				expect(markupGrid?.children.length).to.equal(1);
 				expect(markupGrid?.children[0].subtype).to.equal('RowListItemComponent');
+			});
+		});
+
+		describe('includeBoundingRectInfo', function () {
+			before(async () => {
+				storeResult = await odc.storeNodeReferences({
+					includeBoundingRectInfo: true
+				});
+			});
+
+			it('should include boundingRect info if requested and node extends from group', () => {
+				for (const nodeTree of storeResult.flatTree) {
+					if (nodeTree.id === 'animation') {
+						expect(nodeTree.sceneRect).to.be.undefined;
+					} else {
+						expect(nodeTree.sceneRect).to.not.be.undefined;
+					}
+				}
 			});
 		});
 	});
@@ -208,6 +235,8 @@ describe('OnDeviceComponent', function () {
 			const expectedSubtypes = [
 				'Poster',
 				'Poster',
+				'Rectangle',
+				'Animation',
 				'Group'
 			];
 			for (const child of node.children) {
@@ -356,10 +385,57 @@ describe('OnDeviceComponent', function () {
 			expect(node.subtype).to.equal('Poster');
 			expect(node.id).to.equal('poster');
 		});
-
 	});
 
-	describe('ResponsivenessTesting', function () {
+	describe('findNodesAtLocation', function () {
+		let nodeTreeResponse;
+		before(async () => {
+			nodeTreeResponse = await odc.storeNodeReferences({
+				includeArrayGridChildren: true,
+				includeBoundingRectInfo: true
+			});
+		});
+
+		it('should sort the matching nodes with the center closest to specified location first', async () => {
+			const {matches} = await odc.findNodesAtLocation({
+				x: 100,
+				y: 100,
+				nodeTreeResponse: nodeTreeResponse
+			});
+			expect(matches[0].id).to.equal('rect2');
+		});
+
+		it('should not match nodes that are not visible', async () => {
+			const {matches} = await odc.findNodesAtLocation({
+				x: 100,
+				y: 100,
+				nodeTreeResponse: nodeTreeResponse
+			});
+			for (const match of matches) {
+				expect(match.id).to.not.equal('invisibleRect');
+			}
+		});
+
+		it('Should return proper ArrayGrid child for a MarkupGrid', async () => {
+			const {matches} = await odc.findNodesAtLocation({
+				x: 700,
+				y: 150,
+				nodeTreeResponse: nodeTreeResponse
+			});
+			expect(matches[0].keyPath).to.equal('#pagesContainerGroup.0.#markupGrid.1.#rect');
+		});
+
+		it('Should return proper ArrayGrid child for a RowList', async () => {
+			const {matches} = await odc.findNodesAtLocation({
+				x: 500,
+				y: 600,
+				nodeTreeResponse: nodeTreeResponse
+			});
+			expect(matches[0].keyPath).to.equal('#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.1.items.1.#rect');
+		});
+	});
+
+	describe('responsivenessTesting', function () {
 		it('should fail to get data if we have not started responsiveness testing yet', async () => {
 			try {
 				await odc.getResponsivenessTestingData();
@@ -633,8 +709,8 @@ describe('OnDeviceComponent', function () {
 
 			describe('getChildCount()', async () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: 'getChildCount()'});
-					expect(value).to.equal(3);
+					const {value} = await odc.getValue({keyPath: '#pagesContainerGroup.getChildCount()'});
+					expect(value).to.equal(1);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -992,6 +1068,33 @@ describe('OnDeviceComponent', function () {
 
 			const lastNode = value.children.pop();
 			expect(lastNode.id).to.equal(nodeKey);
+		});
+
+		it('properly strips non ascii input', async () => {
+			const expectedValue = 'I do not explode on unicode characters';
+			await odc.setValue({
+				base: 'global',
+				keyPath: 'stringValue',
+				value: expectedValue + '🔍'
+			});
+			const {value} = await odc.getValue({
+				base: 'global',
+				keyPath: 'stringValue'
+			});
+			expect(value).to.equal(expectedValue);
+		});
+
+		it('Does not stack overflow if we receive a large number of requests at the same time', async () => {
+			const promises = [] as Promise<any>[];
+			for (let i = 0; i < 200; i++) {
+				const promise = odc.setValue({
+					base: 'global',
+					keyPath: 'intValue',
+					value: i
+				});
+				promises.push(promise);
+			}
+			await Promise.all(promises);
 		});
 	});
 

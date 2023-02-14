@@ -60,13 +60,22 @@ sub runTaskThread()
 	m.listenSocket.notifyReadable(true)
 	m.listenSocket.listen(4)
 	m.clientSockets = {}
+	m.socketsWithQueuedData = []
 
 	m.receivingRequests = {}
 	m.activeRequests = {}
 
 	while true
+		if m.socketsWithQueuedData.count() > 0 then
+			waitDelay = 1
+			socketWithQueuedData = m.socketsWithQueuedData.shift()
+			handleClientSocketEvent(socketWithQueuedData.messageSocketId, socketWithQueuedData.clientSocket, socketWithQueuedData.bufferLength)
+		else
+			waitDelay = 1000
+		end if
+
 		' If you want to waste three days debugging set this back to 0 :|
-		message = wait(1000, m.port)
+		message = wait(waitDelay, m.port)
 		if message <> Invalid then
 			messageType = type(message)
 			if messageType = "roSocketEvent" then
@@ -134,9 +143,13 @@ sub handleClientSocketEvent(messageSocketId as String, clientSocket as Object, b
 			m.receivingRequests.delete(messageSocketId)
 			verifyAndHandleRequest(receivingRequest)
 
-			' If we still have more buffer left then go ahead and start the next request
+			' If we still have more data queued then store it so we can pick it up after we handle sending back any requests that are ready to be sent back
 			if remainingBufferLength > 0 then
-				handleClientSocketEvent(messageSocketId, clientSocket, remainingBufferLength)
+				m.socketsWithQueuedData.push({
+					"messageSocketId": messageSocketId
+					"clientSocket": clientSocket
+					"bufferLength": remainingBufferLength
+				})
 			end if
 		end if
 	end if
@@ -181,16 +194,20 @@ function receiveDataForRequest(request as Object, bufferLength as Integer) as In
 			return bufferLength
 		end if
 	else
-		' Figure out amount to pull from the buffer for string
-		if bufferLength > request.stringLength then
-			receiveLength = request.stringLength
-		else
-			receiveLength = bufferLength
+		if bufferLength > 0 then
+			' Figure out amount to pull from the buffer for string
+			if bufferLength > request.stringLength then
+				receiveLength = request.stringLength
+			else
+				receiveLength = bufferLength
+			end if
+
+			request.stringPayload += socket.receiveStr(receiveLength)
+			bufferLength -= receiveLength
+			return receiveDataForRequest(request, bufferLength)
 		end if
-		request.stringPayload += socket.receiveStr(receiveLength)
-		bufferLength -= receiveLength
-		return receiveDataForRequest(request, bufferLength)
 	end if
+
 	return -1
 end function
 
@@ -228,6 +245,7 @@ sub verifyAndHandleRequest(request)
 		' If there is a handler, this request type is handled on the task thread
 		handler = requestTypeConfig.handler
 		if isFunction(handler) then
+			request.timespan = createObject("roTimespan")
 			handler(request)
 			return
 		end if
@@ -432,7 +450,14 @@ sub sendBackError(request as Object, message as String)
 end sub
 
 sub sendResponseToClient(request as Object, response as Object, binaryPayloadByteArray = Invalid as Dynamic)
-	if NOT isBoolean(response.success) then response.success = true
+	if NOT isBoolean(response.success) then
+		response.success = true
+	end if
+
+	if request.timespan <> Invalid then
+		response["timeTaken"] = request.timespan.totalMilliseconds()
+		request.delete("timeTaken")
+	end if
 
 	json = request.json
 	if response.id = Invalid then

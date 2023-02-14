@@ -5,7 +5,9 @@ export namespace ODC {
 		deleteFile,
 		deleteNodeReferences,
 		deleteRegistrySections,
+		deleteEntireRegistry,
 		disableScreenSaver,
+		findNodesAtLocation,
 		focusNode,
 		getAllCount,
 		getDirectoryListing,
@@ -20,7 +22,7 @@ export namespace ODC {
 		handshake,
 		hasFocus,
 		isInFocusChain,
-		observeField,
+		onFieldChangeOnce,
 		readFile,
 		readRegistry,
 		renameFile,
@@ -35,6 +37,8 @@ export namespace ODC {
 	}
 	export type RequestTypes = keyof typeof RequestEnum;
 
+	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs;
+
 	export enum BaseEnum {
 		global,
 		scene,
@@ -45,12 +49,14 @@ export namespace ODC {
 
 	export declare type LogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
 
-	export interface BaseArgs {
-		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
-		base?: BaseTypes;
-
+	interface NodeRefKey {
 		/** If base is 'nodeRef' this is the key that we used to store the node references on. If one isn't provided we use the automatically generated one */
 		key?: string;
+	}
+
+	export interface BaseArgs extends NodeRefKey {
+		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
+		base?: BaseTypes;
 	}
 
 	export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
@@ -66,6 +72,103 @@ export namespace ODC {
 		responseMaxChildDepth?: number;
 	}
 
+	export interface RequestOptions {
+		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
+		timeout?: number;
+	}
+
+	export interface Request {
+		id: string;
+		args: RequestArgs;
+		type: RequestTypes;
+		settings: {
+			logLevel: LogLevels
+		};
+		callback?: (response: ODC.RequestResponse) => void;
+	}
+
+	export interface RequestResponse {
+		json: any;
+		stringLength: number;
+		binaryLength: number;
+		stringPayload: string;
+		binaryPayload: Buffer;
+	}
+
+	export interface NodeRepresentation {
+		// Allow other fields
+		[key: string]: any;
+		change: {
+			Index1: number;
+			Index2: number;
+			Operation: string;
+		};
+		childRenderOrder?: 'renderFirst' | 'renderLast';
+		children: NodeRepresentation[];
+		clippingRect?: [number, number, number, number];
+		enableRenderTracking?: boolean;
+		focusedChild: NodeRepresentation;
+		focusable: boolean;
+		id: string;
+		inheritParentOpacity?: boolean;
+		inheritParentTransform?: boolean;
+		muteAudioGuide?: boolean;
+		opacity?: number;
+		renderPass?: number;
+		renderTracking?: 'none' | 'partial' | 'full';
+		rotation?: number;
+		scale?: [number, number];
+		scaleRotateCenter?: [number, number];
+		subtype: string;
+		translation?: [number, number];
+		visible?: boolean;
+	}
+
+	export interface NodeTree {
+		/** What type of node this as returned by node.subtype() */
+		subtype: string;
+
+		id: string;
+
+		visible?: boolean;
+
+		opacity?: number;
+
+		translation?: number[];
+
+		/** This is the reference to the index it was stored at that we can use in later calls. If -1 we don't have one. */
+		ref: number;
+
+		/** Same as ref but for the parent  */
+		parentRef: number;
+
+		/** Used to determine the position of this node in its parent if applicable */
+		position: number;
+
+		/** keyPath that can be used to access this node */
+		keyPath: string;
+
+		/** The boundingRect of this node if we needed to get it */
+		rect?: BoundingRect
+
+		/** The sceneBoundingRect of this node if we requested to get it */
+		sceneRect?: BoundingRect
+
+		children: NodeTree[];
+	}
+
+	export interface BoundingRect {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	}
+
+	export interface ReturnTimeTaken {
+		/** How long this request took to run on the device */
+		timeTaken: number;
+	}
+
 	export interface CallFuncArgs extends BaseKeyPath {
 		/** Name of the function that needs to be called. */
 		funcName: string;
@@ -74,12 +177,9 @@ export namespace ODC {
 		funcParams?: any[];
 	}
 
-	export interface GetFocusedNodeArgs extends MaxChildDepth {
+	export interface GetFocusedNodeArgs extends MaxChildDepth, NodeRefKey {
 		/** returns `ref` field in response that can be matched up with storeNodeReferences response for determining where we are in the node tree */
 		includeRef?: boolean;
-
-		/** Key that the references were stored on. If one isn't provided we use the automatically generated one */
-		key?: string;
 
 		/** If true, will try to return the actual ArrayGrid itemComponent that is currently focused */
 		returnFocusedArrayGridChild?: boolean;
@@ -100,21 +200,30 @@ export namespace ODC {
 
 	export interface IsInFocusChainArgs extends BaseKeyPath {}
 
-	export interface StoreNodeReferencesArgs {
-		/** Key that we will store the node references on. If one isn't provided we use the automatically generated one */
-		key?: string;
-
+	export interface StoreNodeReferencesArgs extends NodeRefKey {
 		/** We can get ArrayGrid(RowList,MarkupGrid,etc) children but this has an extra overhead so is disabled by default */
 		includeArrayGridChildren?: boolean;
 
 		/** We can get total and type based count info but again this has some overhead so is disabled by default */
 		includeNodeCountInfo?: boolean;
+
+		/** We can get the boundingRect info for each stored node. Again this has a performance penalty so is turned off by default */
+		includeBoundingRectInfo?: boolean;
 	}
 
-	export interface DeleteNodeReferencesArgs {
-		/** Key that the references were stored on. If one isn't provided we use the automatically generated one */
-		key?: string;
+	export interface StoreNodeReferencesResponse extends ReturnTimeTaken {
+		flatTree: ODC.NodeTree[];
+		rootTree: ODC.NodeTree[];
+		totalNodes?: number;
+		nodeCountByType?: {[key: string]: number}
+		currentDesignResolution?: {
+			width: number;
+			height: number;
+			resolution: 'FHD' | 'HD';
+		}
 	}
+
+	export interface DeleteNodeReferencesArgs extends NodeRefKey {}
 
 	export interface DisableScreensaverArgs {
 		/** Set to true to disable screensaver from starting, false to allow screensaver to start at the appropriate time */
@@ -191,10 +300,22 @@ export namespace ODC {
 		value: ComparableValueTypes;
 	}
 
-	export interface GetNodesWithPropertiesArgs extends MaxChildDepth {
-		/** This is the key that we used to store the node references on. If one isn't provided we use the automatically generated one */
-		key?: string;
+	export interface GetNodesWithPropertiesArgs extends MaxChildDepth, NodeRefKey {
 		properties: NodeComparison[];
+	}
+
+	export interface FindNodesAtLocationArgs extends StoreNodeReferencesArgs {
+		/** horizontal pixel position you wish to find nodes at. Defaults to a resolution of 1920 but can be changed with OnDeviceComponent.uiResolution **/
+		x: number;
+
+		/** vertical pixel position you wish to find nodes at. Defaults to a resolution of 1080 but can be changed with OnDeviceComponent.uiResolution */
+		y: number;
+
+		/** If doing a single `findNodesAtLocation` request, it's not a big deal to call storeNodeReferences on the Roku to get our rect info. If you wish to call repeatedly you can make it much faster by providing an existing response from `storeNodeReferences` */
+		nodeTreeResponse?: StoreNodeReferencesResponse;
+
+		/** Will always be true no matter what is passed in */
+		includeBoundingRectInfo?: true;
 	}
 
 	interface MatchObject extends BaseKeyPath {
@@ -246,84 +367,4 @@ export namespace ODC {
 	export interface DeleteEntireRegistrySectionsArgs {}
 
 	export interface GetServerHostArgs {}
-
-	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs;
-
-	export interface RequestOptions {
-		/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
-		timeout?: number;
-	}
-
-	export interface Request {
-		id: string;
-		args: RequestArgs;
-		type: RequestTypes;
-		settings: {
-			logLevel: LogLevels
-		};
-		callback?: (response: ODC.RequestResponse) => void;
-	}
-
-	export interface RequestResponse {
-		json: any;
-		stringLength: number;
-		binaryLength: number;
-		stringPayload: string;
-		binaryPayload: Buffer;
-	}
-
-	export interface NodeRepresentation {
-		// Allow other fields
-		[key: string]: any;
-		change: {
-			Index1: number;
-			Index2: number;
-			Operation: string;
-		};
-		childRenderOrder?: 'renderFirst' | 'renderLast';
-		children: NodeRepresentation[];
-		clippingRect?: [number, number, number, number];
-		enableRenderTracking?: boolean;
-		focusedChild: NodeRepresentation;
-		focusable: boolean;
-		id: string;
-		inheritParentOpacity?: boolean;
-		inheritParentTransform?: boolean;
-		muteAudioGuide?: boolean;
-		opacity?: number;
-		renderPass?: number;
-		renderTracking?: 'none' | 'partial' | 'full';
-		rotation?: number;
-		scale?: [number, number];
-		scaleRotateCenter?: [number, number];
-		subtype: string;
-		translation?: [number, number];
-		visible?: boolean;
-	}
-
-	export interface NodeTree {
-		id: string;
-
-		/** What type of node this as returned by node.subtype() */
-		subtype: string;
-
-		/** This is the reference to the index it was stored at that we can use in later calls. If -1 we don't have one. */
-		ref: number;
-
-		/** Same as ref but for the parent  */
-		parentRef: number;
-
-		/** Used to determine the position of this node in its parent if applicable */
-		position: number;
-
-		/** keyPath that can be used to access this node */
-		keyPath: string;
-
-		children: NodeTree[];
-	}
-
-	export interface ReturnTimeTaken {
-		/** How this request took to run on the device */
-		timeTaken: number;
-	}
 }

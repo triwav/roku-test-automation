@@ -172,7 +172,7 @@ export class OnDeviceComponent {
 
 		args.retryTimeout = retryTimeout;
 
-		const result = await this.sendRequest('observeField', this.breakOutFieldFromKeyPath(args), options);
+		const result = await this.sendRequest('onFieldChangeOnce', this.breakOutFieldFromKeyPath(args), options);
 		return result.json as {
 			/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not */
 			observerFired: boolean;
@@ -229,15 +229,10 @@ export class OnDeviceComponent {
 	public async storeNodeReferences(args: ODC.StoreNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest('storeNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
-		const body = result.json as {
-			flatTree: ODC.NodeTree[];
-			rootTree: ODC.NodeTree[];
-			totalNodes?: number;
-			nodeCountByType?: {[key: string]: number}
-		} & ODC.ReturnTimeTaken;
+		const output = result.json as ODC.StoreNodeReferencesResponse;
 
 		const rootTree = [] as ODC.NodeTree[];
-		for (const tree of body.flatTree) {
+		for (const tree of output.flatTree) {
 			if (!tree.children) {
 				tree.children = [];
 			}
@@ -247,22 +242,64 @@ export class OnDeviceComponent {
 				continue;
 			}
 
-			const parentTree = body.flatTree[tree.parentRef];
+			const parentTree = output.flatTree[tree.parentRef];
 			if (!parentTree.children) {
 				parentTree.children = [];
 			}
 
 			parentTree.children.push(tree);
 		}
-		body.rootTree = rootTree;
+		output.rootTree = rootTree;
 
 		this.buildKeyPathsRecursively(rootTree);
 
 		// sort children by position to make output more logical and add our keyPath on
-		for (const tree of body.flatTree) {
+		for (const tree of output.flatTree) {
 			tree.children.sort((a, b) => a.position - b.position);
 		}
-		return body;
+
+		const designResolution = output.currentDesignResolution;
+		if (designResolution) {
+			let width = 1920;
+			let height = 1080;
+			if (this.getConfig()?.uiResolution === 'hd') {
+				width = 1280;
+				height = 720;
+			}
+			// We convert all the rects to the user's specified resolution so we don't have to mess with it in the future
+			const xMultiplier = width / designResolution.width;
+			const yMultiplier = height / designResolution.height;
+			const flatTree = output.flatTree;
+			for (const nodeTree of flatTree) {
+				if (!nodeTree.sceneRect && nodeTree.rect) {
+					// If we don't have a sceneRect then calculate it based off our parent sceneRect and our rect. Currently only used for ArrayGrid item component children
+					const parentSceneRect = flatTree[nodeTree.parentRef]?.sceneRect;
+					if (parentSceneRect) {
+						const rect = nodeTree.rect;
+						nodeTree.sceneRect = {
+							width: rect.width,
+							height: rect.height,
+							x: parentSceneRect.x + rect.x,
+							y: parentSceneRect.y + rect.y
+						};
+					}
+				}
+
+				const sceneRect = nodeTree.sceneRect;
+				if (!sceneRect) {
+					continue;
+				}
+
+				// For debugging if needed
+				// nodeTree['originalSceneRect'] = {...sceneRect};
+
+				sceneRect.x *= xMultiplier;
+				sceneRect.y *= yMultiplier;
+				sceneRect.width *= xMultiplier;
+				sceneRect.height *= yMultiplier;
+			}
+		}
+		return output;
 	}
 
 	private buildKeyPathsRecursively(nodeTrees: ODC.NodeTree[], keyPathParts = [] as string[], parentIsRowlistItem = false, parentIsTitleGroup = false) {
@@ -369,6 +406,77 @@ export class OnDeviceComponent {
 			nodes: ODC.NodeRepresentation[]
 			nodeRefs: number[]
 		} & ODC.ReturnTimeTaken;
+	}
+
+	private calculateRectCenterPoint(rect: ODC.BoundingRect) {
+		return {
+			x: (rect.x - rect.width) / 2,
+			y: (rect.y - rect.height) / 2
+		};
+	}
+
+	private calculateRectCenterPointOffsetFromLocation(x: number, y: number, rect: ODC.BoundingRect) {
+		const centerPoint = this.calculateRectCenterPoint(rect);
+		return {
+			x: x - centerPoint.x,
+			y: y - centerPoint.y
+		};
+	}
+
+	public async findNodesAtLocation(args: ODC.FindNodesAtLocationArgs, options: ODC.RequestOptions = {}) {
+		let nodeTreeResponse = args.nodeTreeResponse;
+		if (!nodeTreeResponse) {
+			args.includeBoundingRectInfo = true;
+			nodeTreeResponse = await this.storeNodeReferences(args, options);
+		}
+
+		const matches = [] as ODC.NodeTree[];
+		this.findNodesAtLocationCore(args.x, args.y, nodeTreeResponse.rootTree, matches);
+
+		// We now want to sort our matches to try and return the best one first
+		matches.sort((a, b) => {
+			const aOffest = this.calculateRectCenterPointOffsetFromLocation(args.x, args.y, a.sceneRect as ODC.BoundingRect);
+			const bOffset = this.calculateRectCenterPointOffsetFromLocation(args.x, args.y, b.sceneRect as ODC.BoundingRect);
+			return (Math.abs(aOffest.x) + Math.abs(aOffest.y)) - (Math.abs(bOffset.x) + Math.abs(bOffset.y));
+		});
+
+		return {
+			matches
+		};
+	}
+
+	private findNodesAtLocationCore(x: number, y: number, nodeTrees: ODC.NodeTree[], matches: ODC.NodeTree[]) {
+		let nodeFound = false;
+		for (const nodeTree of nodeTrees) {
+			// If we hit a sequestered item dig into its children immediately
+			if (nodeTree['sequestered']) {
+				nodeFound = this.findNodesAtLocationCore(x, y, nodeTree.children, matches);
+			}
+
+			const rect = nodeTree.sceneRect;
+			if (!rect) {
+				continue;
+			}
+
+			const isLocationWithinNodeDimensions = (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height);
+			const isVisible = (nodeTree.visible && !!nodeTree.opacity);
+
+			if (isLocationWithinNodeDimensions && isVisible) {
+				if (!nodeTree.children.length) {
+					matches.push(nodeTree);
+					nodeFound = true;
+				} else {
+					nodeFound = this.findNodesAtLocationCore(x, y, nodeTree.children, matches);
+				}
+
+				// If we didn't find any children that were both visible and have x and y within the nodes dimensions then we add the current node to the list of matches. May eventually want to exclude some types like Group or LayoutGroup
+				if (!nodeFound) {
+					matches.push(nodeTree);
+					nodeFound = true;
+				}
+			}
+		}
+		return nodeFound;
 	}
 
 	public async startResponsivenessTesting(args: ODC.StartResponsivenessTestingArgs = {}, options: ODC.RequestOptions = {}) {
@@ -588,55 +696,58 @@ export class OnDeviceComponent {
 
 			socket.on('data', (data) => {
 				let offset = 0;
-				if (!this.receivingRequestResponse) {
-					offset = this.requestHeaderSize;
-					this.receivingRequestResponse = {
-						json: {},
-						stringLength: data.readInt32LE(0),
-						binaryLength: data.readInt32LE(4),
-						stringPayload: '',
-						binaryPayload: Buffer.alloc(0)
-					};
-				}
-
-				// Check if we're still receiving the string payload
-				const remainingStringPayload = this.receivingRequestResponse.stringLength - this.receivingRequestResponse.stringPayload.length;
-				if (remainingStringPayload > 0) {
-					const remainingBufferBytes = data.length - offset;
-					if (remainingBufferBytes < remainingStringPayload) {
-						this.receivingRequestResponse.stringPayload += data.toString('utf-8', offset, remainingBufferBytes + offset);
-						return;
-					} else {
-						this.receivingRequestResponse.stringPayload += data.toString('utf-8', offset, remainingStringPayload + offset);
-						offset += remainingStringPayload;
+				while (offset < data.length) {
+					if (!this.receivingRequestResponse) {
+						this.receivingRequestResponse = {
+							json: {},
+							stringLength: data.readInt32LE(0 + offset),
+							binaryLength: data.readInt32LE(4 + offset),
+							stringPayload: '',
+							binaryPayload: Buffer.alloc(0)
+						};
+						offset += this.requestHeaderSize;
 					}
-				}
 
-				const binaryPayload = this.receivingRequestResponse.binaryPayload;
-				const remainingBinaryPayload = this.receivingRequestResponse.binaryLength - binaryPayload.length;
-				if (remainingBinaryPayload > 0) {
-					const remainingBufferBytes = data.length - offset;
-					if (remainingBufferBytes < remainingBinaryPayload) {
-						const additionalBinaryPayload = data.slice(offset, remainingBufferBytes + offset);
-						this.receivingRequestResponse.binaryPayload = Buffer.concat([binaryPayload, additionalBinaryPayload]);
-						return;
-					} else {
-						const additionalBinaryPayload = data.slice(offset, remainingBinaryPayload + offset);
-						this.receivingRequestResponse.binaryPayload = Buffer.concat([binaryPayload, additionalBinaryPayload]);
+					// Check if we're still receiving the string payload
+					const remainingStringPayload = this.receivingRequestResponse.stringLength - this.receivingRequestResponse.stringPayload.length;
+					if (remainingStringPayload > 0) {
+						const remainingBufferBytes = data.length - offset;
+						if (remainingBufferBytes < remainingStringPayload) {
+							this.receivingRequestResponse.stringPayload += data.toString('utf-8', offset, remainingBufferBytes + offset);
+							return;
+						} else {
+							this.receivingRequestResponse.stringPayload += data.toString('utf-8', offset, remainingStringPayload + offset);
+							offset += remainingStringPayload;
+						}
 					}
-				}
 
-				const receivingRequestResponse = this.receivingRequestResponse;
-				this.receivingRequestResponse = undefined;
-				const json = JSON.parse(receivingRequestResponse.stringPayload);
-				receivingRequestResponse.json = json;
-				if (json.id && this.activeRequests[json.id]) {
-					const request = this.activeRequests[json.id];
-					const callback = request.callback;
-					if (callback) {
-						callback(receivingRequestResponse);
+					const binaryPayload = this.receivingRequestResponse.binaryPayload;
+					const remainingBinaryPayload = this.receivingRequestResponse.binaryLength - binaryPayload.length;
+					if (remainingBinaryPayload > 0) {
+						const remainingBufferBytes = data.length - offset;
+						if (remainingBufferBytes < remainingBinaryPayload) {
+							const additionalBinaryPayload = data.slice(offset, remainingBufferBytes + offset);
+							this.receivingRequestResponse.binaryPayload = Buffer.concat([binaryPayload, additionalBinaryPayload]);
+							return;
+						} else {
+							const additionalBinaryPayload = data.slice(offset, remainingBinaryPayload + offset);
+							this.receivingRequestResponse.binaryPayload = Buffer.concat([binaryPayload, additionalBinaryPayload]);
+							offset += remainingBinaryPayload;
+						}
 					}
-					delete this.activeRequests[json.id];
+
+					const receivingRequestResponse = this.receivingRequestResponse;
+					this.receivingRequestResponse = undefined;
+					const json = JSON.parse(receivingRequestResponse.stringPayload);
+					receivingRequestResponse.json = json;
+					if (json.id && this.activeRequests[json.id]) {
+						const request = this.activeRequests[json.id];
+						const callback = request.callback;
+						if (callback) {
+							callback(receivingRequestResponse);
+						}
+						delete this.activeRequests[json.id];
+					}
 				}
 			});
 
@@ -673,7 +784,8 @@ export class OnDeviceComponent {
 			delete request.args.binaryPayload;
 		}
 
-		const stringPayload = JSON.stringify(request);
+		// We have to remove any non ascii character or else the device will stack overflow due to it only counting the multibyte character as one byte
+		const stringPayload = JSON.stringify(request).replace(/[\x00-\x08\x0E-\x1F\x7F-\uFFFF]/g, ''); // eslint-disable-line no-control-regex
 
 		// Build our header buffer with the lengths so we know on the receiving how much data we're expecting for the message before it is considered complete
 		const headerBuffer = Buffer.alloc(8);

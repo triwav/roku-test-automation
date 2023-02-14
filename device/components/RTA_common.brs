@@ -551,6 +551,37 @@ function getArrayAtKeyPath(aa as Object, keyPath as String, fallback = [] as Obj
 	return getValueAtKeyPath(aa, keyPath, fallback, isArray)
 end function
 
+function generateKeyPathForNode(node as Object, topParent as Object) as String
+	keyPathParts = []
+	parent = node.getParent()
+	while true
+		nodeId = node.id
+		if nodeId <> "" then
+			keyPathParts.unshift(nodeId)
+		else
+			index = getNodeParentIndex(node, parent)
+			if index = -1 then
+				print "could not make valid keyPath"
+				return ""
+			end if
+			keyPathParts.unshift(index.toStr())
+		end if
+
+		if parent <> Invalid AND parent.isSameNode(topParent) then
+			exit while
+		end if
+
+		node = parent
+		parent = parent.getParent()
+	end while
+
+	keyPath = keyPathParts.join(".")
+	if keyPath = "" then
+		print "did not make valid keyPath"
+	end if
+	return keyPath
+end function
+
 '*************************************************************************
 '#endregion *** KEYED VALUE UTILITIES
 '*************************************************************************

@@ -93,7 +93,7 @@ export class RokuDevice {
 	/**
 	 * @param outputFilePath - Where to output the generated screenshot. Extension is automatically appended based on what type of screenshotFormat you have specified for this device
 	 */
-	public async getScreenshot(outputFilePath: string) {
+	public async getScreenshot(outputFilePath?: string) {
 		await this.generateScreenshot();
 		return await this.saveScreenshot(outputFilePath);
 	}
@@ -158,18 +158,43 @@ export class RokuDevice {
 		return await this.needle('post', url, data, options);
 	}
 
-	private async saveScreenshot(outputFilePath: string) {
+	private async saveScreenshot(outputFilePath?: string) {
 		const deviceConfig = this.getCurrentDeviceConfig();
-		await utils.ensureDirExistForFilePath(outputFilePath);
 		const options = this.getOptions(true);
-		const ext = `.${deviceConfig.screenshotFormat ?? 'jpg'}`;
-		options.output = outputFilePath + ext;
-		const url = `http://${deviceConfig.host}/pkgs/dev${ext}`;
-		const result = await this.needle('get', url, options);
-		if (result.statusCode !== 200) {
-			throw new Error(`Could not download screenshot at ${url}. Make sure you have the correct screenshot format in your config`);
+
+		let ext = deviceConfig.screenshotFormat ?? 'jpg';
+		if (outputFilePath) {
+			await utils.ensureDirExistForFilePath(outputFilePath);
+			options.output = `${outputFilePath}.${ext}`;
 		}
-		return options.output;
+
+		let url = `http://${deviceConfig.host}/pkgs/dev.${ext}`;
+		let result = await this.needle('get', url, options);
+		if (result.statusCode === 401) {
+			throw new Error(`Could not download screenshot at ${url}. Make sure you have the correct device password`);
+		} else if (result.statusCode === 404) {
+			if (ext === 'jpg') {
+				ext = 'png';
+			} else {
+				ext = 'jpg';
+			}
+			url = `http://${deviceConfig.host}/pkgs/dev.${ext}`;
+			result = await this.needle('get', url, options);
+			if (result.statusCode === 200) {
+				console.log(`Device ${deviceConfig.host} screenshot format was ${deviceConfig.screenshotFormat}. Temporarily updating to ${ext}. Consider updating your config.`);
+				deviceConfig.screenshotFormat = ext;
+			}
+		}
+
+		if (result.statusCode !== 200) {
+			throw new Error(`Could not download screenshot at ${url}. Make sure your sideloaded application is open`);
+		}
+
+		return {
+			format: deviceConfig.screenshotFormat,
+			buffer: result.body as Buffer,
+			path: options.output
+		};
 	}
 
 	private getOptions(requiresAuth = false) {

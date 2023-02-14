@@ -1,6 +1,6 @@
 {
     "name": "roku-test-automation",
-    "version": "2.0.0-beta.12",
+    "version": "2.0.0-beta.13",
     "description": "Helps with automating functional tests",
     "main": "client/dist/index.js",
     "typings": "client/dist/index.d.ts",
@@ -11,6 +11,7 @@
         "test:device": "npm run build && mocha dist/RokuDevice.spec.js dist/OnDeviceComponent.spec.js",
         "test:all": "npm run build && mocha dist/**/*.spec.js",
         "buildConfigSchema": "typescript-json-schema src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps --refs false --required --ignoreErrors",
+        "buildRequestTypesSchema": "typescript-json-schema src/types/OnDeviceComponentRequest.ts ODC.RequestTypes --out requestTypes.schema.json --ignoreErrors",
         "buildRequestArgsSchema": "typescript-json-schema src/types/OnDeviceComponentRequest.ts ODC.RequestArgs --propOrder --out requestArgs.schema.json --ignoreErrors",
         "buildRelease": "npx ts-node scripts/buildRelease.ts",
         "buildRelease:beta": "npx ts-node scripts/buildRelease.ts --beta",
@@ -28,14 +29,14 @@
     },
     "homepage": "https://github.com/triwav/roku-test-automation#readme",
     "dependencies": {
+        "@suitest/types": "^4.6.0",
         "ajv": "^6.12.6",
         "fs-extra": "^7.0.1",
         "get-stack-trace": "^2.1.1",
         "http-network-proxy": "^1.0.11",
         "needle": "^2.9.1",
         "path": "^0.12.7",
-        "roku-deploy": "^3.9.2",
-        "@suitest/types": "^4.6.0"
+        "roku-deploy": "^3.9.2"
     },
     "devDependencies": {
         "@rokucommunity/bslint": "^0.7.3",

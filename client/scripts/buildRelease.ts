@@ -18,7 +18,7 @@ const outputFolder = path.resolve(__dirname + '/../../release');
 
 rimraf.sync(outputFolder);
 
-output = execSync(`npm run buildConfigSchema && npm run buildRequestArgsSchema`, {
+output = execSync(`npm run buildConfigSchema && npm run buildRequestArgsSchema && npm run buildRequestTypesSchema`, {
 	encoding: 'utf8'
 });
 console.log(output);
@@ -27,6 +27,7 @@ const resourcesToCopy = [
 	[path.join(clientSourceFolder, 'dist'), path.join('client', 'dist')],
 	[path.join(clientSourceFolder, 'package.json'), 'package.json'],
 	[path.join(clientSourceFolder, 'requestArgs.schema.json'), path.join('client', 'requestArgs.schema.json')],
+	[path.join(clientSourceFolder, 'requestTypes.schema.json'), path.join('client', 'requestTypes.schema.json')],
 	[path.join(clientSourceFolder, 'rta-config.schema.json'), path.join('client', 'rta-config.schema.json')],
 	[path.resolve(__dirname + '/../../device'), 'device'],
 	[path.resolve(__dirname + '/../../README.md'), 'README.md'],
