@@ -383,7 +383,7 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	for each requestId in m.activeObserveFieldRequests
 		activeObserveFieldRequest = m.activeObserveFieldRequests[requestId]
 
-		if activeObserveFieldRequest.node.isSameNode(node) AND activeObserveFieldRequest.args.field = field then
+		if node.isSameNode(activeObserveFieldRequest.node) AND activeObserveFieldRequest.args.field = field then
 			logDebug("Already observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 			alreadyObserving = true
 			exit for
