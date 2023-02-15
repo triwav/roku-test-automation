@@ -489,14 +489,17 @@ sub sendResponseToClient(request as Object, response as Object, binaryPayloadByt
 	socket = request.socket
 	bytesRemaining = ba.count()
 	currentIndex = 0
+	maxSegmentSize = socket.getMaxSeg()
 	while bytesRemaining > 0
 		bytesSent = socket.send(ba, currentIndex, bytesRemaining)
-		if bytesSent = -1 then
-			sleep(1)
-		else
+		if bytesSent > 0 then
 			bytesRemaining -= bytesSent
 			currentIndex += bytesSent
 		end if
+
+		while socket.getCountSendBuf() > maxSegmentSize
+			sleep(1)
+		end while
 	end while
 end sub
 
