@@ -34,12 +34,18 @@ describe('RokuDevice', function () {
 	});
 
 	describe('getScreenshot [SLOW]', () => {
-		it('should work', async () => {
-			const screenShotPath = await device.getScreenshot('output');
-			if (!fsExtra.existsSync(screenShotPath)) {
-				assert.fail(`'${screenShotPath}' did not exist`);
+		it('should output a file if a path was provided', async () => {
+			const {path} = await device.getScreenshot('output');
+			if (path && !fsExtra.existsSync(path)) {
+				assert.fail(`'${path}' did not exist`);
 			}
-			fsExtra.removeSync(screenShotPath);
+			fsExtra.removeSync(path as string);
+		});
+
+		it('should output a buffer if no path was provided', async () => {
+			const {buffer} = await device.getScreenshot();
+			expect(buffer).to.be.instanceof(Buffer);
+			expect(buffer.byteLength).to.be.greaterThan(0);
 		});
 	});
 

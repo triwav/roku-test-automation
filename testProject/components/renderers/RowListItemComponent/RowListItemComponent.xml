@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="RowListItemComponent" extends="Group">
+	<script type="text/brightscript" uri="RowListItemComponent.brs" />
 	<interface>
 		<field id="width" type="float" alias="rect.width" />
 		<field id="height" type="float" alias="rect.height" />
@@ -7,9 +8,10 @@
 		<field id="gridHasFocus" type="boolean" />
 		<field id="focusPercent" type="float" />
 		<field id="rowFocusPercent" type="float" />
-		<field id="itemContent" type="node" />
+		<field id="itemContent" type="node" onChange="onItemContentChange" />
 	</interface>
 	<children>
 		<Rectangle id="rect" color="#FF0000" />
+		<Label id="title" translation="[50, 25]" />
 	</children>
 </component>

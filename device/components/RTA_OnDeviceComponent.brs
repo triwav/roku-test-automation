@@ -31,8 +31,8 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processHasFocusRequest(args)
 	else if requestType = "isInFocusChain" then
 		response = processIsInFocusChainRequest(args)
-	else if requestType = "observeField" then
-		response = processObserveFieldRequest(request)
+	else if requestType = "onFieldChangeOnce" then
+		response = processOnFieldChangeOnceRequest(request)
 	else if requestType = "setValue" then
 		response = processSetValueRequest(args)
 	else if requestType = "getAllCount" then
@@ -297,7 +297,7 @@ function processIsInFocusChainRequest(args as Object) as Object
 	}
 end function
 
-function processObserveFieldRequest(request as Object) as Dynamic
+function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
 	result = processGetValueRequest(args)
@@ -383,7 +383,7 @@ function processObserveFieldRequest(request as Object) as Dynamic
 	for each requestId in m.activeObserveFieldRequests
 		activeObserveFieldRequest = m.activeObserveFieldRequests[requestId]
 
-		if activeObserveFieldRequest.node.isSameNode(node) AND activeObserveFieldRequest.args.field = field then
+		if node.isSameNode(activeObserveFieldRequest.node) AND activeObserveFieldRequest.args.field = field then
 			logDebug("Already observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 			alreadyObserving = true
 			exit for
@@ -406,7 +406,7 @@ end function
 sub onProcessObserveFieldRequestRetryFired(event as Object)
 	requestId = event.getNode()
 	request = m.activeObserveFieldRequests[requestId]
-	response = processObserveFieldRequest(request)
+	response = processOnFieldChangeOnceRequest(request)
 
 	' If response isn't invalid then we have to send it back ourselves
 	if response <> Invalid then
@@ -551,6 +551,7 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 
 	includeArrayGridChildren = getBooleanAtKeyPath(args, "includeArrayGridChildren")
 	includeNodeCountInfo = getBooleanAtKeyPath(args, "includeNodeCountInfo")
+	includeBoundingRectInfo = getBooleanAtKeyPath(args, "includeBoundingRectInfo")
 
 	if NOT isNonEmptyString(nodeReferencesKey) then
 		return buildErrorResponseObject("Invalid value supplied for 'key' param")
@@ -562,14 +563,18 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 	flatTree = []
 
 	arrayGridNodes = {}
-	buildTree(storedNodes, flatTree, m.top.getScene(), includeArrayGridChildren, arrayGridNodes)
+	scene = m.top.getScene()
+	buildTree(storedNodes, flatTree, scene, includeArrayGridChildren, arrayGridNodes)
 
 	result = {
 		"flatTree": flatTree
 	}
 
+	arrayGridComponents = {}
+	nodeCountByType = {}
+	itemComponentNodes = []
+
 	if includeArrayGridChildren OR includeNodeCountInfo then
-		arrayGridComponents = {}
 		if includeArrayGridChildren then
 			for each key in arrayGridNodes
 				node = arrayGridNodes[key]
@@ -582,9 +587,6 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 				end if
 			end for
 		end if
-
-		nodeCountByType = {}
-		itemComponentNodes = []
 
 		allNodes = m.top.getAll()
 		result["totalNodes"] = allNodes.count()
@@ -601,11 +603,54 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 		end for
 
 		if includeArrayGridChildren then
-			buildItemComponentTrees(storedNodes, flatTree, itemComponentNodes, arrayGridNodes, allNodes)
+			buildItemComponentTrees(storedNodes, flatTree, itemComponentNodes, arrayGridNodes, allNodes, includeBoundingRectInfo)
 		end if
 
 		result["nodeCountByType"] = nodeCountByType
 	end if
+
+	if includeBoundingRectInfo then
+		for each nodeTree in flatTree
+			' We use the visible field we added to only calculate rect if this is a RenderableNode.
+			if nodeTree.visible <> Invalid then
+				node = storedNodes[nodeTree.ref]
+
+				if arrayGridComponents[nodeTree.subtype] = true then
+					' We need to get rect differently for our arrayGridComponents as the x and y are often wrong if we called sceneBoundingRect on the ArrayGrid component itself
+					parentTree = flatTree[nodeTree.parentRef]
+					itemIndex = [nodeTree.position.toStr()]
+
+					' We need to build our properly formatted itemNumber string by walking up the parents until we get to the outer ArrayGrid parent. We can't use the inner MarkupGrid as this gives incorrect results sometimes as well.
+					while parentTree <> Invalid
+						if parentTree.subtype = "RowListItem" then
+							itemIndex.unshift(parentTree.position.toStr())
+						else if parentTree.sequestered <> true then
+							' Once we hit our first non sequestered parent we know we've hit our parent ArrayGrid
+							itemNumber = "item" + itemIndex[0]
+							if itemIndex.count() = 2 then
+								itemNumber += "_" + itemIndex[1]
+							end if
+							' For debugging
+							' nodeTree["itemNumber"] = itemNumber
+							nodeTree["sceneRect"] = storedNodes[parentTree.ref].sceneSubBoundingRect(itemNumber)
+							exit while
+						end if
+
+						parentTree = flatTree[parentTree.parentRef]
+					end while
+				else if nodeTree.rect = Invalid AND nodeTree.sceneRect = Invalid AND nodeTree.sequestered <> true then
+					' We don't want to try and get rects for sequestered nodes as those values are often wrong.
+					nodeTree["sceneRect"] = node.sceneBoundingRect()
+				end if
+			end if
+		end for
+
+		if m.currentDesignResolution = invalid then
+			m.currentDesignResolution = scene.currentDesignResolution
+		end if
+		result["currentDesignResolution"] = m.currentDesignResolution
+	end if
+
 	m.nodeReferences[nodeReferencesKey] = storedNodes
 
 	return result
@@ -613,7 +658,7 @@ end function
 
 ' ArrayGrid children can't be built with a normal call to buildTree since you can only get the parent not the children.
 ' Often times nodes are in different spots, so this will also standardize them to a single consistent spot
-sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemComponentNodes as Object, arrayGridNodes as Object, allNodes as Object)
+sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemComponentNodes as Object, arrayGridNodes as Object, allNodes as Object, includeBoundingRectInfo = false as Boolean)
 	unparentedItemComponentNodeBranch = []
 
 	' Serves as a place to store the nodeBranch and allows us to only have to check a small subset of the nodes for a matching parent
@@ -623,7 +668,16 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 	for each itemComponentNode in itemComponentNodes
 		itemContent = itemComponentNode.itemContent
 		position = getNodeParentIndex(itemContent, itemContent.getParent())
+
+		' So we know how many nodes we need to handle afterwards if includeBoundingRectInfo is true
+		startingIndex = storedNodes.count() + 1 ' + 1 since we don't need rect for item component itself
 		childNodeBranch = buildTree(storedNodes, flatTree, itemComponentNode, false, {}, -1, position)
+		if includeBoundingRectInfo then
+			for i = startingIndex to storedNodes.count() - 1
+				flatTree[i].rect = storedNodes[i].boundingRect()
+			end for
+		end if
+
 		parent = itemComponentNode.getParent()
 
 		' If we don't have a parent we want to handle parentRef based off of itemContent later
@@ -685,7 +739,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 				' If not go ahead and make a nodeBranch for it
 				if nodeBranch = Invalid then
 					position = getNodeParentIndex(parent, parent.getParent())
-					nodeBranch = addNodeToTree(storedNodes, flatTree, parent, -1, position)
+					nodeBranch = addNodeToTree(storedNodes, flatTree, parent, -1, position, true)
 					nodeType = nodeBranch.subtype
 					if nodeType = "RowListItem" then
 						internalRowListItemNodeBranches.push(nodeBranch)
@@ -799,7 +853,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 
 			' First index is title info that we want to make available for external use as well
 			if i = 0 then
-				buildTree(storedNodes, flatTree, child, false, {}, internalRowListItemNodeBranch.ref, i)
+				buildTree(storedNodes, flatTree, child, false, {}, internalRowListItemNodeBranch.ref, i, true)
 			else if child.subtype() = "MarkupGrid" then
 				' Need to get position from the child MarkupGrid content
 				content = child.content
@@ -809,24 +863,39 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 	end for
 end sub
 
-function addNodeToTree(storedNodes as Object, flatTree as Object, node as Object, parentRef = -1 as Integer, position = -1 as Integer) as Object
+' @sequestered - boolean to let us know if this is a non item component child of an ArrayGrid so we have to treat it differently
+function addNodeToTree(storedNodes as Object, flatTree as Object, node as Object, parentRef = -1 as Integer, position = -1 as Integer, sequestered = false as Boolean) as Object
 	currentNodeReference = storedNodes.count()
 	storedNodes.push(node)
 
+	nodeSubtype = node.subtype()
 	nodeBranch = {
+		"subtype": nodeSubtype
 		"id": node.id
-		"subtype": node.subtype()
 		"ref": currentNodeReference
 		"parentRef": parentRef
 		"position": position
 	}
+
+	if sequestered then
+		nodeBranch.sequestered = true
+	end if
+
+	' Only add the following fields if we extend from Group. Note node.isSubtype("Group") returns false if called on a Group node. This necessitates the second check.
+	if node.isSubtype("Group") OR nodeSubtype = "Group" then
+		nodeBranch.visible = node.visible
+		nodeBranch.opacity = node.opacity
+		nodeBranch.translation = node.translation
+	end if
+
 	flatTree.push(nodeBranch)
 
 	return nodeBranch
 end function
 
-function buildTree(storedNodes as Object, flatTree as Object, node as Object, searchForArrayGrids as Boolean, arrayGridNodes = {} as Object, parentRef = -1 as Integer, position = -1 as Integer) as Object
-	nodeBranch = addNodeToTree(storedNodes, flatTree, node, parentRef, position)
+' @sequestered - boolean to let us know if this is a non item component child of an ArrayGrid so we have to treat it differently
+function buildTree(storedNodes as Object, flatTree as Object, node as Object, searchForArrayGrids as Boolean, arrayGridNodes = {} as Object, parentRef = -1 as Integer, position = -1 as Integer, sequestered = false as Boolean) as Object
+	nodeBranch = addNodeToTree(storedNodes, flatTree, node, parentRef, position, sequestered)
 	nodeRef = nodeBranch.ref
 	if searchForArrayGrids AND node.isSubtype("ArrayGrid") then
 		arrayGridNodes[nodeRef.toStr()] = node
@@ -1118,7 +1187,7 @@ function processFocusNodeRequest(args as Object) as Object
 end function
 
 function getBaseObject(args as Object) as Dynamic
-	baseType = args.base
+	baseType = getStringAtKeyPath(args, "base")
 	if baseType = "global" then return m.global
 	if baseType = "scene" then return m.top.getScene()
 	if baseType = "focusedNode" then return getFocusedNode()

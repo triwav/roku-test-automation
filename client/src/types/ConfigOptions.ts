@@ -80,6 +80,9 @@ export interface OnDeviceComponentConfigOptions {
 
 	/** We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line */
 	disableCallOriginationLine?: boolean
+
+	/** The resolution we will use when specifying pixel values. If not specified defaults to `fhd` */
+	uiResolution?: 'fhd' | 'hd'
 }
 
 export interface NetworkProxyOptions {
