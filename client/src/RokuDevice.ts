@@ -2,10 +2,10 @@ import * as needle from 'needle';
 import * as rokuDeploy from 'roku-deploy';
 import * as fsExtra from 'fs-extra';
 import * as querystring from 'needle/lib/querystring';
-import * as mocha from 'mocha';
+import type * as mocha from 'mocha';
 import * as net from 'net';
 
-import { ConfigOptions } from './types/ConfigOptions';
+import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 
 export class RokuDevice {

@@ -1,14 +1,5 @@
 import type { ODC } from './OnDeviceComponentRequest';
 
-export enum ConfigBaseKeyEnum {
-	ECP,
-	NetworkProxy,
-	OnDeviceComponent,
-	RokuDevice,
-	Suitest
-}
-export type ConfigBaseKeyTypes = keyof typeof ConfigBaseKeyEnum;
-
 export interface ConfigOptions {
 	/** strictly for schema validation not used internally */
 	$schema?: string;
@@ -67,7 +58,7 @@ export interface OnDeviceComponentConfigOptions {
 	clientDebugLogging?: boolean;
 
 	/** Allows specifying the default base that will be used if one was not provided in the args for a request */
-	defaultBase?: ODC.BaseTypes
+	defaultBase?: ODC.BaseType
 
 	/**
 	 * Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.

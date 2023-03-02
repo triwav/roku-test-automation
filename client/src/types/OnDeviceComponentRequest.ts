@@ -1,62 +1,59 @@
 export namespace ODC {
-	export enum RequestEnum {
-		callFunc,
-		createDirectory,
-		deleteFile,
-		deleteNodeReferences,
-		deleteRegistrySections,
-		deleteEntireRegistry,
-		disableScreenSaver,
-		findNodesAtLocation,
-		focusNode,
-		getAllCount,
-		getDirectoryListing,
-		getFocusedNode,
-		getNodesInfo,
-		getNodesWithProperties,
-		getRootsCount,
-		getServerHost,
-		getValue,
-		getValues,
-		getVolumeList,
-		handshake,
-		hasFocus,
-		isInFocusChain,
-		onFieldChangeOnce,
-		readFile,
-		readRegistry,
-		renameFile,
-		setValue,
-		startResponsivenessTesting,
-		getResponsivenessTestingData,
-		stopResponsivenessTesting,
-		statPath,
-		storeNodeReferences,
-		writeFile,
-		writeRegistry,
+	export enum RequestType {
+		callFunc = 'callFunc',
+		createDirectory = 'createDirectory',
+		deleteFile = 'deleteFile',
+		deleteNodeReferences = 'deleteNodeReferences',
+		deleteRegistrySections = 'deleteRegistrySections',
+		deleteEntireRegistry = 'deleteEntireRegistry',
+		disableScreenSaver = 'disableScreenSaver',
+		findNodesAtLocation = 'findNodesAtLocation',
+		focusNode = 'focusNode',
+		getAllCount = 'getAllCount',
+		getDirectoryListing = 'getDirectoryListing',
+		getFocusedNode = 'getFocusedNode',
+		getNodesInfo = 'getNodesInfo',
+		getNodesWithProperties = 'getNodesWithProperties',
+		getRootsCount = 'getRootsCount',
+		getServerHost = 'getServerHost',
+		getValue = 'getValue',
+		getValues = 'getValues',
+		getVolumeList = 'getVolumeList',
+		hasFocus = 'hasFocus',
+		isInFocusChain = 'isInFocusChain',
+		onFieldChangeOnce = 'onFieldChangeOnce',
+		readFile = 'readFile',
+		readRegistry = 'readRegistry',
+		renameFile = 'renameFile',
+		setValue = 'setValue',
+		startResponsivenessTesting = 'startResponsivenessTesting',
+		getResponsivenessTestingData = 'getResponsivenessTestingData',
+		stopResponsivenessTesting = 'stopResponsivenessTesting',
+		statPath = 'statPath',
+		storeNodeReferences = 'storeNodeReferences',
+		writeFile = 'writeFile',
+		writeRegistry = 'writeRegistry',
 	}
-	export type RequestTypes = keyof typeof RequestEnum;
 
 	export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs;
 
-	export enum BaseEnum {
-		global,
-		scene,
-		nodeRef,
-		focusedNode
+	export enum BaseType {
+		global = 'global',
+		scene = 'scene',
+		nodeRef = 'nodeRef',
+		focusedNode = 'focusedNode'
 	}
-	export type BaseTypes = keyof typeof BaseEnum;
 
 	export declare type LogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
 
 	interface NodeRefKey {
 		/** If base is 'nodeRef' this is the key that we used to store the node references on. If one isn't provided we use the automatically generated one */
-		key?: string;
+		nodeRefKey?: string;
 	}
 
 	export interface BaseArgs extends NodeRefKey {
 		/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
-		base?: BaseTypes;
+		base?: BaseType |  keyof typeof BaseType;
 	}
 
 	export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
@@ -80,7 +77,7 @@ export namespace ODC {
 	export interface Request {
 		id: string;
 		args: RequestArgs;
-		type: RequestTypes;
+		type: RequestType;
 		settings: {
 			logLevel: LogLevels
 		};
@@ -124,7 +121,7 @@ export namespace ODC {
 		visible?: boolean;
 	}
 
-	export interface NodeTree {
+	export interface TreeNode {
 		/** What type of node this as returned by node.subtype() */
 		subtype: string;
 
@@ -154,7 +151,7 @@ export namespace ODC {
 		/** The sceneBoundingRect of this node if we requested to get it */
 		sceneRect?: BoundingRect
 
-		children: NodeTree[];
+		children: TreeNode[];
 	}
 
 	export interface BoundingRect {
@@ -212,8 +209,8 @@ export namespace ODC {
 	}
 
 	export interface StoreNodeReferencesResponse extends ReturnTimeTaken {
-		flatTree: ODC.NodeTree[];
-		rootTree: ODC.NodeTree[];
+		flatTree: ODC.TreeNode[];
+		rootTree: ODC.TreeNode[];
 		totalNodes?: number;
 		nodeCountByType?: {[key: string]: number}
 		currentDesignResolution?: {

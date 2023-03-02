@@ -3,13 +3,13 @@
 import * as needle from 'needle';
 import * as querystring from 'needle/lib/querystring';
 import * as fsExtra from 'fs-extra';
+import type {TestLine, AssertTestLine, PressButtonTestLine, IdElementSubject, Condition, StringComparator, NumberComparator} from '@suitest/types';
 
 import { ECP } from './ECP';
 import { ODC } from './types/OnDeviceComponentRequest';
-import { OnDeviceComponent } from './OnDeviceComponent';
-import { ConfigOptions } from './types/ConfigOptions';
+import type { OnDeviceComponent } from './OnDeviceComponent';
+import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import {TestLine, AssertTestLine, PressButtonTestLine, IdElementSubject, Condition, StringComparator, NumberComparator} from '@suitest/types';
 
 export class Suitest {
 	public testsByTestId: {
@@ -43,8 +43,8 @@ export class Suitest {
 		}
 	} = {};
 
-	public preOpenAppHook: (() => void) | undefined;
-	public postOpenAppHook: (() => void) | undefined;
+	public preOpenAppHook: (() => Promise<void>) | undefined;
+	public postOpenAppHook: (() => Promise<void>) | undefined;
 
 	//store the import on the class to make testing easier
 	private utils = utils;
@@ -433,7 +433,7 @@ export class Suitest {
 		});
 		const roku = element.platforms.roku;
 
-		let matchingNodeTree: ODC.NodeTree | undefined;
+		let matchingNodeTree: ODC.TreeNode | undefined;
 		let matchingNodeError: Error | undefined;
 		let matchingNode: ODC.NodeRepresentation | undefined;
 
@@ -442,7 +442,7 @@ export class Suitest {
 			try {
 				matchingNodeTree = await this.findMatchingNode(rootTree, xpathParts, flatTree);
 				const {value} = await this.odc.getValue({
-					base: 'nodeRef',
+					base: ODC.BaseType.nodeRef,
 					keyPath: `${matchingNodeTree.ref}`
 				});
 				matchingNode = value;
@@ -672,7 +672,7 @@ export class Suitest {
 		return false;
 	}
 
-	private async findMatchingNode(rootNodeTree: ODC.NodeTree[], xpathParts: string[], flatTree: ODC.NodeTree[], previousXpathParts = [] as string[]): Promise<ODC.NodeTree> {
+	public async findMatchingNode(rootNodeTree: ODC.TreeNode[], xpathParts: string[], flatTree: ODC.TreeNode[], previousXpathParts = [] as string[]): Promise<ODC.TreeNode> {
 		while (xpathParts.length > 0 && xpathParts[0] === '') {
 			xpathParts.shift();
 		}
@@ -720,7 +720,7 @@ export class Suitest {
 		throw new Error(`Failed to find '${currentNodeSubtypePattern}' at xpath '${previousXpathParts.join('/')}'`);
 	}
 
-	private getNodeTree(flatTree: ODC.NodeTree[], ref?: number) {
+	private getNodeTree(flatTree: ODC.TreeNode[], ref?: number) {
 		if (!ref) {
 			return undefined;
 		}

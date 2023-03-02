@@ -1,9 +1,8 @@
 import { RokuDevice } from './RokuDevice';
-import { ActiveAppResponse } from './types/ActiveAppResponse';
-import { ConfigOptions } from './types/ConfigOptions';
-import { ECPKeys } from './types/ECPKeys';
+import type { ActiveAppResponse } from './types/ActiveAppResponse';
+import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import { MediaPlayerResponse } from './types/MediaPlayerResponse';
+import type { MediaPlayerResponse } from './types/MediaPlayerResponse';
 import * as fsExtra from 'fs-extra';
 
 export class ECP {
@@ -15,7 +14,6 @@ export class ECP {
 
 	private raspFileSteps?: string[];
 
-	public static readonly Key = ECPKeys;
 	public readonly Key = ECP.Key;
 
 	constructor(config?: ConfigOptions) {
@@ -47,7 +45,7 @@ export class ECP {
 
 
 
-	public async sendKeyPress(key: ECPKeys, options?: SendKeyPressOptions) {
+	public async sendKeyPress(key: ECP.Key, options?: SendKeyPressOptions) {
 		if (typeof options === 'number') {
 			options = {
 				wait: options
@@ -79,44 +77,44 @@ export class ECP {
 		return this.utils.sleep(milliseconds);
 	}
 
-	private convertKeyToRaspEquivalent(key: ECPKeys) {
+	private convertKeyToRaspEquivalent(key: ECP.Key) {
 		switch (key) {
-			case ECPKeys.Back:
+			case ECP.Key.Back:
 				return 'back';
-			case ECPKeys.Backspace:
+			case ECP.Key.Backspace:
 				return console.log('Roku Remote Tool does not handle Backspace ECP request. Skipping');
-			case ECPKeys.Down:
+			case ECP.Key.Down:
 				return 'down';
-			case ECPKeys.Enter:
+			case ECP.Key.Enter:
 				return console.log('Roku Remote Tool does not handle Enter ECP request. Skipping');
-			case ECPKeys.Forward:
+			case ECP.Key.Forward:
 				return 'forward';
-			case ECPKeys.Home:
+			case ECP.Key.Home:
 				return 'home';
-			case ECPKeys.Left:
+			case ECP.Key.Left:
 				return 'left';
-			case ECPKeys.Ok:
+			case ECP.Key.Ok:
 				return 'ok';
-			case ECPKeys.Option:
+			case ECP.Key.Option:
 				return 'info';
-			case ECPKeys.Play:
+			case ECP.Key.Play:
 				return 'play';
-			case ECPKeys.Replay:
+			case ECP.Key.Replay:
 				return 'repeat';
-			case ECPKeys.Rewind:
+			case ECP.Key.Rewind:
 				return 'reverse';
-			case ECPKeys.Right:
+			case ECP.Key.Right:
 				return 'right';
-			case ECPKeys.Up:
+			case ECP.Key.Up:
 				return 'up';
-			case ECPKeys.Search:
-			case ECPKeys.PowerOff:
-			case ECPKeys.PowerOn:
+			case ECP.Key.Search:
+			case ECP.Key.PowerOff:
+			case ECP.Key.PowerOn:
 				return console.log(`Roku Remote Tool does not handle ${key} ECP request. Skipping`);
 		}
 	}
 
-	public async sendKeyPressSequence(keys: ECPKeys[], options?: SendKeyPressOptions) {
+	public async sendKeyPressSequence(keys: ECP.Key[], options?: SendKeyPressOptions) {
 		if (typeof options !== 'number') {
 			const count = options?.count;
 			if (count !== undefined) {
@@ -319,6 +317,28 @@ export class ECP {
 		raspFileLines = raspFileLines.concat(this.raspFileSteps);
 		this.raspFileSteps = undefined;
 		fsExtra.writeFileSync(outputPath, raspFileLines.join('\n'));
+	}
+}
+
+export namespace ECP {
+	export enum Key {
+		Back = 'Back',
+		Backspace = 'Backspace',
+		Down = 'Down',
+		Enter = 'Enter',
+		Forward = 'Fwd',
+		Home = 'Home',
+		Left = 'Left',
+		Ok = 'Select',
+		Option = 'Info',
+		Play = 'Play',
+		Replay = 'InstantReplay',
+		Rewind = 'Rev',
+		Right = 'Right',
+		Search = 'Search',
+		Up = 'Up',
+		PowerOff = 'PowerOff',
+		PowerOn = 'PowerOn'
 	}
 }
 

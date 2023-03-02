@@ -1,5 +1,7 @@
-import { ApplicationRequestProxy, OnProxyRequestCallback, OnProxyResponseCallback } from 'http-network-proxy';
-import { ConfigOptions, OnDeviceComponent, utils } from '.';
+import type { OnProxyRequestCallback, OnProxyResponseCallback } from 'http-network-proxy';
+import { ApplicationRequestProxy } from 'http-network-proxy';
+import type { ConfigOptions, OnDeviceComponent} from '.';
+import { utils } from '.';
 
 export class NetworkProxy {
 	private proxyAddress?: string;

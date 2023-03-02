@@ -119,15 +119,15 @@ function processGetFocusedNodeRequest(args as Object) as Object
 	}
 
 	if getBooleanAtKeyPath(args, "includeRef") then
-		nodeReferencesKey = args.key
+		nodeRefKey = args.nodeRefKey
 
-		if NOT isNonEmptyString(nodeReferencesKey) then
+		if NOT isNonEmptyString(nodeRefKey) then
 			return buildErrorResponseObject("Invalid value supplied for 'key' param")
 		end if
 
-		storedNodes = m.nodeReferences[nodeReferencesKey]
+		storedNodes = m.nodeReferences[nodeRefKey]
 		if NOT isArray(storedNodes) then
-			return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
+			return buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
 		end if
 
 		arrayGridChildItemContent = invalid
@@ -547,19 +547,19 @@ function calculateNodeCount(nodes) as Object
 end function
 
 function processStoreNodeReferencesRequest(args as Object) as Object
-	nodeReferencesKey = args.key
+	nodeRefKey = args.nodeRefKey
 
 	includeArrayGridChildren = getBooleanAtKeyPath(args, "includeArrayGridChildren")
 	includeNodeCountInfo = getBooleanAtKeyPath(args, "includeNodeCountInfo")
 	includeBoundingRectInfo = getBooleanAtKeyPath(args, "includeBoundingRectInfo")
 
-	if NOT isNonEmptyString(nodeReferencesKey) then
-		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	if NOT isNonEmptyString(nodeRefKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'nodeRefKey' param")
 	end if
 
 	storedNodes = []
 	' Clear out old nodes before getting next retrieval of nodes
-	m.nodeReferences[nodeReferencesKey] = storedNodes
+	m.nodeReferences[nodeRefKey] = storedNodes
 	flatTree = []
 
 	arrayGridNodes = {}
@@ -651,7 +651,7 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 		result["currentDesignResolution"] = m.currentDesignResolution
 	end if
 
-	m.nodeReferences[nodeReferencesKey] = storedNodes
+	m.nodeReferences[nodeRefKey] = storedNodes
 
 	return result
 end function
@@ -667,7 +667,10 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 
 	for each itemComponentNode in itemComponentNodes
 		itemContent = itemComponentNode.itemContent
-		position = getNodeParentIndex(itemContent, itemContent.getParent())
+		position = -1
+		if itemContent <> Invalid then
+			position = getNodeParentIndex(itemContent, itemContent.getParent())
+		end if
 
 		' So we know how many nodes we need to handle afterwards if includeBoundingRectInfo is true
 		startingIndex = storedNodes.count() + 1 ' + 1 since we don't need rect for item component itself
@@ -911,24 +914,24 @@ function buildTree(storedNodes as Object, flatTree as Object, node as Object, se
 end function
 
 function processDeleteNodeReferencesRequest(args as Object) as Object
-	nodeReferencesKey = args.key
-	if NOT isString(nodeReferencesKey) then
+	nodeRefKey = args.nodeRefKey
+	if NOT isString(nodeRefKey) then
 		return buildErrorResponseObject("Invalid value supplied for 'key' param")
 	end if
-	m.nodeReferences.delete(nodeReferencesKey)
+	m.nodeReferences.delete(nodeRefKey)
 
 	return {}
 end function
 
 function processGetNodesWithPropertiesRequest(args as Object) as Object
-	nodeReferencesKey = args.key
-	if NOT isString(nodeReferencesKey) then
-		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	nodeRefKey = args.nodeRefKey
+	if NOT isString(nodeRefKey) then
+		return buildErrorResponseObject("Invalid value supplied for 'nodeRefKey' param")
 	end if
 
-	storedNodes = m.nodeReferences[nodeReferencesKey]
+	storedNodes = m.nodeReferences[nodeRefKey]
 	if NOT isArray(storedNodes) then
-		return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
+		return buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
 	end if
 
 	matchingNodes = []
@@ -1192,10 +1195,10 @@ function getBaseObject(args as Object) as Dynamic
 	if baseType = "scene" then return m.top.getScene()
 	if baseType = "focusedNode" then return getFocusedNode()
 	if baseType = "nodeRef" then
-		nodeReferencesKey = getStringAtKeyPath(args, "key")
-		base = m.nodeReferences[nodeReferencesKey]
+		nodeRefKey = getStringAtKeyPath(args, "nodeRefKey")
+		base = m.nodeReferences[nodeRefKey]
 		if base = Invalid then
-			return buildErrorResponseObject("Invalid key supplied '" + nodeReferencesKey + "'. Make sure you have stored first")
+			return buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
 		else
 			return base
 		end if

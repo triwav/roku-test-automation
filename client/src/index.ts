@@ -23,5 +23,5 @@ export { Suitest, suitest };
 
 export * from './types/ActiveAppResponse';
 export * from './types/ConfigOptions';
-export * from './types/ECPKeys';
+export * from './types/MediaPlayerResponse';
 export * from './types/OnDeviceComponentRequest';
