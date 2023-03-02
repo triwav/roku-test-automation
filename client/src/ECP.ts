@@ -2,7 +2,6 @@ import { RokuDevice } from './RokuDevice';
 import type { ActiveAppResponse } from './types/ActiveAppResponse';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import type { MediaPlayerResponse } from './types/MediaPlayerResponse';
 import * as fsExtra from 'fs-extra';
 
 export class ECP {
@@ -200,7 +199,7 @@ export class ECP {
 		const player = result.body;
 		if (!player) throw this.utils.makeError('getMediaPlayerInvalidResponse', 'Received invalid media-player response from device');
 
-		const response: MediaPlayerResponse = {
+		const response: ECP.MediaPlayerResponse = {
 			state: player.attributes.state,
 			error: player.attributes.error === 'true',
 		};
@@ -339,6 +338,72 @@ export namespace ECP {
 		Up = 'Up',
 		PowerOff = 'PowerOff',
 		PowerOn = 'PowerOn'
+	}
+
+	export interface MediaPlayerResponse {
+		state: 'close' | 'none' | 'startup' | 'buffer' | 'play' | 'pause' | 'open';
+		error: boolean;
+		plugin?: MediaPlayerPlugin;
+		format?: MediaPlayerFormat;
+		buffering?: MediaPlayerBuffering;
+		new_stream?: MediaPlayerNewStream;
+		position?: MediaPlayerPosition;
+		duration?: MediaPlayerDuration;
+		is_live?: MediaPlayerIsLive;
+		runtime?: MediaPlayerRuntime;
+		stream_segment?: MediaPlayerStreamSegment;
+	}
+
+	export interface MediaPlayerPlugin {
+		bandwidth: string;
+		id: string;
+		name: string;
+	}
+
+	export interface MediaPlayerFormat {
+		audio: string;
+		captions: string;
+		container: string;
+		drm: string;
+		video: string;
+	}
+
+	export interface MediaPlayerBuffering {
+		current: string;
+		max: string;
+		target: string;
+	}
+
+	export interface MediaPlayerNewStream {
+		speed: string;
+	}
+
+	export interface MediaPlayerPosition {
+		value: string;
+		number: number;
+	}
+
+	export interface MediaPlayerDuration {
+		value: string;
+		number: number;
+	}
+
+	export interface MediaPlayerIsLive {
+		value: string;
+	}
+
+	export interface MediaPlayerRuntime {
+		value: string;
+		number: number;
+	}
+
+	export interface MediaPlayerStreamSegment {
+		bitrate: string;
+		height: string;
+		media_sequence: string;
+		segment_type: string;
+		time: string;
+		width: string;
 	}
 }
 
