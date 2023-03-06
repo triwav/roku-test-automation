@@ -3,7 +3,7 @@ import * as net from 'net';
 import type { RokuDevice } from './RokuDevice';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import { ODC } from '.';
+import * as ODC from './types/OnDeviceComponent';
 
 export class OnDeviceComponent {
 	public device: RokuDevice;

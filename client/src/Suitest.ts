@@ -6,7 +6,7 @@ import * as fsExtra from 'fs-extra';
 import type {TestLine, AssertTestLine, PressButtonTestLine, IdElementSubject, Condition, StringComparator, NumberComparator} from '@suitest/types';
 
 import { ECP } from './ECP';
-import { ODC } from './types/OnDeviceComponentRequest';
+import * as ODC from './types/OnDeviceComponent';
 import type { OnDeviceComponent } from './OnDeviceComponent';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';

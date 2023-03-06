@@ -3,6 +3,27 @@ import type { ActiveAppResponse } from './types/ActiveAppResponse';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 import * as fsExtra from 'fs-extra';
+import type { MediaPlayerResponse } from './types/MediaPlayerResponse';
+
+export enum Key {
+	Back = 'Back',
+	Backspace = 'Backspace',
+	Down = 'Down',
+	Enter = 'Enter',
+	Forward = 'Fwd',
+	Home = 'Home',
+	Left = 'Left',
+	Ok = 'Select',
+	Option = 'Info',
+	Play = 'Play',
+	Replay = 'InstantReplay',
+	Rewind = 'Rev',
+	Right = 'Right',
+	Search = 'Search',
+	Up = 'Up',
+	PowerOff = 'PowerOff',
+	PowerOn = 'PowerOn'
+}
 
 export class ECP {
 	//store the import on the class to make testing easier
@@ -13,7 +34,8 @@ export class ECP {
 
 	private raspFileSteps?: string[];
 
-	public readonly Key = ECP.Key;
+	public static readonly Key = Key;
+	public readonly Key = Key;
 
 	constructor(config?: ConfigOptions) {
 		if (config) {
@@ -44,7 +66,7 @@ export class ECP {
 
 
 
-	public async sendKeyPress(key: ECP.Key, options?: SendKeyPressOptions) {
+	public async sendKeyPress(key: Key, options?: SendKeyPressOptions) {
 		if (typeof options === 'number') {
 			options = {
 				wait: options
@@ -76,44 +98,44 @@ export class ECP {
 		return this.utils.sleep(milliseconds);
 	}
 
-	private convertKeyToRaspEquivalent(key: ECP.Key) {
+	private convertKeyToRaspEquivalent(key: Key) {
 		switch (key) {
-			case ECP.Key.Back:
+			case Key.Back:
 				return 'back';
-			case ECP.Key.Backspace:
+			case Key.Backspace:
 				return console.log('Roku Remote Tool does not handle Backspace ECP request. Skipping');
-			case ECP.Key.Down:
+			case Key.Down:
 				return 'down';
-			case ECP.Key.Enter:
+			case Key.Enter:
 				return console.log('Roku Remote Tool does not handle Enter ECP request. Skipping');
-			case ECP.Key.Forward:
+			case Key.Forward:
 				return 'forward';
-			case ECP.Key.Home:
+			case Key.Home:
 				return 'home';
-			case ECP.Key.Left:
+			case Key.Left:
 				return 'left';
-			case ECP.Key.Ok:
+			case Key.Ok:
 				return 'ok';
-			case ECP.Key.Option:
+			case Key.Option:
 				return 'info';
-			case ECP.Key.Play:
+			case Key.Play:
 				return 'play';
-			case ECP.Key.Replay:
+			case Key.Replay:
 				return 'repeat';
-			case ECP.Key.Rewind:
+			case Key.Rewind:
 				return 'reverse';
-			case ECP.Key.Right:
+			case Key.Right:
 				return 'right';
-			case ECP.Key.Up:
+			case Key.Up:
 				return 'up';
-			case ECP.Key.Search:
-			case ECP.Key.PowerOff:
-			case ECP.Key.PowerOn:
+			case Key.Search:
+			case Key.PowerOff:
+			case Key.PowerOn:
 				return console.log(`Roku Remote Tool does not handle ${key} ECP request. Skipping`);
 		}
 	}
 
-	public async sendKeyPressSequence(keys: ECP.Key[], options?: SendKeyPressOptions) {
+	public async sendKeyPressSequence(keys: Key[], options?: SendKeyPressOptions) {
 		if (typeof options !== 'number') {
 			const count = options?.count;
 			if (count !== undefined) {
@@ -199,7 +221,7 @@ export class ECP {
 		const player = result.body;
 		if (!player) throw this.utils.makeError('getMediaPlayerInvalidResponse', 'Received invalid media-player response from device');
 
-		const response: ECP.MediaPlayerResponse = {
+		const response: MediaPlayerResponse = {
 			state: player.attributes.state,
 			error: player.attributes.error === 'true',
 		};
@@ -316,94 +338,6 @@ export class ECP {
 		raspFileLines = raspFileLines.concat(this.raspFileSteps);
 		this.raspFileSteps = undefined;
 		fsExtra.writeFileSync(outputPath, raspFileLines.join('\n'));
-	}
-}
-
-export namespace ECP {
-	export enum Key {
-		Back = 'Back',
-		Backspace = 'Backspace',
-		Down = 'Down',
-		Enter = 'Enter',
-		Forward = 'Fwd',
-		Home = 'Home',
-		Left = 'Left',
-		Ok = 'Select',
-		Option = 'Info',
-		Play = 'Play',
-		Replay = 'InstantReplay',
-		Rewind = 'Rev',
-		Right = 'Right',
-		Search = 'Search',
-		Up = 'Up',
-		PowerOff = 'PowerOff',
-		PowerOn = 'PowerOn'
-	}
-
-	export interface MediaPlayerResponse {
-		state: 'close' | 'none' | 'startup' | 'buffer' | 'play' | 'pause' | 'open';
-		error: boolean;
-		plugin?: MediaPlayerPlugin;
-		format?: MediaPlayerFormat;
-		buffering?: MediaPlayerBuffering;
-		new_stream?: MediaPlayerNewStream;
-		position?: MediaPlayerPosition;
-		duration?: MediaPlayerDuration;
-		is_live?: MediaPlayerIsLive;
-		runtime?: MediaPlayerRuntime;
-		stream_segment?: MediaPlayerStreamSegment;
-	}
-
-	export interface MediaPlayerPlugin {
-		bandwidth: string;
-		id: string;
-		name: string;
-	}
-
-	export interface MediaPlayerFormat {
-		audio: string;
-		captions: string;
-		container: string;
-		drm: string;
-		video: string;
-	}
-
-	export interface MediaPlayerBuffering {
-		current: string;
-		max: string;
-		target: string;
-	}
-
-	export interface MediaPlayerNewStream {
-		speed: string;
-	}
-
-	export interface MediaPlayerPosition {
-		value: string;
-		number: number;
-	}
-
-	export interface MediaPlayerDuration {
-		value: string;
-		number: number;
-	}
-
-	export interface MediaPlayerIsLive {
-		value: string;
-	}
-
-	export interface MediaPlayerRuntime {
-		value: string;
-		number: number;
-	}
-
-	export interface MediaPlayerStreamSegment {
-		bitrate: string;
-		height: string;
-		media_sequence: string;
-		segment_type: string;
-		time: string;
-		width: string;
 	}
 }
 

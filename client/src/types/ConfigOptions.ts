@@ -1,4 +1,4 @@
-import type { ODC } from './OnDeviceComponentRequest';
+import type * as ODC from './OnDeviceComponent';
 
 export interface ConfigOptions {
 	/** strictly for schema validation not used internally */

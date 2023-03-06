@@ -7,7 +7,7 @@ const expect = chai.expect;
 import * as assert from 'assert';
 
 import { utils } from './utils';
-import type { ODC } from './types/OnDeviceComponentRequest';
+import type * as ODC from './types/OnDeviceComponent';
 import { ecp, odc, device } from '.';
 
 // Used to unwrap promise return types to get the true value
