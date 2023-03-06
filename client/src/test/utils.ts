@@ -1,5 +1,5 @@
 import * as fsExtra from 'fs-extra';
-import * as needle from 'needle';
+import type * as needle from 'needle';
 
 import { utils } from '../utils';
 

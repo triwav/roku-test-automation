@@ -28,12 +28,15 @@ module.exports = {
                 'allowTemplateLiterals': true
             }
         ],
-        '@typescript-eslint/no-namespace': 'off',
+        '@typescript-eslint/require-await': 'error',
+        '@typescript-eslint/await-thenable': 'error',
         '@typescript-eslint/no-explicit-any': 'off',
         '@typescript-eslint/no-var-requires': 'off',
         '@typescript-eslint/no-unused-vars': 'off',
         '@typescript-eslint/no-empty-function': 'off',
         '@typescript-eslint/no-empty-interface': 'off',
         '@typescript-eslint/switch-exhaustiveness-check': 'warn',
+        '@typescript-eslint/prefer-enum-initializers': 'error',
+        '@typescript-eslint/consistent-type-imports': 'error'
     }
 };

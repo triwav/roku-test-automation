@@ -21,7 +21,6 @@
         "getValue",
         "getValues",
         "getVolumeList",
-        "handshake",
         "hasFocus",
         "isInFocusChain",
         "onFieldChangeOnce",

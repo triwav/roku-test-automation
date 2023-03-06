@@ -7,7 +7,7 @@ const expect = chai.expect;
 import * as assert from 'assert';
 
 import { utils } from './utils';
-import { ODC } from './types/OnDeviceComponentRequest';
+import type * as ODC from './types/OnDeviceComponent';
 import { ecp, odc, device } from '.';
 
 // Used to unwrap promise return types to get the true value
@@ -49,7 +49,7 @@ describe('OnDeviceComponent', function () {
 			storeResult = await odc.storeNodeReferences();
 		});
 
-		it('should have the correct fields for flatTree', async () => {
+		it('should have the correct fields for flatTree', () => {
 			expect(storeResult.flatTree).to.be.an('array');
 			for (const tree of storeResult.flatTree) {
 				expect(tree.subtype).to.be.a.string;
@@ -65,7 +65,7 @@ describe('OnDeviceComponent', function () {
 			}
 		});
 
-		it('should have the correct fields for rootTree', async () => {
+		it('should have the correct fields for rootTree', () => {
 			expect(storeResult.rootTree).to.be.an('array');
 			const tree = storeResult.rootTree[0];
 
@@ -79,19 +79,19 @@ describe('OnDeviceComponent', function () {
 			expect(tree.children).to.be.an('array');
 		});
 
-		it('each tree should have a children array field', async () => {
+		it('each tree should have a children array field', () => {
 			expect(storeResult.rootTree).to.be.array();
 			for (const tree of storeResult.flatTree) {
 				expect(tree.children).to.be.array();
 			}
 		});
 
-		it('should not include node count info by default', async () => {
+		it('should not include node count info by default', () => {
 			expect(storeResult.totalNodes).to.not.be.ok;
 			expect(storeResult.nodeCountByType).to.not.be.ok;
 		});
 
-		it('should include correct keyPaths for both findNode and index based key paths', async () => {
+		it('should include correct keyPaths for both findNode and index based key paths', () => {
 			expect(storeResult.rootTree[0].children[4].keyPath).to.equal('#pagesContainerGroup');
 			expect(storeResult.rootTree[0].children[4].children[0].keyPath).to.equal('#pagesContainerGroup.0');
 		});
@@ -103,12 +103,12 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			it('should include node count info if requested', async () => {
+			it('should include node count info if requested', () => {
 				expect(storeResult.totalNodes).to.be.greaterThan(0);
 				expect(Object.keys(storeResult.nodeCountByType!).length).to.be.greaterThan(0);
 			});
 
-			it('should not run array grid child finding code unless explicitly requested', async () => {
+			it('should not run array grid child finding code unless explicitly requested', () => {
 				for (const nodeTree of storeResult.flatTree) {
 					expect(nodeTree.subtype).to.not.equal('RowListItem');
 				}
@@ -141,7 +141,7 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('should be able to pull ArrayGrid children for an itemComponent even if it did not have a parent and did not have enough items to have an itemComponent in the same row that had a parent as long as we have a rowTitleComponent', () => {
-				let rowListWithCustomTitleComponentNodeTree: ODC.NodeTree | undefined = undefined;
+				let rowListWithCustomTitleComponentNodeTree: ODC.TreeNode | undefined = undefined;
 				for (const nodeTree of storeResult.flatTree) {
 					if (nodeTree.id === 'rowListWithCustomTitleComponent') {
 						rowListWithCustomTitleComponentNodeTree = nodeTree;
@@ -642,7 +642,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		describe('Brightscript interface function calls', function () {
-			describe('getParent()', async () => {
+			describe('getParent()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#poster.getParent()'});
 					expect(value.subtype).to.equal('MainScene');
@@ -654,7 +654,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('count()', async () => {
+			describe('count()', () => {
 				it('should work on array item', async () => {
 					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.count()'});
 					expect(value).to.equal(3);
@@ -676,7 +676,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('keys()', async () => {
+			describe('keys()', () => {
 				it('should work on AA item', async () => {
 					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.keys()'});
 					expect(value).to.be.instanceof(Array);
@@ -695,7 +695,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('len()', async () => {
+			describe('len()', () => {
 				it('should work on string item', async () => {
 					const {value} = await odc.getValue({base: 'global', keyPath: 'stringValue.len()'});
 					expect(value).to.equal(11);
@@ -707,7 +707,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('getChildCount()', async () => {
+			describe('getChildCount()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#pagesContainerGroup.getChildCount()'});
 					expect(value).to.equal(1);
@@ -719,7 +719,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('threadinfo()', async () => {
+			describe('threadinfo()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: 'threadinfo()'});
 					const currentThread = value.currentThread;
@@ -733,7 +733,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('getFieldTypes()', async () => {
+			describe('getFieldTypes()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: 'getFieldTypes()'});
 					const expectedValues = {
@@ -777,7 +777,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('subtype()', async () => {
+			describe('subtype()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.subtype()'});
 					expect(value).to.equal('RowList');
@@ -789,7 +789,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('boundingRect()', async () => {
+			describe('boundingRect()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.boundingRect()'});
 					expect(value.height).to.equal(438);
@@ -804,7 +804,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('localBoundingRect()', async () => {
+			describe('localBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()'});
 					expect(value.height).to.equal(438);
@@ -819,7 +819,7 @@ describe('OnDeviceComponent', function () {
 				});
 			});
 
-			describe('sceneBoundingRect()', async () => {
+			describe('sceneBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()'});
 					expect(value.height).to.equal(438);
@@ -884,7 +884,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should fail if invalid key supplied or we did not store first', async () => {
 			try {
-				await odc.getFocusedNode({key: 'na', includeRef: true});
+				await odc.getFocusedNode({nodeRefKey: 'na', includeRef: true});
 			} catch (e) {
 				// failed as expected
 				return;
@@ -1145,12 +1145,12 @@ describe('OnDeviceComponent', function () {
 
 		it('it should allow match on other key paths and wait until that value matches', async () => {
 			const stringKeyPath = {
-				base: 'global' as ODC.BaseTypes,
+				base: 'global' as ODC.BaseType,
 				keyPath: 'stringValue'
 			};
 
 			const match = {
-				base: 'global' as ODC.BaseTypes,
+				base: 'global' as ODC.BaseType,
 				keyPath: 'intValue',
 				value: utils.randomInteger()
 			};
@@ -1167,10 +1167,10 @@ describe('OnDeviceComponent', function () {
 
 		it('if a match value is provided and the value already equals what we are looking for, it should return right away', async () => {
 			const args = {
-				base: 'global' as ODC.BaseTypes,
+				base: 'global' as ODC.BaseType,
 				keyPath: 'stringValue',
 				match: {
-					base: 'global' as ODC.BaseTypes,
+					base: 'global' as ODC.BaseType,
 					keyPath: 'intValue',
 					value: utils.randomInteger()
 				}

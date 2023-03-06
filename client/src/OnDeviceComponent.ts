@@ -1,11 +1,9 @@
 import * as net from 'net';
 
-import { getStackTrace } from 'get-stack-trace';
-
-import { RokuDevice } from './RokuDevice';
-import { ConfigOptions } from './types/ConfigOptions';
+import type { RokuDevice } from './RokuDevice';
+import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import { ODC } from '.';
+import * as ODC from './types/OnDeviceComponent';
 
 export class OnDeviceComponent {
 	public device: RokuDevice;
@@ -46,7 +44,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		const result = await this.sendRequest('callFunc', args, options);
+		const result = await this.sendRequest(ODC.RequestType.callFunc, args, options);
 		return result.json as {
 			value: any
 		} & ODC.ReturnTimeTaken;
@@ -56,7 +54,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		const result = await this.sendRequest('getValue', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getValue, args, options);
 		return result.json as {
 			found: boolean;
 			value?: any;
@@ -70,7 +68,7 @@ export class OnDeviceComponent {
 			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
 		}
 
-		const result = await this.sendRequest('getValues', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getValues, args, options);
 		return result.json as {
 			results: {
 				[key: string]: {
@@ -88,7 +86,7 @@ export class OnDeviceComponent {
 			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
 		}
 
-		const result = await this.sendRequest('getNodesInfo', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getNodesInfo, args, options);
 		return result.json as {
 			results: {
 				[key: string]: {
@@ -111,7 +109,7 @@ export class OnDeviceComponent {
 	public async getFocusedNode(args: ODC.GetFocusedNodeArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		const result = await this.sendRequest('getFocusedNode', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getFocusedNode, args, options);
 		return result.json as {
 			node: ODC.NodeRepresentation;
 			ref?: number;
@@ -122,7 +120,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		const result = await this.sendRequest('hasFocus', {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.hasFocus, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json.hasFocus as boolean;
 	}
 
@@ -130,7 +128,7 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		const result = await this.sendRequest('isInFocusChain', {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.isInFocusChain, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json.isInFocusChain as boolean;
 	}
 
@@ -172,7 +170,7 @@ export class OnDeviceComponent {
 
 		args.retryTimeout = retryTimeout;
 
-		const result = await this.sendRequest('onFieldChangeOnce', this.breakOutFieldFromKeyPath(args), options);
+		const result = await this.sendRequest(ODC.RequestType.onFieldChangeOnce, this.breakOutFieldFromKeyPath(args), options);
 		return result.json as {
 			/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not */
 			observerFired: boolean;
@@ -188,9 +186,9 @@ export class OnDeviceComponent {
 
 		let result: ODC.RequestResponse;
 		if (args.field !== undefined) {
-			result = await this.sendRequest('setValue', args, options);
+			result = await this.sendRequest(ODC.RequestType.setValue, args, options);
 		} else {
-			result = await this.sendRequest('setValue', this.breakOutFieldFromKeyPath(args), options);
+			result = await this.sendRequest(ODC.RequestType.setValue, this.breakOutFieldFromKeyPath(args), options);
 		}
 
 		return result.json as ODC.ReturnTimeTaken;
@@ -198,20 +196,20 @@ export class OnDeviceComponent {
 
 	private conditionallyAddDefaultBase(args: ODC.BaseArgs) {
 		if (!args.base) {
-			args.base = (this.getConfig()?.defaultBase) ?? 'scene';
+			args.base = (this.getConfig()?.defaultBase) ?? ODC.BaseType.scene;
 		}
 	}
 
 	private conditionallyAddDefaultNodeReferenceKey(args: ODC.BaseArgs) {
-		if (!args.key) {
+		if (!args.nodeRefKey) {
 			if (!args.base || args.base === 'nodeRef') {
-				args.key = this.defaultNodeReferencesKey;
+				args.nodeRefKey = this.defaultNodeReferencesKey;
 			}
 		}
 	}
 
 	public async getAllCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('getAllCount', {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.getAllCount, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json as {
 			totalNodes: number;
 			nodeCountByType: {[key: string]: number}
@@ -219,7 +217,7 @@ export class OnDeviceComponent {
 	}
 
 	public async getRootsCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('getRootsCount', {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.getRootsCount, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json as {
 			totalNodes: number;
 			nodeCountByType: {[key: string]: number}
@@ -228,10 +226,10 @@ export class OnDeviceComponent {
 
 	public async storeNodeReferences(args: ODC.StoreNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
-		const result = await this.sendRequest('storeNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.storeNodeReferences, {...args, convertResponseToJsonCompatible: false}, options);
 		const output = result.json as ODC.StoreNodeReferencesResponse;
 
-		const rootTree = [] as ODC.NodeTree[];
+		const rootTree = [] as ODC.TreeNode[];
 		for (const tree of output.flatTree) {
 			if (!tree.children) {
 				tree.children = [];
@@ -302,7 +300,7 @@ export class OnDeviceComponent {
 		return output;
 	}
 
-	private buildKeyPathsRecursively(nodeTrees: ODC.NodeTree[], keyPathParts = [] as string[], parentIsRowlistItem = false, parentIsTitleGroup = false) {
+	private buildKeyPathsRecursively(nodeTrees: ODC.TreeNode[], keyPathParts = [] as string[], parentIsRowlistItem = false, parentIsTitleGroup = false) {
 		for (const nodeTree of nodeTrees) {
 			let keyPathPostfix = '';
 			const currentNodeTreeKeyPathParts = [...keyPathParts];
@@ -348,7 +346,7 @@ export class OnDeviceComponent {
 	public async deleteNodeReferences(args: ODC.DeleteNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 
-		const result = await this.sendRequest('deleteNodeReferences', {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.deleteNodeReferences, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
@@ -401,7 +399,7 @@ export class OnDeviceComponent {
 			}
 		}
 
-		const result = await this.sendRequest('getNodesWithProperties', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getNodesWithProperties, args, options);
 		return result.json as {
 			nodes: ODC.NodeRepresentation[]
 			nodeRefs: number[]
@@ -430,7 +428,7 @@ export class OnDeviceComponent {
 			nodeTreeResponse = await this.storeNodeReferences(args, options);
 		}
 
-		const matches = [] as ODC.NodeTree[];
+		const matches = [] as ODC.TreeNode[];
 		this.findNodesAtLocationCore(args.x, args.y, nodeTreeResponse.rootTree, matches);
 
 		// We now want to sort our matches to try and return the best one first
@@ -445,7 +443,7 @@ export class OnDeviceComponent {
 		};
 	}
 
-	private findNodesAtLocationCore(x: number, y: number, nodeTrees: ODC.NodeTree[], matches: ODC.NodeTree[]) {
+	private findNodesAtLocationCore(x: number, y: number, nodeTrees: ODC.TreeNode[], matches: ODC.TreeNode[]) {
 		let nodeFound = false;
 		for (const nodeTree of nodeTrees) {
 			// If we hit a sequestered item dig into its children immediately
@@ -480,12 +478,12 @@ export class OnDeviceComponent {
 	}
 
 	public async startResponsivenessTesting(args: ODC.StartResponsivenessTestingArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('startResponsivenessTesting', args, options);
+		const result = await this.sendRequest(ODC.RequestType.startResponsivenessTesting, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async getResponsivenessTestingData(args = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('getResponsivenessTestingData', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getResponsivenessTestingData, args, options);
 		return result.json as ODC.ReturnTimeTaken & {
 			periods: {
 				/** Duration of this period in milliseconds */
@@ -514,26 +512,26 @@ export class OnDeviceComponent {
 	}
 
 	public async stopResponsivenessTesting(args = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('stopResponsivenessTesting', args, options);
+		const result = await this.sendRequest(ODC.RequestType.stopResponsivenessTesting, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async disableScreenSaver(args: ODC.DisableScreensaverArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('disableScreenSaver', args, options);
+		const result = await this.sendRequest(ODC.RequestType.disableScreenSaver, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async focusNode(args: ODC.FocusNodeArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
-		const result = await this.sendRequest('focusNode', args, options);
+		const result = await this.sendRequest(ODC.RequestType.focusNode, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 	//#endregion
 
 	//#region requests run on task thread
 	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('readRegistry', {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.readRegistry, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json as {
 			values: {
 				[section: string]: {[sectionItemKey: string]: string}
@@ -542,12 +540,12 @@ export class OnDeviceComponent {
 	}
 
 	public async writeRegistry(args: ODC.WriteRegistryArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('writeRegistry', args, options);
+		const result = await this.sendRequest(ODC.RequestType.writeRegistry, args, options);
 		return result.json;
 	}
 
 	public async deleteRegistrySections(args: ODC.DeleteRegistrySectionsArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('deleteRegistrySections', args, options);
+		const result = await this.sendRequest(ODC.RequestType.deleteRegistrySections, args, options);
 		return result.json;
 	}
 
@@ -560,21 +558,21 @@ export class OnDeviceComponent {
 	}
 
 	public async getVolumeList(args: ODC.GetVolumeListArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('getVolumeList', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getVolumeList, args, options);
 		return result.json as {
 			list: string[]
 		} & ODC.ReturnTimeTaken;
 	}
 
 	public async getDirectoryListing(args: ODC.GetDirectoryListingArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('getDirectoryListing', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getDirectoryListing, args, options);
 		return result.json as {
 			list: string[]
 		} & ODC.ReturnTimeTaken;
 	}
 
 	public async statPath(args: ODC.StatPathArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('statPath', args, options);
+		const result = await this.sendRequest(ODC.RequestType.statPath, args, options);
 		const body = result.json;
 		// Convert timestamps for easier usage
 		body.ctime = new Date(body.ctime * 1000);
@@ -591,22 +589,22 @@ export class OnDeviceComponent {
 	}
 
 	public async createDirectory(args: ODC.CreateDirectoryArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('createDirectory', args, options);
+		const result = await this.sendRequest(ODC.RequestType.createDirectory, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async deleteFile(args: ODC.DeleteFileArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('deleteFile', args, options);
+		const result = await this.sendRequest(ODC.RequestType.deleteFile, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async renameFile(args: ODC.RenameFileArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('renameFile', args, options);
+		const result = await this.sendRequest(ODC.RequestType.renameFile, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async readFile(args: ODC.ReadFileArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('readFile', args, options);
+		const result = await this.sendRequest(ODC.RequestType.readFile, args, options);
 		return result as {
 			json: ODC.ReturnTimeTaken;
 			binaryPayload: Buffer;
@@ -614,12 +612,12 @@ export class OnDeviceComponent {
 	}
 
 	public async writeFile(args: ODC.WriteFileArgs, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('writeFile', args, options);
+		const result = await this.sendRequest(ODC.RequestType.writeFile, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest('getServerHost', args, options);
+		const result = await this.sendRequest(ODC.RequestType.getServerHost, args, options);
 		return result.json as {
 			host: string
 		};
@@ -761,7 +759,7 @@ export class OnDeviceComponent {
 		return this.clientSocketPromise;
 	}
 
-	private async sendRequest(type: ODC.RequestTypes, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
+	private async sendRequest(type: ODC.RequestType, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
 		const requestId = utils.randomStringGenerator();
 		const request: ODC.Request = {
 			id: requestId,
@@ -770,9 +768,9 @@ export class OnDeviceComponent {
 			settings: { logLevel: this.getConfig()?.logLevel ?? 'info' },
 		};
 
-		let stackTracePromise;
+		let stackTraceError: Error | undefined;
 		if (!this.getConfig()?.disableCallOriginationLine) {
-			stackTracePromise = getStackTrace();
+			stackTraceError = new Error();
 		}
 
 		this.activeRequests[requestId] = request;
@@ -811,18 +809,28 @@ export class OnDeviceComponent {
 		// Combining into one buffer as it sends separately if we do multiple writes which with TCP could potentially introduce extra latency
 		this.clientSocket.write(Buffer.concat(requestBuffers));
 
-		// eslint-disable-next-line no-async-promise-executor
-		const promise = new Promise<ODC.RequestResponse>(async (resolve, reject) => {
-			request.callback = async (response) => {
-				const json = response.json;
-				this.debugLog('Received response:', response.json);
-				if (json?.success) {
-					resolve(response);
-				} else {
-					const errorMessage = `${json?.error?.message} ${this.getCaller(await stackTracePromise)}`;
-					reject(new Error(errorMessage));
-				}
-			};
+		const promise = new Promise<ODC.RequestResponse>((resolve, reject) => {
+				request.callback = (response) => {
+					try {
+						const json = response.json;
+						this.debugLog('Received response:', response.json);
+						if (json?.success) {
+							resolve(response);
+						} else {
+							let error: Error;
+							if (stackTraceError) {
+								error = stackTraceError;
+								this.removeOnDeviceComponentFromErrorStack(error);
+							} else {
+								error = new Error();
+							}
+							error.message = `${json?.error?.message}`;
+							reject(error);
+						}
+					} catch(e) {
+						reject(e);
+					}
+				};
 		});
 
 		const timeout = this.getTimeOut(options);
@@ -832,18 +840,35 @@ export class OnDeviceComponent {
 			if ((e as Error).name === 'Timeout') {
 				let message = `${request.type} request timed out after ${timeout}ms`;
 
-				if (!this.getConfig()?.disableCallOriginationLine) {
-					message += `${this.getCaller(await stackTracePromise)}\n`;
-				}
-
 				if (!this.getConfig()?.disableTelnet) {
 					const logs = await this.device.getTelnetLog();
 					message += `Log contents:\n${logs}`;
 				}
-				e = new Error(message);
+				e.message = message;
 			}
+
+			if (stackTraceError) {
+				stackTraceError.message = e.message;
+				e = stackTraceError;
+				this.removeOnDeviceComponentFromErrorStack(e);
+			}
+
 			throw e;
 		}
+	}
+
+	private removeOnDeviceComponentFromErrorStack(error: Error) {
+		if (error.stack) {
+			const stackParts = error.stack.split('\n');
+			const modifiedStackParts = [] as string[];
+			for (const stackPart of stackParts) {
+				if (stackPart.indexOf('at OnDeviceComponent') === -1) {
+					modifiedStackParts.push(stackPart);
+				}
+			}
+			error.stack = modifiedStackParts.join('\n');
+		}
+		return error;
 	}
 
 	private getTimeOut(options: ODC.RequestOptions) {
@@ -865,23 +890,6 @@ export class OnDeviceComponent {
 		}
 		this.clientSocket?.destroy();
 		this.clientSocket = undefined;
-	}
-
-	private getCaller(stackTrace?: any[]) {
-		if (stackTrace) {
-			for (let i = stackTrace.length - 1; i >= 0 ; i--) {
-				const currentFrame = stackTrace[i];
-				if (currentFrame.typeName === 'OnDeviceComponent') {
-					// Go back one to get to the actual call that the user made if it exists
-					let frame = stackTrace[i + 1];
-					if (!frame) {
-						frame = currentFrame;
-					}
-					return `(${frame.fileName}:${frame.lineNumber}:${frame.columnNumber})`;
-				}
-			}
-		}
-		return '';
 	}
 
 	private debugLog(message: string, ...args) {

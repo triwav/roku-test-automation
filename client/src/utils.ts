@@ -4,7 +4,7 @@ import type * as Mocha from 'mocha';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
 
-import { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
+import type { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
 
 class Utils {
 	/** Provides a way to easily get a path to device files for external access */

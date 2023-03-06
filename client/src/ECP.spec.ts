@@ -1,4 +1,4 @@
-import * as needle from 'needle';
+import type * as needle from 'needle';
 import * as fsExtra from 'fs-extra';
 import * as assert from 'assert';
 import * as chai from 'chai';
@@ -11,7 +11,7 @@ const expect = chai.expect;
 
 import { ECP } from './ECP';
 import * as utils from './test/utils';
-import { ConfigOptions } from './types/ConfigOptions';
+import type { ConfigOptions } from './types/ConfigOptions';
 
 describe('ECP', function () {
 	let ecp: ECP;
@@ -421,7 +421,7 @@ describe('ECP', function () {
 	});
 
 	describe('startRaspFileCreation', function () {
-		it('creates_empty_array_for_raspFileSteps_when_run', async () => {
+		it('creates_empty_array_for_raspFileSteps_when_run', () => {
 			expect((ecp as any).raspFileSteps).to.be.undefined;
 			ecp.startRaspFileCreation();
 			expect((ecp as any).raspFileSteps).to.be.array();
@@ -469,7 +469,7 @@ steps:
 			expect(fsExtra.readFileSync(outputPath, 'utf8')).to.equal(expectedContents);
 		});
 
-		it('cleans_up_array_when_done', async () => {
+		it('cleans_up_array_when_done', () => {
 			ecp.startRaspFileCreation();
 			expect((ecp as any).raspFileSteps).to.be.array();
 
