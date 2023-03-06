@@ -49,7 +49,7 @@ Some incompatibility changes were made in v2.0. These include:
 - `callFunc()` will no longer automatically inject an `invalid` param if a `params` array was not provided.
 - `getValues()` now returns each result inside a `results` object to avoid potential variable collision
 - In v1.0 server was used to refer to the computer connecting to the Roku device. This is now the client and config settings related to this has been changed to reflect this
-- ECPKeys was switched from upper case key names to pascal case key names and `OPTIONS` is now `Option` and is now ECP.Key
+- `ECPKeys` cases were switched from upper case to pascal case and `OPTIONS` is now `Option` and is now `Key`
 - In an effort to provide clarity and to avoid shadowing cases, keys in keyPaths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a child node with an id of `poster` you will now need to have a keyPath of `0.#poster`
 
 v2.0 also includes changing to using TCP sockets for all communication which should simplify setup communicating with Roku devices not on the same local network.
