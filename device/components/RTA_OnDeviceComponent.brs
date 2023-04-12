@@ -11,7 +11,6 @@ end sub
 
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
-	setLogLevel(getStringAtKeyPath(request, "settings.logLevel"))
 	logDebug("Received request: ", formatJson(request))
 
 	requestType = request.type
@@ -57,6 +56,9 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processDisableScreenSaverRequest(args)
 	else if requestType = "focusNode" then
 		response = processFocusNodeRequest(args)
+	else if requestType = "setSettings" then
+		setLogLevel(getStringAtKeyPath(args, "logLevel"))
+		response = {}
 	else
 		response = buildErrorResponseObject("Request type '" + requestType + "' not handled in this version")
 	end if
