@@ -1,5 +1,5 @@
-import * as fsExtra from 'fs-extra';
-import * as path from 'path';
+import type * as fsExtra from 'fs-extra';
+import type * as path from 'path';
 import type * as Mocha from 'mocha';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
@@ -7,18 +7,46 @@ const ajv = new Ajv();
 import type { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
 
 class Utils {
+	private path?: typeof path;
+
+	private fsExtra?: typeof fsExtra;
+
+	private getPath() {
+		if (!this.path) {
+			try {
+				this.path = require('path') as typeof path;
+			} catch(e) {
+				console.error('You can not access path from non node environment');
+				throw e;
+			}
+		}
+		return this.path;
+	}
+
+	private getFsExtra() {
+		if (!this.fsExtra) {
+			try {
+				this.fsExtra = require('fs-extra') as typeof fsExtra;
+			} catch(e) {
+				console.error('You can not access fsExtra from non node environment');
+				throw e;
+			}
+		}
+		return this.fsExtra;
+	}
+
 	/** Provides a way to easily get a path to device files for external access */
 	public getDeviceFilesPath() {
-		return path.resolve(__dirname + '/../../device');
+		return this.getPath().resolve(__dirname + '/../../device');
 	}
 
 	/** Provides a way to easily get a path to client files for external access */
 	public getClientFilesPath() {
-		return path.resolve(__dirname + '/../');
+		return this.getPath().resolve(__dirname + '/../');
 	}
 
 	public parseJsonFile(filePath: string) {
-		return JSON.parse(fsExtra.readFileSync(filePath, 'utf-8'));
+		return JSON.parse(this.getFsExtra().readFileSync(filePath, 'utf-8'));
 	}
 
 	public getMatchingDevices(config: ConfigOptions, deviceSelector: Record<string, any>): { [key: string]: DeviceConfigOptions} {
@@ -49,9 +77,7 @@ class Utils {
 	}
 
 	/** Helper for setting up process.env from a config */
-	public setupEnvironmentFromConfigFile(configFilePath = 'rta-config.json', deviceSelector: Record<string, any> | number | undefined = undefined) {
-		const config = this.getConfigFromConfigFile(configFilePath);
-
+	setupEnvironmentFromConfig(config: ConfigOptions, deviceSelector?: Record<string, any> | number) {
 		if (deviceSelector === undefined) {
 			deviceSelector = config.RokuDevice.deviceIndex ?? 0;
 		}
@@ -67,6 +93,12 @@ class Utils {
 			config.RokuDevice.deviceIndex = parseInt(keys[0]);
 		}
 		process.env.rtaConfig = JSON.stringify(config);
+	}
+
+	/** Helper for setting up process.env from a config file */
+	public setupEnvironmentFromConfigFile(configFilePath = 'rta-config.json', deviceSelector: Record<string, any> | number | undefined = undefined) {
+		const config = this.getConfigFromConfigFile(configFilePath);
+		this.setupEnvironmentFromConfig(config);
 	}
 
 	/** Validates the ConfigOptions schema the current class is using
@@ -166,7 +198,7 @@ class Utils {
 	}
 
 	public async ensureDirExistForFilePath(filePath: string) {
-		await fsExtra.ensureDir(path.dirname(filePath));
+		await this.getFsExtra().ensureDir(this.getPath().dirname(filePath));
 	}
 
 	public randomStringGenerator(length = 7) {
