@@ -27,6 +27,7 @@
         "readFile",
         "readRegistry",
         "renameFile",
+        "setSettings",
         "setValue",
         "startResponsivenessTesting",
         "statPath",
