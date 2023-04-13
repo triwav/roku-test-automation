@@ -226,13 +226,16 @@ sub verifyAndHandleRequest(request)
 		return
 	end if
 
-	' TODO look into changing how we do this to avoid overhead associated
-	setLogLevel(getStringAtKeyPath(json, "settings.logLevel"))
-
 	requestType = getStringAtKeyPath(json, "type")
-	if NOT isAA(json.args) then
+
+	requestArgs = json.args
+	if NOT isAA(requestArgs) then
 		sendBackError(json, "No args supplied for request type '" + requestType + "'")
 		return
+	end if
+
+	if requestType = "setSettings" then
+		setLogLevel(getStringAtKeyPath(requestArgs, "logLevel"))
 	end if
 
 	if m.activeRequests[requestId] <> Invalid then

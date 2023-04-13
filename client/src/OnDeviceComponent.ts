@@ -624,6 +624,14 @@ export class OnDeviceComponent {
 	}
 	//#endregion
 
+	//#region requests run on both
+	public async setSettings(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest(ODC.RequestType.setSettings, args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+	//#endregion
+
+
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
 	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.OnFieldChangeOnceArgs | ODC.SetValueArgs) {
 		if (!args.keyPath) {
@@ -656,7 +664,15 @@ export class OnDeviceComponent {
 
 			socket.on('connect', () => {
 				this.debugLog(`Connected to Roku at ${host} on port ${port}`);
-				resolve(socket);
+				this.setSettings({
+					logLevel: this.getConfig()?.logLevel ?? 'info'
+				}, {
+					socket: socket
+				}).then(() => {
+					resolve(socket);
+				}, (e) => {
+					this.debugLog('Could not set settings', e);
+				});
 			});
 
 			socket.on('error', async (e) => {
@@ -764,8 +780,7 @@ export class OnDeviceComponent {
 		const request: ODC.Request = {
 			id: requestId,
 			type: type,
-			args: args,
-			settings: { logLevel: this.getConfig()?.logLevel ?? 'info' },
+			args: args
 		};
 
 		let stackTraceError: Error | undefined;
@@ -795,7 +810,13 @@ export class OnDeviceComponent {
 			requestBuffers.push(binaryBuffer);
 		}
 
-		this.clientSocket = await this.setupClientSocket(options);
+		let clientSocket: net.Socket;
+		if (options.socket) {
+			clientSocket = options.socket;
+		} else {
+			clientSocket = await this.setupClientSocket(options);
+			this.clientSocket = clientSocket;
+		}
 
 		if (this.getConfig()?.restoreRegistry && !this.storedDeviceRegistry) {
 			this.debugLog('Storing original device registry state');
@@ -807,7 +828,7 @@ export class OnDeviceComponent {
 
 		this.debugLog('Sending request:', stringPayload);
 		// Combining into one buffer as it sends separately if we do multiple writes which with TCP could potentially introduce extra latency
-		this.clientSocket.write(Buffer.concat(requestBuffers));
+		clientSocket.write(Buffer.concat(requestBuffers));
 
 		const promise = new Promise<ODC.RequestResponse>((resolve, reject) => {
 				request.callback = (response) => {

@@ -1,3 +1,5 @@
+import type { Socket } from 'net';
+import type * as ODC from './OnDeviceComponent';
 
 export enum RequestType {
 	callFunc = 'callFunc',
@@ -25,6 +27,7 @@ export enum RequestType {
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
 	renameFile = 'renameFile',
+	setSettings = 'setSettings',
 	setValue = 'setValue',
 	startResponsivenessTesting = 'startResponsivenessTesting',
 	getResponsivenessTestingData = 'getResponsivenessTestingData',
@@ -72,15 +75,15 @@ interface MaxChildDepth {
 export interface RequestOptions {
 	/** How long to wait (in milliseconds) until the request is considered a failure. If not provided OnDeviceComponent.defaultTimeout is used  */
 	timeout?: number;
+
+	/** Allows for passing in a socket to allow sending a request before our socket promise has resolved */
+	socket?: Socket;
 }
 
 export interface Request {
 	id: string;
 	args: RequestArgs;
 	type: RequestType;
-	settings: {
-		logLevel: LogLevels
-	};
 	callback?: (response: RequestResponse) => void;
 }
 
@@ -364,3 +367,7 @@ export interface DeleteRegistrySectionsArgs {
 export interface DeleteEntireRegistrySectionsArgs {}
 
 export interface GetServerHostArgs {}
+
+export interface SetSettingsArgs {
+	logLevel: ODC.LogLevels;
+}
