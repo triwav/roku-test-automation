@@ -11,26 +11,21 @@ class Utils {
 
 	private fsExtra?: typeof fsExtra;
 
-	private getPath() {
+	// We use a dynamic require to avoid an issue in the brightscript vscode extension
+	private require<T>(id: string): T {
+		return require(id) as T;
+	}
+
+	private getPath(): any {
 		if (!this.path) {
-			try {
-				this.path = require('path') as typeof path;
-			} catch(e) {
-				console.error('You can not access path from non node environment');
-				throw e;
-			}
+			this.path = this.require<typeof path>('path');
 		}
 		return this.path;
 	}
 
-	private getFsExtra() {
+	private getFsExtra(): any {
 		if (!this.fsExtra) {
-			try {
-				this.fsExtra = require('fs-extra') as typeof fsExtra;
-			} catch(e) {
-				console.error('You can not access fsExtra from non node environment');
-				throw e;
-			}
+			this.fsExtra = this.require<typeof fsExtra>('fs-extra');
 		}
 		return this.fsExtra;
 	}
