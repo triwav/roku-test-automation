@@ -16,14 +16,14 @@ class Utils {
 		return require(id) as T;
 	}
 
-	private getPath(): any {
+	private getPath() {
 		if (!this.path) {
 			this.path = this.require<typeof path>('path');
 		}
 		return this.path;
 	}
 
-	private getFsExtra(): any {
+	private getFsExtra() {
 		if (!this.fsExtra) {
 			this.fsExtra = this.require<typeof fsExtra>('fs-extra');
 		}
