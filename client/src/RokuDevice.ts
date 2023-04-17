@@ -76,7 +76,15 @@ export class RokuDevice {
 		this.deployed = true;
 	}
 
-	public sendECP(path: string, params?: object, body?: needle.BodyData): Promise<needle.NeedleResponse> {
+	public sendEcpPost(path: string, params = {}, body: needle.BodyData = ''): Promise<needle.NeedleResponse> {
+		return this.sendEcp(path, params, body);
+	}
+
+	public sendEcpGet(path: string, params = {}): Promise<needle.NeedleResponse> {
+		return this.sendEcp(path, params);
+	}
+
+	private sendEcp(path: string, params = {}, body?: needle.BodyData): Promise<needle.NeedleResponse> {
 		let url = `http://${this.getCurrentDeviceConfig().host}:8060/${path}`;
 
 		if (params && Object.keys(params).length) {

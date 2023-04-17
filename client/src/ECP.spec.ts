@@ -22,7 +22,10 @@ describe('ECP', function () {
 
 	beforeEach(() => {
 		device = {
-			sendECP: () => {
+			sendEcpPost: () => {
+				return ecpResponse;
+			},
+			sendEcpGet: () => {
 				return ecpResponse;
 			}
 		};
@@ -42,8 +45,8 @@ describe('ECP', function () {
 	});
 
 	describe('sendText', function () {
-		it('calls_device_sendECP_for_each_character', async () => {
-			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
+		it('calls_device_sendEcpPost_for_each_character', async () => {
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
 
 			const text = 'love my life';
 			await ecp.sendText(text);
@@ -61,8 +64,8 @@ describe('ECP', function () {
 	});
 
 	describe('sendKeyPressSequence', function () {
-		it('calls_device_sendECP_for_each_key', async () => {
-			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
+		it('calls_device_sendEcpPost_for_each_key', async () => {
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
 
 			const keys = [ECP.Key.Forward, ECP.Key.Play, ECP.Key.Rewind];
 			await ecp.sendKeyPressSequence(keys);
@@ -74,13 +77,13 @@ describe('ECP', function () {
 			const keys = [ECP.Key.Forward, ECP.Key.Play, ECP.Key.Rewind];
 			const count = 3;
 
-			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(keys[index]);
 				index++;
 				if (index === keys.length) {
 					index = 0;
 				}
-			});
+			}) as any);
 
 			await ecp.sendKeyPressSequence(keys, {count: count});
 			expect(stub.callCount).to.equal(keys.length * count);
@@ -89,7 +92,7 @@ describe('ECP', function () {
 		it('should_not_send_any_keys_if_count_is_zero', async () => {
 			const keys = [ECP.Key.Forward, ECP.Key.Play, ECP.Key.Rewind];
 
-			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {});
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
 
 			await ecp.sendKeyPressSequence(keys, {count: 0});
 			expect(stub.callCount).to.equal(0);
@@ -97,20 +100,20 @@ describe('ECP', function () {
 	});
 
 	describe('sendKeyPress', function () {
-		it('calls_device_sendECP', async () => {
-			const stub = sinon.stub(device, 'sendECP').callsFake((path: string, params?: object, body?: needle.BodyData) => {
+		it('calls_device_sendEcpPost', async () => {
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(ECP.Key.Home);
-			});
+			}) as any);
 
 			await ecp.sendKeyPress(ECP.Key.Home, 0);
 
 			if (stub.notCalled) {
-				assert.fail('device.sendECP not called');
+				assert.fail('device.sendEcpPost not called');
 			}
 		});
 
 		it('does_not_sleep_if_not_requested', async () => {
-			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
 
 			await ecp.sendKeyPress(ECP.Key.Home, 0);
 
@@ -121,9 +124,9 @@ describe('ECP', function () {
 
 		it('sleeps_if_requested', async () => {
 			const wait = 1000;
-			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
-			});
+			}) as any);
 
 			await ecp.sendKeyPress(ECP.Key.Home, wait);
 
@@ -140,9 +143,9 @@ describe('ECP', function () {
 				}
 			};
 
-			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
-			});
+			}) as any);
 
 			await ecp.sendKeyPress(ECP.Key.Home);
 
@@ -159,9 +162,9 @@ describe('ECP', function () {
 				}
 			};
 
-			const stub = sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {
 				expect(milliseconds).to.equal(wait);
-			});
+			}) as any);
 
 			await ecp.sendKeyPress(ECP.Key.Home, wait);
 
@@ -220,7 +223,7 @@ describe('ECP', function () {
 			ecpResponse = await utils.getNeedleMockResponse(this);
 			await ecp.sendLaunchChannel({
 				channelId: 'dev',
-				launchParameters: {},
+				params: {},
 				verifyLaunch: false
 			});
 		});
@@ -245,7 +248,7 @@ describe('ECP', function () {
 
 				await ecp.sendLaunchChannel({
 					channelId: '',
-					launchParameters: {},
+					params: {},
 					verifyLaunch: false
 				});
 			} catch (e) {
@@ -254,11 +257,11 @@ describe('ECP', function () {
 		});
 
 		it('should_throw_if_launch_not_successful_and_verification_is_enabled', async () => {
-			sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
+			sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
 			try {
 				await ecp.sendLaunchChannel({
 					channelId: 'dev',
-					launchParameters: {},
+					params: {},
 					verifyLaunch: true,
 					verifyLaunchTimeOut: 20
 				});
@@ -272,7 +275,7 @@ describe('ECP', function () {
 		it('should_not_throw_if_launch_not_successful_and_verification_not_enabled', async () => {
 			await ecp.sendLaunchChannel({
 				channelId: 'dev',
-				launchParameters: {},
+				params: {},
 				verifyLaunch: false
 			});
 		});
@@ -432,7 +435,7 @@ describe('ECP', function () {
 		const outputPath = 'test-path.rasp';
 
 		it('outputs_file_at_path_specified_with_correct_contents', async () => {
-			sinon.stub(ecpUtils, 'sleep').callsFake((milliseconds: number) => {});
+			sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
 			config.ECP = {
 				default: {
 					keyPressDelay: 1500

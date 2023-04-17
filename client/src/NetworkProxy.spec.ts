@@ -11,7 +11,6 @@ describe('NetworkProxy', function () {
 			rootDir: '../testProject',
 			preventMultipleDeployments: true
 		});
-		await ecp.sendLaunchChannel({skipIfAlreadyRunning: true});
 	});
 
 	it('should be able to intercept a request', async () => {
