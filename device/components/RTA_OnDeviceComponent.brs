@@ -56,6 +56,8 @@ sub onRenderThreadRequestChange(event as Object)
 		response = processDisableScreenSaverRequest(args)
 	else if requestType = "focusNode" then
 		response = processFocusNodeRequest(args)
+	else if requestType = "removeNodeChildren" then
+		response = processRemoveNodeChildrenRequest(args)
 	else if requestType = "setSettings" then
 		setLogLevel(getStringAtKeyPath(args, "logLevel"))
 		response = {}
@@ -116,9 +118,28 @@ end function
 
 function processGetFocusedNodeRequest(args as Object) as Object
 	focusedNode = getFocusedNode()
-	result = {
-		"node": focusedNode
-	}
+	result = {}
+
+	if getBooleanAtKeyPath(args, "includeNode", true) then
+		result.node = focusedNode
+	end if
+
+	node = focusedNode
+	parent = node.getParent()
+	keyPathParts = []
+
+	while parent <> invalid
+		nodeId = node.id
+		if nodeId <> "" then
+			keyPathParts.unshift("#" + nodeId)
+		else
+			keyPathParts.unshift(getNodeParentIndex(node, parent).toStr())
+		end if
+
+		node = parent
+		parent = node.getParent()
+	end while
+	result["keyPath"] = keyPathParts.join(".")
 
 	if getBooleanAtKeyPath(args, "includeRef") then
 		nodeRefKey = args.nodeRefKey
@@ -1187,6 +1208,35 @@ function processFocusNodeRequest(args as Object) as Object
 	end if
 
 	node.setFocus(getBooleanAtKeyPath(args, "on", true))
+
+	return {}
+end function
+
+function processRemoveNodeChildrenRequest(args as Object) as Object
+	result = processGetValueRequest(args)
+	if isErrorObject(result) then
+		return result
+	end if
+
+	if result.found <> true then
+		keyPath = getStringAtKeyPath(args, "keyPath")
+		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+	end if
+
+	node = result.value
+	if NOT isNode(node) then
+		keyPath = getStringAtKeyPath(args, "keyPath")
+		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	end if
+
+	index = getNumberAtKeyPath(args, "index")
+	count = getNumberAtKeyPath(args, "count", 1)
+
+	if count = -1 then
+		count = node.getChildCount()
+	end if
+
+	node.removeChildrenIndex(count, index)
 
 	return {}
 end function

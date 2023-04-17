@@ -26,6 +26,7 @@ export enum RequestType {
 	onFieldChangeOnce = 'onFieldChangeOnce',
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
+	removeNodeChildren = 'removeNodeChildren',
 	renameFile = 'renameFile',
 	setSettings = 'setSettings',
 	setValue = 'setValue',
@@ -181,6 +182,9 @@ export interface GetFocusedNodeArgs extends MaxChildDepth, NodeRefKey {
 	/** returns `ref` field in response that can be matched up with storeNodeReferences response for determining where we are in the node tree */
 	includeRef?: boolean;
 
+	/** If you only need access to the `ref` or `keyPath` in the output then you can speed up the request by choosing not to include the node in the response. Defaults to true */
+	includeNode?: boolean;
+
 	/** If true, will try to return the actual ArrayGrid itemComponent that is currently focused */
 	returnFocusedArrayGridChild?: boolean;
 }
@@ -245,6 +249,14 @@ export interface StartResponsivenessTestingArgs {
 export interface FocusNodeArgs extends BaseKeyPath {
 	/** Set to false to take away focus from the node. Defaults to true */
 	on?: boolean;
+}
+
+export interface RemoveNodeChildrenArgs extends BaseKeyPath {
+	/** The first index of the node(s) that we want to remove */
+	index: number;
+
+	/** The total count of nodes we want to remove. -1 for all */
+	count?: number;
 }
 
 export interface GetAllCountArgs {}
