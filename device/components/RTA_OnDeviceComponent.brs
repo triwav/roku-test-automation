@@ -403,8 +403,8 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 
 	' Only want to observe if we weren't already observing this node field
 	alreadyObserving = false
-	for each requestId in m.activeObserveFieldRequests
-		activeObserveFieldRequest = m.activeObserveFieldRequests[requestId]
+	for each observedRequestId in m.activeObserveFieldRequests
+		activeObserveFieldRequest = m.activeObserveFieldRequests[observedRequestId]
 
 		if node.isSameNode(activeObserveFieldRequest.node) AND activeObserveFieldRequest.args.field = field then
 			logDebug("Already observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
@@ -416,13 +416,14 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	if NOT alreadyObserving then
 		if node.observeFieldScoped(field, "observeFieldCallback") then
 			logDebug("Now observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+
+			request.node = node
+			m.activeObserveFieldRequests[requestId] = request
 		else
 			return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 		end if
 	end if
 
-	request.node = node
-	m.activeObserveFieldRequests[requestId] = request
 	return Invalid
 end function
 
