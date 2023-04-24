@@ -92,8 +92,8 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should include correct keyPaths for both findNode and index based key paths', () => {
-			expect(storeResult.rootTree[0].children[4].keyPath).to.equal('#pagesContainerGroup');
-			expect(storeResult.rootTree[0].children[4].children[0].keyPath).to.equal('#pagesContainerGroup.0');
+			expect(storeResult.rootTree[0].children[5].keyPath).to.equal('#pagesContainerGroup');
+			expect(storeResult.rootTree[0].children[5].children[0].keyPath).to.equal('#pagesContainerGroup.0');
 		});
 
 		describe('includeNodeCountInfo', function () {
@@ -237,6 +237,7 @@ describe('OnDeviceComponent', function () {
 				'Poster',
 				'Rectangle',
 				'Animation',
+				'Group',
 				'Group'
 			];
 			for (const child of node.children) {
@@ -855,23 +856,35 @@ describe('OnDeviceComponent', function () {
 				keyPath: '#pagesContainerGroup.#loginButton'
 			});
 			const {node} = await odc.getFocusedNode();
-			expect(node.id).to.equal('loginButton');
+			expect(node).to.be.ok;
+			expect(node!.id).to.equal('loginButton');
+		});
+
+		it('should not return the node if includeNode is false', async () => {
+			await odc.focusNode({
+				keyPath: '#pagesContainerGroup.#loginButton',
+			});
+			const {node} = await odc.getFocusedNode({includeNode: false});
+			expect(node).to.be.not.be.ok;
 		});
 
 		it('should not include children by default', async () => {
 			const {node} = await odc.getFocusedNode();
-			expect(node.children).to.be.undefined;
+			expect(node).to.be.ok;
+			expect(node!.children).to.be.undefined;
 		});
 
-		it('should not include children if maxChildDepth set to zero', async () => {
+		it('should not include children if maxChildDepth is set to zero', async () => {
 			const {node} = await odc.getFocusedNode({responseMaxChildDepth: 0});
-			expect(node.children).to.be.undefined;
+			expect(node).to.be.ok;
+			expect(node!.children).to.be.undefined;
 		});
 
 		it('should include children to specified depth', async () => {
 			const {node} = await odc.getFocusedNode({responseMaxChildDepth: 1});
-			expect(node.children).to.not.be.empty;
-			for (const child of node.children) {
+			expect(node).to.be.ok;
+			expect(node!.children).to.not.be.empty;
+			for (const child of node!.children) {
 				// We only requested 1 so make sure it only returned a single level
 				expect(child.children).to.be.undefined;
 			}
@@ -896,8 +909,9 @@ describe('OnDeviceComponent', function () {
 			const storeResult = await odc.storeNodeReferences();
 			const {node, ref} = await odc.getFocusedNode({includeRef: true});
 			expect(ref).to.be.ok;
-			expect(storeResult.flatTree[ref!].subtype).to.equal(node.subtype);
-			expect(storeResult.flatTree[ref!].id).to.equal(node.id);
+			expect(node).to.be.ok;
+			expect(storeResult.flatTree[ref!].subtype).to.equal(node!.subtype);
+			expect(storeResult.flatTree[ref!].id).to.equal(node!.id);
 		});
 
 		it('should return focused arrayGrid child if requested', async () => {
@@ -910,13 +924,21 @@ describe('OnDeviceComponent', function () {
 				returnFocusedArrayGridChild: true
 			});
 			expect(ref).to.be.ok;
-			expect(storeResult.flatTree[ref!].subtype).to.equal(node.subtype);
-			expect(node.itemContent.id).to.equal('row 0  item 0');
+			expect(node).to.be.ok;
+			expect(storeResult.flatTree[ref!].subtype).to.equal(node!.subtype);
+			expect(node!.itemContent.id).to.equal('row 0  item 0');
 
 			// Reset back to login button for focus
 			await odc.focusNode({
 				keyPath: '#pagesContainerGroup.#loginButton'
 			});
+		});
+
+		it('should include correct keyPath field', async () => {
+			const expectedKeyPath = '#pagesContainerGroup.0.#loginButton';
+			await odc.focusNode({keyPath: expectedKeyPath});
+			const {keyPath} = await odc.getFocusedNode();
+			expect(keyPath).to.equal(expectedKeyPath);
 		});
 	});
 
@@ -957,6 +979,157 @@ describe('OnDeviceComponent', function () {
 		it('should return an error when keypath does not point to a node', async () => {
 			try {
 				await odc.focusNode({keyPath: 'stringValue'});
+			} catch(e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+	});
+
+	describe('removeNodeChildren', function () {
+		it('should successfully delete the child at the specified index', async () => {
+			// Add a child node
+			const nodeId = utils.addRandomPostfix('node');
+			const baseKeyPath = '#temporaryNodesGroup';
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						subtype: 'Group',
+						id: nodeId
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const {value: childCount} = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const {value: child} = await odc.getValue({
+				keyPath: `${baseKeyPath}.0`
+			});
+			expect(child.id).to.equal(nodeId);
+
+			await odc.removeNodeChildren({
+				keyPath: baseKeyPath,
+				index: 0
+			});
+
+			const {value: newChildCount} = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(newChildCount).to.equal(0);
+		});
+
+		it('should successfully delete the specified count of nodes starting at the provided index', async () => {
+			// Add the child nodes
+			const nodeIds = [] as string[];
+			const children = [] as any[];
+
+			for (let i = 1; i < 5; i++) {
+				const nodeId = utils.addRandomPostfix('node');
+				nodeIds.push(nodeId);
+				children.push({
+					subtype: 'Group',
+					id: nodeId
+				});
+			}
+
+			const baseKeyPath = '#temporaryNodesGroup';
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: children
+				}
+			});
+
+			// Verify it got added correctly
+			const {value: childCount} = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(nodeIds.length);
+
+			const {value: firstChildBefore} = await odc.getValue({
+				keyPath: `${baseKeyPath}.0`
+			});
+			expect(firstChildBefore.id).to.equal(nodeIds[0]);
+
+			await odc.removeNodeChildren({
+				keyPath: baseKeyPath,
+				index: 1,
+				count: 3
+			});
+
+			const {value: newChildCount} = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(newChildCount).to.equal(1);
+
+			const {value: firstChildAfter} = await odc.getValue({
+				keyPath: `${baseKeyPath}.0`
+			});
+			expect(firstChildAfter.id).to.equal(nodeIds[0]);
+
+			// Cleanup our last remaining child
+			await odc.removeNodeChildren({
+				keyPath: baseKeyPath,
+				index: 0,
+				count: 1
+			});
+		});
+
+		it('should successfully remove all children if -1 is given', async () => {
+			// Add the child nodes
+			const nodeIds = [] as string[];
+			const children = [] as any[];
+
+			for (let i = 1; i < 5; i++) {
+				const nodeId = utils.addRandomPostfix('node');
+				nodeIds.push(nodeId);
+				children.push({
+					subtype: 'Group',
+					id: nodeId
+				});
+			}
+
+			const baseKeyPath = '#temporaryNodesGroup';
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: children
+				}
+			});
+
+			// Verify it got added correctly
+			const {value: childCount} = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(nodeIds.length);
+
+			await odc.removeNodeChildren({
+				keyPath: baseKeyPath,
+				index: 0,
+				count: -1
+			});
+
+			const {value: newChildCount} = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(newChildCount).to.equal(0);
+		});
+
+		it('should return an error when keypath does not point to a node', async () => {
+			try {
+				await odc.removeNodeChildren({
+					keyPath: 'stringValue',
+					index: 0
+				});
 			} catch(e) {
 				// failed as expected
 				return;
@@ -1182,8 +1355,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should still work after a restart of the application', async () => {
 			await ecp.sendLaunchChannel({
-				skipIfAlreadyRunning: false,
-				launchParameters: {contentId: 'deeplink'},
+				params: {contentId: 'deeplink'},
 				verifyLaunch: false
 			});
 			const {observerFired} = await odc.onFieldChangeOnce({

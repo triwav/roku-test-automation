@@ -111,8 +111,9 @@ export class OnDeviceComponent {
 
 		const result = await this.sendRequest(ODC.RequestType.getFocusedNode, args, options);
 		return result.json as {
-			node: ODC.NodeRepresentation;
+			node?: ODC.NodeRepresentation;
 			ref?: number;
+			keyPath?: string;
 		};
 	}
 
@@ -525,6 +526,13 @@ export class OnDeviceComponent {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest(ODC.RequestType.focusNode, args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async removeNodeChildren(args: ODC.RemoveNodeChildrenArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+		const result = await this.sendRequest(ODC.RequestType.removeNodeChildren, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 	//#endregion

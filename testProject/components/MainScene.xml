@@ -13,6 +13,7 @@
 		<Poster id="poster" />
 		<Rectangle id="invisibleRect" width="1920" height="1080" color="#FF0000" visible="false" />
 		<Animation id="animation" />
+		<Group id="temporaryNodesGroup" />
 		<Group id="pagesContainerGroup" />
 	</children>
 </component>

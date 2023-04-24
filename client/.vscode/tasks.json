@@ -23,15 +23,6 @@
 			"runOptions": {
 				"runOn": "folderOpen"
 			}
-		},
-		{
-			"label": "compile-automated-tests",
-			"type": "npm",
-			"options": {
-				"cwd": "testProject"
-			},
-			"script": "automatedTests:compile",
-			"problemMatcher": []
 		}
 	]
 }

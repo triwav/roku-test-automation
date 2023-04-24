@@ -64,8 +64,6 @@ export class ECP {
 		}
 	}
 
-
-
 	public async sendKeyPress(key: Key, options?: SendKeyPressOptions) {
 		if (typeof options === 'number') {
 			options = {
@@ -81,7 +79,7 @@ export class ECP {
 		if (raspEquivalent) {
 			this.addRaspFileStep(`press: ${raspEquivalent}`);
 		}
-		await this.device.sendECP(`keypress/${encodeURIComponent(key)}`, {}, '');
+		await this.device.sendEcpPost(`keypress/${encodeURIComponent(key)}`);
 
 		const keyPressDelay = this.getConfig()?.default?.keyPressDelay;
 		let wait = options?.wait;
@@ -156,21 +154,16 @@ export class ECP {
 
 	public async sendLaunchChannel({
 		channelId = '',
-		launchParameters = {},
-		skipIfAlreadyRunning = false,
+		params = {},
 		verifyLaunch = true,
 		verifyLaunchTimeOut = 3000
 	} = {}) {
 		channelId = this.getChannelId(channelId);
 
-		if (skipIfAlreadyRunning) {
-			if (await this.isActiveApp(channelId)) {
-				console.log('already running skipping launch');
-				return;
-			}
-		}
+		// We always append a param as if none is passed and the application is already running it will not restart the application
+		params['RTA_LAUNCH'] = 1;
 
-		await this.device.sendECP(`launch/${channelId}`, launchParameters, '');
+		await this.device.sendEcpPost(`launch/${channelId}`, params);
 		if (verifyLaunch) {
 			const startTime = new Date();
 			while (new Date().valueOf() - startTime.valueOf() < verifyLaunchTimeOut) {
@@ -185,8 +178,15 @@ export class ECP {
 		}
 	}
 
+	// Helper for sending a /input request to the device that can be handled via roInput
+	public async sendInput({
+		params = {}
+	} = {}) {
+		await this.device.sendEcpPost(`input`, params);
+	}
+
 	public async getActiveApp() {
-		const result = await this.device.sendECP(`query/active-app`);
+		const result = await this.device.sendEcpGet(`query/active-app`);
 		const children = result.body?.children;
 		if (!children) throw this.utils.makeError('getActiveAppInvalidResponse', 'Received invalid active-app response from device');
 
@@ -217,7 +217,7 @@ export class ECP {
 	}
 
 	public async getMediaPlayer() {
-		const result = await this.device.sendECP(`query/media-player`);
+		const result = await this.device.sendEcpGet(`query/media-player`);
 		const player = result.body;
 		if (!player) throw this.utils.makeError('getMediaPlayerInvalidResponse', 'Received invalid media-player response from device');
 
@@ -244,7 +244,7 @@ export class ECP {
 	}
 
 	public async getChanperf() {
-		const {body} = await this.device.sendECP(`query/chanperf`);
+		const {body} = await this.device.sendEcpGet(`query/chanperf`);
 
 		const response = this.simplifyEcpResponse(body);
 		const plugin = response.plugin;

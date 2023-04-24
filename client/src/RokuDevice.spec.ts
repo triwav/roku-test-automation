@@ -16,9 +16,9 @@ describe('RokuDevice', function () {
 		sinon.restore();
 	});
 
-	describe('sendECP', () => {
+	describe('sendEcpPost', () => {
 		it('should work for POST requests', async () => {
-			await device.sendECP('keypress/Right', {}, '');
+			await device.sendEcpPost('keypress/Right');
 		});
 
 		it('should work if params are passed in', async () => {
@@ -29,7 +29,7 @@ describe('RokuDevice', function () {
 				contentId: 'contentIdValue',
 				mediaType: 'special'
 			};
-			await device.sendECP('launch/dev', params, '');
+			await device.sendEcpPost('launch/dev', params);
 		});
 	});
 
