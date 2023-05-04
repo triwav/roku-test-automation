@@ -1286,7 +1286,7 @@ function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth 
 	else if isNode(value) then
 		depth++
 		node = value
-		if maxChildDepth = depth then
+		if maxChildDepth < depth then
 			value = {
 				"id": node.id
 			}
