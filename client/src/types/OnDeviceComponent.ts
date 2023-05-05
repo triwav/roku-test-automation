@@ -39,7 +39,7 @@ export enum RequestType {
 	writeRegistry = 'writeRegistry',
 }
 
-export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs;
+export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
 	global = 'global',
@@ -64,7 +64,7 @@ export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
 	/** Holds the hierarchy value with each level separated by dot for ex: videoNode.title to what you are interested in getting the value from or written to. */
 	keyPath?: string;
 
-	/** We have to convert nodes before converting to json. If this isn't needed then it causes a fairly significant overhead */
+	/** We have to convert nodes before converting to json. If this isn't needed then it can be avoided using this param as this causes a fairly significant overhead */
 	convertResponseToJsonCompatible?: boolean;
 }
 

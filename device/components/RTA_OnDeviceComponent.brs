@@ -416,13 +416,13 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	if NOT alreadyObserving then
 		if node.observeFieldScoped(field, "observeFieldCallback") then
 			logDebug("Now observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
-
-			request.node = node
-			m.activeObserveFieldRequests[requestId] = request
 		else
 			return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
 		end if
 	end if
+
+	request.node = node
+	m.activeObserveFieldRequests[requestId] = request
 
 	return Invalid
 end function
@@ -454,12 +454,16 @@ sub observeFieldCallback(event as Object)
 			if isAA(match) then
 				result = processGetValueRequest(match)
 				if isErrorObject(result) then
+					logVerbose("observeFieldCallback: Encountered error", result)
 					sendResponseToTask(request, result)
 					return
 				end if
 
 				if result.found = false OR result.value <> match.value then
-					logVerbose("Match.value did not match requested value continuing to wait")
+					logVerbose("observeFieldCallback: Match.value did not match requested value continuing to wait", {
+						"result": result.value
+						"match": match.value
+					})
 					return
 				end if
 			end if
@@ -472,6 +476,7 @@ sub observeFieldCallback(event as Object)
 		end if
 	end for
 
+	' We should only get to here if all the requests succeeded with their matches
 	if nodeFound then
 		' If we got to here then we sent back all responses for this field so we can remove our observer now
 		logDebug("Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
@@ -1269,28 +1274,36 @@ sub sendResponseToTask(request as Object, response as Object)
 	m.task.renderThreadResponse = response
 end sub
 
-function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth as Integer, depth = 0 as Integer) as Object
+function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth as Integer, depth = -1 as Integer) as Object
 	if isArray(value) then
 		for i = 0 to getLastIndex(value)
-			value[i] = recursivelyConvertValueToJsonCompatible(value[i], maxChildDepth)
+			value[i] = recursivelyConvertValueToJsonCompatible(value[i], maxChildDepth, depth)
 		end for
 	else if isAA(value) then
 		for each key in value
-			value[key] = recursivelyConvertValueToJsonCompatible(value[key], maxChildDepth)
+			value[key] = recursivelyConvertValueToJsonCompatible(value[key], maxChildDepth, depth)
 		end for
 	else if isNode(value) then
+		depth++
 		node = value
-		value = node.getFields()
-		value.delete("focusedChild")
-		value.subtype = node.subtype()
-		value = recursivelyConvertValueToJsonCompatible(value, maxChildDepth)
-		if maxChildDepth > depth then
-			children = []
-			for each child in node.getChildren(-1, 0)
-				children.push(recursivelyConvertValueToJsonCompatible(child, maxChildDepth, depth + 1))
-			end for
-			value.children = children
+		if maxChildDepth < depth then
+			value = {
+				"id": node.id
+			}
+		else
+			value = node.getFields()
+			value.delete("focusedChild")
+			value = recursivelyConvertValueToJsonCompatible(value, maxChildDepth, depth)
+			if maxChildDepth > depth then
+				children = []
+				for each child in node.getChildren(-1, 0)
+					children.push(recursivelyConvertValueToJsonCompatible(child, maxChildDepth, depth))
+				end for
+				value.children = children
+			end if
 		end if
+
+		value.subtype = node.subtype()
 	end if
 	return value
 end function
