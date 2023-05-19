@@ -118,11 +118,9 @@ end function
 
 function processGetFocusedNodeRequest(args as Object) as Object
 	focusedNode = getFocusedNode()
-	result = {}
-
-	if getBooleanAtKeyPath(args, "includeNode", true) then
-		result.node = focusedNode
-	end if
+	result = {
+		"node": focusedNode
+	}
 
 	node = focusedNode
 	parent = node.getParent()
@@ -181,6 +179,10 @@ function processGetFocusedNodeRequest(args as Object) as Object
 				end if
 			end for
 		end if
+	end if
+
+	if NOT getBooleanAtKeyPath(args, "includeNode", true) then
+		result.delete("node")
 	end if
 
 	return result
