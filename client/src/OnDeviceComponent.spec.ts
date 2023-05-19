@@ -1725,6 +1725,18 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('getApplicationStartTime', function () {
+		it('should return an application start time close to current time', async () => {
+			const {startTime} = await odc.getApplicationStartTime();
+
+			const currentTime = Date.now();
+
+			expect(startTime).to.be.lessThan(currentTime);
+			expect(startTime).to.be.greaterThan(currentTime - 10 * 60 * 1000);
+			await odc.getApplicationStartTime();
+		});
+	});
+
 	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODC.SetValueArgs) {
 		if (args.expectedStartingValue !== undefined) {
 			const {value: actualStartingValue} = await odc.getValue(args);

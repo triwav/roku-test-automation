@@ -41,6 +41,9 @@ sub setValidRequestTypes()
 		"writeFile": {
 			"handler": processWriteFileRequest
 		}
+		"getApplicationStartTime": {
+			"handler": processGetApplicationStartTimeRequest
+		}
 		"getServerHost": {
 			"handler": processGetServerHostRequest
 		}
@@ -439,6 +442,22 @@ sub processWriteFileRequest(request as Object)
 	else
 		sendBackError(request, "Failed writing file path: '" + path + "'")
 	end if
+end sub
+
+sub processGetApplicationStartTimeRequest(request as Object)
+	if m.appManager = Invalid then
+		m.appManager = createObject("roAppManager")
+	end if
+
+	date = createObject("roDateTime")
+	currentTime& = date.asSeconds()
+	currentTime& = currentTime& * 1000 + date.getMilliseconds()
+	startTimeDifference = m.appManager.getUptime().totalMilliseconds()
+	startTime = currentTime& - startTimeDifference
+
+	sendResponseToClient(request, {
+		"startTime": startTime
+	})
 end sub
 
 sub processGetServerHostRequest(request as Object)
