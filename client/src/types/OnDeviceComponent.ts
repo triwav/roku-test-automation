@@ -12,6 +12,7 @@ export enum RequestType {
 	findNodesAtLocation = 'findNodesAtLocation',
 	focusNode = 'focusNode',
 	getAllCount = 'getAllCount',
+	getApplicationStartTime = 'getApplicationStartTime',
 	getDirectoryListing = 'getDirectoryListing',
 	getFocusedNode = 'getFocusedNode',
 	getNodesInfo = 'getNodesInfo',
@@ -377,6 +378,8 @@ export interface DeleteRegistrySectionsArgs {
 }
 
 export interface DeleteEntireRegistrySectionsArgs {}
+
+export interface GetApplicationStartTimeArgs {}
 
 export interface GetServerHostArgs {}
 

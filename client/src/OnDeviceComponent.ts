@@ -624,6 +624,13 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	public async getApplicationStartTime(args: ODC.GetApplicationStartTimeArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest(ODC.RequestType.getApplicationStartTime, args, options);
+		return result.json as {
+			startTime: number
+		};
+	}
+
 	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getServerHost, args, options);
 		return result.json as {
