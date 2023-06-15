@@ -47,6 +47,7 @@ export class ECP {
 	public setConfig(config: ConfigOptions) {
 		utils.validateRTAConfigSchema(config);
 		this.config = config;
+		this.device.setConfig(config);
 	}
 
 	public getConfig() {
