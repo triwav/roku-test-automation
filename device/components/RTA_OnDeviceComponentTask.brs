@@ -86,7 +86,7 @@ sub runTaskThread()
 			else if messageType = "roSGNodeEvent" then
 				handleNodeEvent(message)
 			else
-				logWarn(messageType + " type not handled")
+				RTA_logWarn(messageType + " type not handled")
 			end if
 		end if
 	end while
@@ -100,7 +100,7 @@ sub handleSocketEvent(message as Object)
 		if m.listenSocket.isReadable() then
 			clientSocket = m.listenSocket.accept()
 			if clientSocket = Invalid then
-				logError("Connection accept failed")
+				RTA_logError("Connection accept failed")
 			else
 				' We setup notification for when the new connection is readable
 				clientSocket.notifyReadable(true)
@@ -113,7 +113,7 @@ sub handleSocketEvent(message as Object)
 		if bufferLength > 0 then
 			handleClientSocketEvent(messageSocketId, clientSocket, bufferLength)
 		else
-			logInfo("Client closed connection")
+			RTA_logInfo("Client closed connection")
 			clientSocket.close()
 			m.clientSockets.delete(messageSocketId)
 		end if
@@ -166,7 +166,7 @@ sub handleNodeEvent(message)
 		m.activeRequests.delete(response.id)
 		sendResponseToClient(request, response)
 	else
-		logWarn(fieldName + " not handled")
+		RTA_logWarn(fieldName + " not handled")
 	end if
 end sub
 
@@ -217,32 +217,32 @@ end function
 
 sub verifyAndHandleRequest(request)
 	json = parseJson(request.stringPayload)
-	if NOT isAA(json) then
-		logError("Received message did not contain valid request " + request.stringPayload)
+	if NOT RTA_isAA(json) then
+		RTA_logError("Received message did not contain valid request " + request.stringPayload)
 		return
 	end if
 	request.json = json
 
 	requestId = json.id
-	if NOT isNonEmptyString(requestId) then
-		logError("Received message did not have id " + request.stringPayload)
+	if NOT RTA_isNonEmptyString(requestId) then
+		RTA_logError("Received message did not have id " + request.stringPayload)
 		return
 	end if
 
-	requestType = getStringAtKeyPath(json, "type")
+	requestType = RTA_getStringAtKeyPath(json, "type")
 
 	requestArgs = json.args
-	if NOT isAA(requestArgs) then
+	if NOT RTA_isAA(requestArgs) then
 		sendBackError(json, "No args supplied for request type '" + requestType + "'")
 		return
 	end if
 
 	if requestType = "setSettings" then
-		setLogLevel(getStringAtKeyPath(requestArgs, "logLevel"))
+		setLogLevel(RTA_getStringAtKeyPath(requestArgs, "logLevel"))
 	end if
 
 	if m.activeRequests[requestId] <> Invalid then
-		logError("Ignoring request id " + requestId + ". Already received and running")
+		RTA_logError("Ignoring request id " + requestId + ". Already received and running")
 		return
 	end if
 
@@ -250,7 +250,7 @@ sub verifyAndHandleRequest(request)
 	if requestTypeConfig <> Invalid then
 		' If there is a handler, this request type is handled on the task thread
 		handler = requestTypeConfig.handler
-		if isFunction(handler) then
+		if RTA_isFunction(handler) then
 			request.timespan = createObject("roTimespan")
 			handler(request)
 			return
@@ -264,7 +264,7 @@ end sub
 sub processReadRegistryRequest(request as Object)
 	args = request.json.args
 	values = args.values
-	if NOT isAA(values) OR values.isEmpty() then
+	if NOT RTA_isAA(values) OR values.isEmpty() then
 		sections = createObject("roRegistry").getSectionList()
 		values = {}
 		for each section in sections
@@ -281,9 +281,9 @@ sub processReadRegistryRequest(request as Object)
 		end if
 		sectionRequestedValues = values[section]
 
-		if isString(sectionRequestedValues) then
+		if RTA_isString(sectionRequestedValues) then
 			sectionRequestedValues = [sectionRequestedValues]
-		else if NOT isArray(sectionRequestedValues) OR sectionRequestedValues.isEmpty() then
+		else if NOT RTA_isArray(sectionRequestedValues) OR sectionRequestedValues.isEmpty() then
 			sectionRequestedValues = sec.getKeyList()
 		end if
 		outputValues[section] = sec.readMulti(sectionRequestedValues)
@@ -334,7 +334,7 @@ sub processDeleteRegistrySectionsRequest(request as Object)
 	registry = createObject("roRegistry")
 
 	sections = args.sections
-	if isString(sections) then
+	if RTA_isString(sections) then
 		sections = [sections]
 	end if
 
@@ -369,7 +369,7 @@ end sub
 
 sub processGetDirectoryListingRequest(request as Object)
 	args = request.json.args
-	path = getStringAtKeyPath(args, "path")
+	path = RTA_getStringAtKeyPath(args, "path")
 	sendResponseToClient(request, {
 		"list": createObject("roFileSystem").getDirectoryListing(path).toArray()
 	})
@@ -377,7 +377,7 @@ end sub
 
 sub processStatPathRequest(request as Object)
 	args = request.json.args
-	path = getStringAtKeyPath(args, "path")
+	path = RTA_getStringAtKeyPath(args, "path")
 	fs = createObject("roFileSystem")
 	if NOT fs.exists(path) then
 		sendBackError(request, "No file or directory exists at path: '" + path + "'")
@@ -392,7 +392,7 @@ end sub
 
 sub processCreateDirectoryRequest(request as Object)
 	args = request.json.args
-	path = getStringAtKeyPath(args, "path")
+	path = RTA_getStringAtKeyPath(args, "path")
 	if createObject("roFileSystem").createDirectory(path) then
 		sendResponseToClient(request, {})
 	else
@@ -402,9 +402,9 @@ end sub
 
 sub processDeleteFileRequest(request as Object)
 	args = request.json.args
-	path = getStringAtKeyPath(args, "path")
+	path = RTA_getStringAtKeyPath(args, "path")
 
-	path = getStringAtKeyPath(args, "path")
+	path = RTA_getStringAtKeyPath(args, "path")
 	if createObject("roFileSystem").delete(path) then
 		sendResponseToClient(request, {})
 	else
@@ -414,8 +414,8 @@ end sub
 
 sub processRenameFileRequest(request as Object)
 	args = request.json.args
-	fromPath = getStringAtKeyPath(args, "fromPath")
-	toPath = getStringAtKeyPath(args, "toPath")
+	fromPath = RTA_getStringAtKeyPath(args, "fromPath")
+	toPath = RTA_getStringAtKeyPath(args, "toPath")
 	if createObject("roFileSystem").rename(fromPath, toPath) then
 		sendResponseToClient(request, {})
 	else
@@ -425,7 +425,7 @@ end sub
 
 sub processReadFileRequest(request as Object)
 	args = request.json.args
-	path = getStringAtKeyPath(args, "path")
+	path = RTA_getStringAtKeyPath(args, "path")
 	ba = createObject("roByteArray")
 	if ba.readFile(path) then
 		sendResponseToClient(request, {}, ba)
@@ -436,7 +436,7 @@ end sub
 
 sub processWriteFileRequest(request as Object)
 	args = request.json.args
-	path = getStringAtKeyPath(args, "path")
+	path = RTA_getStringAtKeyPath(args, "path")
 	if request.binaryPayload.writeFile(path) then
 		sendResponseToClient(request, {})
 	else
@@ -467,12 +467,12 @@ sub processGetServerHostRequest(request as Object)
 end sub
 
 sub sendBackError(request as Object, message as String)
-	logError(message)
-	sendResponseToClient(request, buildErrorResponseObject(message))
+	RTA_logError(message)
+	sendResponseToClient(request, RTA_buildErrorResponseObject(message))
 end sub
 
 sub sendResponseToClient(request as Object, response as Object, binaryPayloadByteArray = Invalid as Dynamic)
-	if NOT isBoolean(response.success) then
+	if NOT RTA_isBoolean(response.success) then
 		response.success = true
 	end if
 
@@ -488,9 +488,9 @@ sub sendResponseToClient(request as Object, response as Object, binaryPayloadByt
 
 	stringPayload = formatJson(response)
 	if stringPayload.len() < 1024 then
-		logDebug("Sending back response for requestType: " + json.type, stringPayload)
+		RTA_logDebug("Sending back response for requestType: " + json.type, stringPayload)
 	else
-		logDebug("Sending back large response (id: " + json.id + ", requestType: " + json.type + ", success: " + response.success.toStr() + ", timeTaken: " + response.timeTaken.toStr() + ")")
+		RTA_logDebug("Sending back large response (id: " + json.id + ", requestType: " + json.type + ", success: " + response.success.toStr() + ", timeTaken: " + response.timeTaken.toStr() + ")")
 	end if
 
 	ba = createObject("roByteArray")

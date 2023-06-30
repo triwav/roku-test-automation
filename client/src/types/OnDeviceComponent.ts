@@ -179,6 +179,19 @@ export interface CallFuncArgs extends BaseKeyPath {
 	funcParams?: any[];
 }
 
+export interface GetComponentGlobalAAKeyPath extends BaseKeyPath {
+	/** Key path for selecting what to pull from the component's `m` associative array  */
+	componentGlobalAAKeyPath: string;
+}
+
+export interface SetComponentGlobalAAKeyPath extends BaseKeyPath {
+	/** Key path for selecting what to set on the component's `m` associative array. */
+	componentGlobalAAKeyPath: string;
+
+	/** Value to set for the supplied `componentGlobalAAKeyPath` */
+	componentGlobalAAKeyPathValue: any;
+}
+
 export interface GetFocusedNodeArgs extends MaxChildDepth, NodeRefKey {
 	/** returns `ref` field in response that can be matched up with storeNodeReferences response for determining where we are in the node tree */
 	includeRef?: boolean;

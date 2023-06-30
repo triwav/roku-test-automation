@@ -1,5 +1,5 @@
 sub init()
-	logInfo("OnDeviceComponent init")
+	RTA_logInfo("OnDeviceComponent init")
 	m.task = m.top.createChild("RTA_OnDeviceComponentTask")
 	m.task.observeFieldScoped("renderThreadRequest", "onRenderThreadRequestChange")
 	m.task.control = "RUN"
@@ -11,7 +11,7 @@ end sub
 
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
-	logDebug("Received request: ", formatJson(request))
+	RTA_logDebug("Received request: ", formatJson(request))
 
 	requestType = request.type
 	args = request.args
@@ -20,8 +20,8 @@ sub onRenderThreadRequestChange(event as Object)
 	response = Invalid
 	if requestType = "callFunc" then
 		response = processCallFuncRequest(args)
-	else if requestType = "getFocusedNode" then
-		response = processGetFocusedNodeRequest(args)
+	else if requestType = "RTA_getFocusedNode" then
+		response = processRTA_getFocusedNodeRequest(args)
 	else if requestType = "getValue" then
 		response = processGetValueRequest(args)
 	else if requestType = "getValues" then
@@ -59,10 +59,10 @@ sub onRenderThreadRequestChange(event as Object)
 	else if requestType = "removeNodeChildren" then
 		response = processRemoveNodeChildrenRequest(args)
 	else if requestType = "setSettings" then
-		setLogLevel(getStringAtKeyPath(args, "logLevel"))
+		setLogLevel(RTA_getStringAtKeyPath(args, "logLevel"))
 		response = {}
 	else
-		response = buildErrorResponseObject("Request type '" + requestType + "' not handled in this version")
+		response = RTA_buildErrorResponseObject("Request type '" + requestType + "' not handled in this version")
 	end if
 
 	if response <> Invalid then
@@ -72,19 +72,19 @@ end sub
 
 function processCallFuncRequest(args as Object) as Object
 	result = processGetValueRequest(args)
-	if isErrorObject(result) then
+	if RTA_isErrorObject(result) then
 		return result
 	end if
 
 	node = result.value
-	if NOT isNode(node) then
-		keyPath = getStringAtKeyPath(args, "keyPath")
-		return buildErrorResponseObject("Node not found at key path '" + keyPath + "'")
+	if NOT RTA_isNode(node) then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("Node not found at key path '" + keyPath + "'")
 	end if
 
 	funcName = args.funcName
-	if NOT isNonEmptyString(funcName) then
-		return buildErrorResponseObject("CallFunc request did not have valid 'funcName' param passed in")
+	if NOT RTA_isNonEmptyString(funcName) then
+		return RTA_buildErrorResponseObject("CallFunc request did not have valid 'funcName' param passed in")
 	end if
 
 	p = args.funcParams
@@ -116,8 +116,8 @@ function processCallFuncRequest(args as Object) as Object
 	}
 end function
 
-function processGetFocusedNodeRequest(args as Object) as Object
-	focusedNode = getFocusedNode()
+function processRTA_getFocusedNodeRequest(args as Object) as Object
+	focusedNode = RTA_getFocusedNode()
 	result = {
 		"node": focusedNode
 	}
@@ -131,7 +131,7 @@ function processGetFocusedNodeRequest(args as Object) as Object
 		if nodeId <> "" then
 			keyPathParts.unshift("#" + nodeId)
 		else
-			keyPathParts.unshift(getNodeParentIndex(node, parent).toStr())
+			keyPathParts.unshift(RTA_getNodeParentIndex(node, parent).toStr())
 		end if
 
 		node = parent
@@ -139,22 +139,22 @@ function processGetFocusedNodeRequest(args as Object) as Object
 	end while
 	result["keyPath"] = keyPathParts.join(".")
 
-	if getBooleanAtKeyPath(args, "includeRef") then
+	if RTA_getBooleanAtKeyPath(args, "includeRef") then
 		nodeRefKey = args.nodeRefKey
 
-		if NOT isNonEmptyString(nodeRefKey) then
-			return buildErrorResponseObject("Invalid value supplied for 'key' param")
+		if NOT RTA_isNonEmptyString(nodeRefKey) then
+			return RTA_buildErrorResponseObject("Invalid value supplied for 'key' param")
 		end if
 
 		storedNodes = m.nodeReferences[nodeRefKey]
-		if NOT isArray(storedNodes) then
-			return buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
+		if NOT RTA_isArray(storedNodes) then
+			return RTA_buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
 		end if
 
 		arrayGridChildItemContent = invalid
-		if getBooleanAtKeyPath(args, "returnFocusedArrayGridChild") AND focusedNode.isSubtype("ArrayGrid") AND focusedNode.content <> Invalid then
+		if RTA_getBooleanAtKeyPath(args, "returnFocusedArrayGridChild") AND focusedNode.isSubtype("ArrayGrid") AND focusedNode.content <> Invalid then
 			rowItemFocused = focusedNode.rowItemFocused
-			if isArray(rowItemFocused) AND rowItemFocused.count() = 2 then
+			if RTA_isArray(rowItemFocused) AND rowItemFocused.count() = 2 then
 				arrayGridChildItemContent = focusedNode.content.getChild(rowItemFocused[0]).getChild(rowItemFocused[1])
 			else
 				arrayGridChildItemContent = focusedNode.content.getChild(focusedNode.itemFocused)
@@ -162,16 +162,16 @@ function processGetFocusedNodeRequest(args as Object) as Object
 		end if
 
 		if arrayGridChildItemContent <> invalid then
-			for i = 0 to getLastIndex(storedNodes)
+			for i = 0 to RTA_getLastIndex(storedNodes)
 				node = storedNodes[i]
-				if NOT node.isSubtype("ContentNode") AND isNode(node.itemContent) AND node.itemContent.isSameNode(arrayGridChildItemContent) then
+				if NOT node.isSubtype("ContentNode") AND RTA_isNode(node.itemContent) AND node.itemContent.isSameNode(arrayGridChildItemContent) then
 					result.node = node
 					result.ref = i
 					exit for
 				end if
 			end for
 		else
-			for i = 0 to getLastIndex(storedNodes)
+			for i = 0 to RTA_getLastIndex(storedNodes)
 				nodeReference = storedNodes[i]
 				if focusedNode.isSameNode(nodeReference) then
 					result.ref = i
@@ -181,7 +181,7 @@ function processGetFocusedNodeRequest(args as Object) as Object
 		end if
 	end if
 
-	if NOT getBooleanAtKeyPath(args, "includeNode", true) then
+	if NOT RTA_getBooleanAtKeyPath(args, "includeNode", true) then
 		result.delete("node")
 	end if
 
@@ -190,15 +190,15 @@ end function
 
 function processGetValueRequest(args as Object) as Object
 	base = getBaseObject(args)
-	if isErrorObject(base) then
+	if RTA_isErrorObject(base) then
 		return base
 	end if
 
-	keyPath = getStringAtKeyPath(args, "keyPath")
+	keyPath = RTA_getStringAtKeyPath(args, "keyPath")
 
-	if isNonEmptyString(keyPath) then
-		value = getValueAtKeyPath(base, keyPath, "[[VALUE_NOT_FOUND]]")
-		found = NOT isString(value) OR value <> "[[VALUE_NOT_FOUND]]"
+	if RTA_isNonEmptyString(keyPath) then
+		value = RTA_getValueAtKeyPath(base, keyPath, "[[VALUE_NOT_FOUND]]")
+		found = NOT RTA_isString(value) OR value <> "[[VALUE_NOT_FOUND]]"
 	else
 		value = base
 		found = true
@@ -217,13 +217,14 @@ end function
 
 function processGetValuesRequest(args as Object) as Object
 	requests = args.requests
-	if NOT isNonEmptyAA(requests) then
-		return buildErrorResponseObject("getValues did not have have any requests")
+	if NOT RTA_isNonEmptyAA(requests) then
+		return RTA_buildErrorResponseObject("getValues did not have have any requests")
 	end if
 	results = {}
 	for each key in requests
+		' TODO handle children here
 		result = processGetValueRequest(requests[key])
-		if isErrorObject(result) then
+		if RTA_isErrorObject(result) then
 			return result
 		end if
 		results[key] = result
@@ -235,21 +236,21 @@ end function
 
 function processGetNodesInfoRequest(args as Object) as Object
 	requests = args.requests
-	if NOT isNonEmptyAA(requests) then
-		return buildErrorResponseObject("getNodesInfo did not have have any requests")
+	if NOT RTA_isNonEmptyAA(requests) then
+		return RTA_buildErrorResponseObject("getNodesInfo did not have have any requests")
 	end if
 
 	results = {}
 	for each key in requests
 		requestArgs = requests[key]
 		result = processGetValueRequest(requestArgs)
-		if isErrorObject(result) then
+		if RTA_isErrorObject(result) then
 			return result
 		end if
 
 		node = result.value
-		if NOT result.found OR NOT isNode(node) then
-			return buildErrorResponseObject("Node not found at keypath '" + requestArgs.keyPath + "'")
+		if NOT result.found OR NOT RTA_isNode(node) then
+			return RTA_buildErrorResponseObject("Node not found at keypath '" + requestArgs.keyPath + "'")
 		end if
 
 		fields = {}
@@ -284,17 +285,17 @@ end function
 
 function processHasFocusRequest(args as Object) as Object
 	result = processGetValueRequest(args)
-	if isErrorObject(result) then
+	if RTA_isErrorObject(result) then
 		return result
 	end if
 
 	if result.found <> true then
-		return buildErrorResponseObject("No value found at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+		return RTA_buildErrorResponseObject("No value found at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
 	end if
 
 	node = result.value
-	if NOT isNode(node) then
-		return buildErrorResponseObject("Value at key path '" + getStringAtKeyPath(args, "keyPath") + "' was not a node")
+	if NOT RTA_isNode(node) then
+		return RTA_buildErrorResponseObject("Value at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "' was not a node")
 	end if
 
 	return {
@@ -304,17 +305,17 @@ end function
 
 function processIsInFocusChainRequest(args as Object) as Object
 	result = processGetValueRequest(args)
-	if isErrorObject(result) then
+	if RTA_isErrorObject(result) then
 		return result
 	end if
 
 	if result.found <> true then
-		return buildErrorResponseObject("No value found at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+		return RTA_buildErrorResponseObject("No value found at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
 	end if
 
 	node = result.value
-	if NOT isNode(node) then
-		return buildErrorResponseObject("Value at key path '" + getStringAtKeyPath(args, "keyPath") + "' was not a node")
+	if NOT RTA_isNode(node) then
+		return RTA_buildErrorResponseObject("Value at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "' was not a node")
 	end if
 
 	return {
@@ -326,17 +327,17 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
 	result = processGetValueRequest(args)
-	if isErrorObject(result) then
+	if RTA_isErrorObject(result) then
 		return result
 	end if
 
 	node = result.value
 	field = args.field
 
-	parentIsNode = isNode(node)
-	fieldExists = parentIsNode AND node.doesExist(field)
+	parentRTA_isNode = RTA_isNode(node)
+	fieldExists = parentRTA_isNode AND node.doesExist(field)
 	timePassed = 0
-	if NOT parentIsNode OR NOT fieldExists then
+	if NOT parentRTA_isNode OR NOT fieldExists then
 		retryTimeout = args.retryTimeout
 		if retryTimeout > 0 then
 			request.id = request.id
@@ -368,18 +369,18 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 			end if
 		end if
 
-		if NOT parentIsNode then
-			errorMessage = "Node not found at key path '" + getStringAtKeyPath(args, "keyPath") + "'"
+		if NOT parentRTA_isNode then
+			errorMessage = "Node not found at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'"
 		else
-			errorMessage = "Node did not have field named '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'"
+			errorMessage = "Node did not have field named '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'"
 		end if
 		if timePassed > 0 then
 			errorMessage += " timed out after " + timePassed.toStr() + "ms"
 		end if
-		logWarn(errorMessage)
+		RTA_logWarn(errorMessage)
 
 		m.activeObserveFieldRequests.delete(requestId)
-		sendResponseToTask(request, buildErrorResponseObject(errorMessage))
+		sendResponseToTask(request, RTA_buildErrorResponseObject(errorMessage))
 
 		' Might be called asynchronously, and we already handled this, so return Invalid
 		return Invalid
@@ -387,10 +388,10 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 
 	' If match was provided, check to see if it already matches the expected value
 	match = args.match
-	if isAA(match) then
+	if RTA_isAA(match) then
 		match.key = args.key
 		result = processGetValueRequest(match)
-		if isErrorObject(result) then
+		if RTA_isErrorObject(result) then
 			return result
 		end if
 
@@ -409,7 +410,7 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 		activeObserveFieldRequest = m.activeObserveFieldRequests[observedRequestId]
 
 		if node.isSameNode(activeObserveFieldRequest.node) AND activeObserveFieldRequest.args.field = field then
-			logDebug("Already observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+			RTA_logDebug("Already observing '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
 			alreadyObserving = true
 			exit for
 		end if
@@ -417,9 +418,9 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 
 	if NOT alreadyObserving then
 		if node.observeFieldScoped(field, "observeFieldCallback") then
-			logDebug("Now observing '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+			RTA_logDebug("Now observing '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
 		else
-			return buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + getStringAtKeyPath(args, "keyPath") + "'")
+			return RTA_buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
 		end if
 	end if
 
@@ -444,25 +445,25 @@ sub observeFieldCallback(event as Object)
 	node = event.getRoSgNode()
 	field = event.getField()
 	data = event.getData()
-	logDebug("Received callback for node field '" + field + "' with value ", data)
+	RTA_logDebug("Received callback for node field '" + field + "' with value ", data)
 	nodeFound = false
 	for each requestId in m.activeObserveFieldRequests
 		request = m.activeObserveFieldRequests[requestId]
 		args = request.args
 		if node.isSameNode(request.node) AND args.field = field then
-			logVerbose("Found matching requestId: " + requestId)
+			RTA_logVerbose("Found matching requestId: " + requestId)
 			nodeFound = true
 			match = args.match
-			if isAA(match) then
+			if RTA_isAA(match) then
 				result = processGetValueRequest(match)
-				if isErrorObject(result) then
-					logVerbose("observeFieldCallback: Encountered error", result)
+				if RTA_isErrorObject(result) then
+					RTA_logVerbose("observeFieldCallback: Encountered error", result)
 					sendResponseToTask(request, result)
 					return
 				end if
 
 				if result.found = false OR result.value <> match.value then
-					logVerbose("observeFieldCallback: Match.value did not match requested value continuing to wait", {
+					RTA_logVerbose("observeFieldCallback: Match.value did not match requested value continuing to wait", {
 						"result": result.value
 						"match": match.value
 					})
@@ -481,33 +482,33 @@ sub observeFieldCallback(event as Object)
 	' We should only get to here if all the requests succeeded with their matches
 	if nodeFound then
 		' If we got to here then we sent back all responses for this field so we can remove our observer now
-		logDebug("Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
+		RTA_logDebug("Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
 		node.unobserveFieldScoped(field)
 		return
 	end if
 
-	logError("Received callback for unknown node or field ", node)
+	RTA_logError("Received callback for unknown node or field ", node)
 end sub
 
 function processSetValueRequest(args as Object) as Object
-	keyPath = getStringAtKeyPath(args, "keyPath")
+	keyPath = RTA_getStringAtKeyPath(args, "keyPath")
 	result = processGetValueRequest(args)
-	if isErrorObject(result) then
+	if RTA_isErrorObject(result) then
 		return result
 	end if
 
 	if result.found <> true then
-		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+		return RTA_buildErrorResponseObject("No value found at key path '" + keyPath + "'")
 	end if
 
 	resultValue = result.value
-	if NOT isKeyedValueType(resultValue) AND NOT isArray(resultValue) then
-		return buildErrorResponseObject("keyPath '" + keyPath + "' can not have a value assigned to it")
+	if NOT RTA_isKeyedValueType(resultValue) AND NOT RTA_isArray(resultValue) then
+		return RTA_buildErrorResponseObject("keyPath '" + keyPath + "' can not have a value assigned to it")
 	end if
 
 	field = args.field
-	if NOT isString(field) then
-		return buildErrorResponseObject("Missing valid 'field' param")
+	if NOT RTA_isString(field) then
+		return RTA_buildErrorResponseObject("Missing valid 'field' param")
 	end if
 
 	nodeParent = resultValue
@@ -515,8 +516,8 @@ function processSetValueRequest(args as Object) as Object
 	base = getBaseObject(args)
 	if field = "" then
 		updateAA = args.value
-		if NOT isAA(updateAA) then
-			return buildErrorResponseObject("If field is empty, then value must be an AA")
+		if NOT RTA_isAA(updateAA) then
+			return RTA_buildErrorResponseObject("If field is empty, then value must be an AA")
 		end if
 	else
 		' Have to walk up the tree until we get to a node as anything that is a field on a node must be replaced
@@ -524,8 +525,8 @@ function processSetValueRequest(args as Object) as Object
 		parentKeyPathParts = parentKeyPath.tokenize(".").toArray()
 		setKeyPathParts = []
 		while NOT parentKeyPathParts.isEmpty()
-			nodeParent = getValueAtKeyPath(base, parentKeyPathParts.join("."))
-			if isNode(nodeParent) then
+			nodeParent = RTA_getValueAtKeyPath(base, parentKeyPathParts.join("."))
+			if RTA_isNode(nodeParent) then
 				exit while
 			else
 				setKeyPathParts.unshift(parentKeyPathParts.pop())
@@ -533,17 +534,17 @@ function processSetValueRequest(args as Object) as Object
 		end while
 
 		if setKeyPathParts.isEmpty() then
-			updateAA = createCaseSensitiveAA(field, args.value)
+			updateAA = RTA_createCaseSensitiveAA(field, args.value)
 		else
 			setKeyPathParts.push(field)
 			nodeFieldKey = setKeyPathParts.shift()
 			nodeFieldValueCopy = nodeParent[nodeFieldKey]
-			setValueAtKeyPath(nodeFieldValueCopy, setKeyPathParts.join("."), args.value)
-			updateAA = createCaseSensitiveAA(nodeFieldKey, nodeFieldValueCopy)
+			RTA_setValueAtKeyPath(nodeFieldValueCopy, setKeyPathParts.join("."), args.value)
+			updateAA = RTA_createCaseSensitiveAA(nodeFieldKey, nodeFieldValueCopy)
 		end if
 	end if
 
-	if NOT isNode(nodeParent) then
+	if NOT RTA_isNode(nodeParent) then
 		nodeParent = base
 	end if
 
@@ -580,12 +581,12 @@ end function
 function processStoreNodeReferencesRequest(args as Object) as Object
 	nodeRefKey = args.nodeRefKey
 
-	includeArrayGridChildren = getBooleanAtKeyPath(args, "includeArrayGridChildren")
-	includeNodeCountInfo = getBooleanAtKeyPath(args, "includeNodeCountInfo")
-	includeBoundingRectInfo = getBooleanAtKeyPath(args, "includeBoundingRectInfo")
+	includeArrayGridChildren = RTA_getBooleanAtKeyPath(args, "includeArrayGridChildren")
+	includeNodeCountInfo = RTA_getBooleanAtKeyPath(args, "includeNodeCountInfo")
+	includeBoundingRectInfo = RTA_getBooleanAtKeyPath(args, "includeBoundingRectInfo")
 
-	if NOT isNonEmptyString(nodeRefKey) then
-		return buildErrorResponseObject("Invalid value supplied for 'nodeRefKey' param")
+	if NOT RTA_isNonEmptyString(nodeRefKey) then
+		return RTA_buildErrorResponseObject("Invalid value supplied for 'nodeRefKey' param")
 	end if
 
 	storedNodes = []
@@ -610,9 +611,9 @@ function processStoreNodeReferencesRequest(args as Object) as Object
 			for each key in arrayGridNodes
 				node = arrayGridNodes[key]
 				componentName = node.itemComponentName
-				if isString(componentName) then
+				if RTA_isString(componentName) then
 					arrayGridComponents[componentName] = true
-				else if isString(node.channelInfoComponentName) then
+				else if RTA_isString(node.channelInfoComponentName) then
 					componentName = node.channelInfoComponentName
 					arrayGridComponents[componentName] = true
 				end if
@@ -700,7 +701,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 		itemContent = itemComponentNode.itemContent
 		position = -1
 		if itemContent <> Invalid then
-			position = getNodeParentIndex(itemContent, itemContent.getParent())
+			position = RTA_getNodeParentIndex(itemContent, itemContent.getParent())
 		end if
 
 		' So we know how many nodes we need to handle afterwards if includeBoundingRectInfo is true
@@ -715,7 +716,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 		parent = itemComponentNode.getParent()
 
 		' If we don't have a parent we want to handle parentRef based off of itemContent later
-		if NOT isNode(parent) then
+		if NOT RTA_isNode(parent) then
 			' If no parent just store for now
 			unparentedItemComponentNodeBranch.push(childNodeBranch)
 		else
@@ -725,7 +726,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 				nodeBranch = Invalid
 
 				' This helps match up what ArrayGrid in the nodeTree we are connected to. We only want it if it's an external ArrayGrid not the internal ones inside RowList
-				if parent.isSubtype("ArrayGrid") AND getNodeSubtype(parent.getParent()) <> "RowListItem" then
+				if parent.isSubtype("ArrayGrid") AND RTA_getNodeSubtype(parent.getParent()) <> "RowListItem" then
 					for each nodeRef in arrayGridNodes
 						' Look for the visible ArrayGrid this renderer belongs to
 						if arrayGridNodes[nodeRef].isSameNode(parent) then
@@ -742,7 +743,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 				if parent.subtype() = "Group" AND parent.getParent().subtype() = "RowListItem" then
 					' Walk up to the RowListItem
 					rowListItem = parent.getParent()
-					for i = 0 to getLastIndex(rowListItem)
+					for i = 0 to RTA_getLastIndex(rowListItem)
 						' Once we find the MarkupGrid make it the parent
 						child = rowListItem.getChild(i)
 						if child.subtype() = "MarkupGrid" then
@@ -772,7 +773,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 
 				' If not go ahead and make a nodeBranch for it
 				if nodeBranch = Invalid then
-					position = getNodeParentIndex(parent, parent.getParent())
+					position = RTA_getNodeParentIndex(parent, parent.getParent())
 					nodeBranch = addNodeToTree(storedNodes, flatTree, parent, -1, position, true)
 					nodeType = nodeBranch.subtype
 					if nodeType = "RowListItem" then
@@ -780,7 +781,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 					else if nodeType = "MarkupGrid" then
 						internalMarkupGridNodeBranches.push(nodeBranch)
 					else
-						logError("Encountered unexpected node type '" + nodeType + "' while handling ArrayGrid items")
+						RTA_logError("Encountered unexpected node type '" + nodeType + "' while handling ArrayGrid items")
 					end if
 				end if
 
@@ -846,12 +847,12 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 								end if
 							end for
 
-							position = getNodeParentIndex(rowListItem, rowListItem.getParent())
+							position = RTA_getNodeParentIndex(rowListItem, rowListItem.getParent())
 							rowListItemNodeBranch = addNodeToTree(storedNodes, flatTree, rowListItem, parentRef, position)
 							internalRowListItemNodeBranches.push(rowListItemNodeBranch)
 
 							' Go through the RowListItem's children to get the internal MarkupGrid
-							for i = 0 to getLastIndex(rowListItem)
+							for i = 0 to RTA_getLastIndex(rowListItem)
 								child = rowListItem.getChild(i)
 								if child.subtype() = "MarkupGrid" then
 									markupGridNodeBranch = addNodeToTree(storedNodes, flatTree, child, rowListItemNodeBranch.ref, i)
@@ -867,7 +868,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 
 			if itemComponentNodeBranch.parentRef = -1 then
 				' Was throwing away but seems to cause issue so commenting out for now. Will likely just handle with the improvement below eventually instead
-				' for i = 0 to getLastIndex(flatTree)
+				' for i = 0 to RTA_getLastIndex(flatTree)
 				' 	ref = flatTree[i].ref
 				' 	if ref <> -1 AND ref = itemComponentNodeBranch.ref then
 				' 		flatTree.delete(i)
@@ -882,7 +883,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 	' Do position and adding children for RowListItem here so we only have to it once for each
 	for each internalRowListItemNodeBranch in internalRowListItemNodeBranches
 		rowListItem = storedNodes[internalRowListItemNodeBranch.ref]
-		for i = 0 to getLastIndex(rowListItem)
+		for i = 0 to RTA_getLastIndex(rowListItem)
 			child = rowListItem.getChild(i)
 
 			' First index is title info that we want to make available for external use as well
@@ -891,7 +892,7 @@ sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemCompo
 			else if child.subtype() = "MarkupGrid" then
 				' Need to get position from the child MarkupGrid content
 				content = child.content
-				internalRowListItemNodeBranch.position = getNodeParentIndex(content, content.getParent())
+				internalRowListItemNodeBranch.position = RTA_getNodeParentIndex(content, content.getParent())
 			end if
 		end for
 	end for
@@ -946,8 +947,8 @@ end function
 
 function processDeleteNodeReferencesRequest(args as Object) as Object
 	nodeRefKey = args.nodeRefKey
-	if NOT isString(nodeRefKey) then
-		return buildErrorResponseObject("Invalid value supplied for 'key' param")
+	if NOT RTA_isString(nodeRefKey) then
+		return RTA_buildErrorResponseObject("Invalid value supplied for 'key' param")
 	end if
 	m.nodeReferences.delete(nodeRefKey)
 
@@ -956,25 +957,25 @@ end function
 
 function processGetNodesWithPropertiesRequest(args as Object) as Object
 	nodeRefKey = args.nodeRefKey
-	if NOT isString(nodeRefKey) then
-		return buildErrorResponseObject("Invalid value supplied for 'nodeRefKey' param")
+	if NOT RTA_isString(nodeRefKey) then
+		return RTA_buildErrorResponseObject("Invalid value supplied for 'nodeRefKey' param")
 	end if
 
 	storedNodes = m.nodeReferences[nodeRefKey]
-	if NOT isArray(storedNodes) then
-		return buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
+	if NOT RTA_isArray(storedNodes) then
+		return RTA_buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
 	end if
 
 	matchingNodes = []
 	matchingNodeRefs = []
 	properties = args.properties
-	for nodeRef = 0 to getLastIndex(storedNodes)
+	for nodeRef = 0 to RTA_getLastIndex(storedNodes)
 		node = storedNodes[nodeRef]
 		nodeMatches = true
 		for each property in properties
 			result = doesNodeHaveProperty(node, property)
 			if result = -1 then
-				return buildErrorResponseObject("Invalid type for property " + formatJson(property))
+				return RTA_buildErrorResponseObject("Invalid type for property " + formatJson(property))
 			end if
 
 			if result = 0 then
@@ -999,7 +1000,7 @@ function doesNodeHaveProperty(node as Object, property as Object) as Integer
 	result = 0
 	operator = property.operator
 	fields = property.fields
-	if isArray(fields) then
+	if RTA_isArray(fields) then
 		for each field in fields
 			if node.hasField(field) then
 				result = compareValues(operator, node[field], property.value)
@@ -1008,11 +1009,11 @@ function doesNodeHaveProperty(node as Object, property as Object) as Integer
 				end if
 			end if
 		end for
-	else if isArray(property.keyPaths) then
+	else if RTA_isArray(property.keyPaths) then
 		for each keyPath in property.keyPaths
 			' Route through keypath functionality to allow more advanced searches
-			actualValue = getValueAtKeyPath(node, keyPath, "[[VALUE_NOT_FOUND]]")
-			found = NOT isString(actualValue) OR actualValue <> "[[VALUE_NOT_FOUND]]"
+			actualValue = RTA_getValueAtKeyPath(node, keyPath, "[[VALUE_NOT_FOUND]]")
+			found = NOT RTA_isString(actualValue) OR actualValue <> "[[VALUE_NOT_FOUND]]"
 
 			if found then
 				result = compareValues(operator, actualValue, property.value)
@@ -1038,7 +1039,7 @@ function compareValues(operator as String, a as Dynamic, b as Dynamic) as Intege
 			return 1
 		end if
 	else if operator = "greaterThan" OR operator = "greaterThanEqualTo" OR operator = "lessThan" OR operator = "lessThanEqualTo" then
-		if isNumber(a) AND isNumber(b) then
+		if RTA_isNumber(a) AND RTA_isNumber(b) then
 			if operator = "greaterThan" then
 				if a > b then
 					return 1
@@ -1061,7 +1062,7 @@ function compareValues(operator as String, a as Dynamic, b as Dynamic) as Intege
 		end if
 	else if operator = "in" OR operator = "!in" then
 		' Only string checking allowed for now
-		if isString(a) AND isString(b) then
+		if RTA_isString(a) AND RTA_isString(b) then
 			found = a.instr(b) >= 0
 
 			if operator = "in" AND found then
@@ -1078,7 +1079,7 @@ function compareValues(operator as String, a as Dynamic, b as Dynamic) as Intege
 end function
 
 function processDisableScreenSaverRequest(args as Object) as Object
-	if getBooleanAtKeyPath(args, "disableScreenSaver") then
+	if RTA_getBooleanAtKeyPath(args, "disableScreenSaver") then
 		if m.videoNode = Invalid then
 			m.videoNode = m.top.createChild("Video")
 			m.videoNode.disableScreenSaver = true
@@ -1095,13 +1096,13 @@ end function
 function processStartResponsivenessTestingRequest(args as Object) as Object
 	' Using 60 FPS as our baseline but timers work on a millisecond level so everything is a little bit off
 	defaultTickDuration = 16
-	m.responsivenessTestingTickDuration = getNumberAtKeyPath(args, "tickDuration", defaultTickDuration)
+	m.responsivenessTestingTickDuration = RTA_getNumberAtKeyPath(args, "tickDuration", defaultTickDuration)
 
 	defaultPeriodTickCount = 60
-	m.responsivenessTestingPeriodTickCount = getNumberAtKeyPath(args, "periodTickCount", defaultPeriodTickCount)
+	m.responsivenessTestingPeriodTickCount = RTA_getNumberAtKeyPath(args, "periodTickCount", defaultPeriodTickCount)
 
 	defaultPeriodsTrackCount = 10
-	m.responsivenessTestingperiodsTrackCount = getNumberAtKeyPath(args, "periodsTrackCount", defaultPeriodsTrackCount)
+	m.responsivenessTestingperiodsTrackCount = RTA_getNumberAtKeyPath(args, "periodsTrackCount", defaultPeriodsTrackCount)
 
 	if m.responsivenessTestingCurrentPeriodTimeSpan = invalid then
 		m.responsivenessTestingCurrentPeriodTimer = createObject("roSGNode", "Timer")
@@ -1164,7 +1165,7 @@ sub onResponsivenessTestingCurrentPeriodTimerFire()
 	periods.push({
 		"duration": elapsedTime
 		"tickCount": tickCount
-		"percent": safeDivide(tickCount, numberOfExpectedTicks) * 100
+		"percent": RTA_safeDivide(tickCount, numberOfExpectedTicks) * 100
 	})
 
 	m.responsivenessTestingData.totalTicks += tickCount
@@ -1176,7 +1177,7 @@ end sub
 
 function processGetResponsivenessTestingDataRequest(args as Object) as Object
 	if m.responsivenessTestingData = invalid then
-		return buildErrorResponseObject("Responsiveness testing is not started. Be sure to call 'startResponsivenessTesting()' first")
+		return RTA_buildErrorResponseObject("Responsiveness testing is not started. Be sure to call 'startResponsivenessTesting()' first")
 	end if
 
 	tickDuration = m.responsivenessTestingTickDuration
@@ -1192,7 +1193,7 @@ function processGetResponsivenessTestingDataRequest(args as Object) as Object
 		"tickDuration": tickDuration
 		"testingTotals": {
 			"duration": totalTime
-			"percent": safeDivide(totalTicks, numberOfExpectedTicks) * 100
+			"percent": RTA_safeDivide(totalTicks, numberOfExpectedTicks) * 100
 			"tickCount": totalTicks
 		}
 	}
@@ -1200,45 +1201,45 @@ end function
 
 function processFocusNodeRequest(args as Object) as Object
 	result = processGetValueRequest(args)
-	if isErrorObject(result) then
+	if RTA_isErrorObject(result) then
 		return result
 	end if
 
 	if result.found <> true then
-		keyPath = getStringAtKeyPath(args, "keyPath")
-		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("No value found at key path '" + keyPath + "'")
 	end if
 
 	node = result.value
-	if NOT isNode(node) then
-		keyPath = getStringAtKeyPath(args, "keyPath")
-		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	if NOT RTA_isNode(node) then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
 	end if
 
-	node.setFocus(getBooleanAtKeyPath(args, "on", true))
+	node.setFocus(RTA_getBooleanAtKeyPath(args, "on", true))
 
 	return {}
 end function
 
 function processRemoveNodeChildrenRequest(args as Object) as Object
 	result = processGetValueRequest(args)
-	if isErrorObject(result) then
+	if RTA_isErrorObject(result) then
 		return result
 	end if
 
 	if result.found <> true then
-		keyPath = getStringAtKeyPath(args, "keyPath")
-		return buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("No value found at key path '" + keyPath + "'")
 	end if
 
 	node = result.value
-	if NOT isNode(node) then
-		keyPath = getStringAtKeyPath(args, "keyPath")
-		return buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	if NOT RTA_isNode(node) then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
 	end if
 
-	index = getNumberAtKeyPath(args, "index")
-	count = getNumberAtKeyPath(args, "count", 1)
+	index = RTA_getNumberAtKeyPath(args, "index")
+	count = RTA_getNumberAtKeyPath(args, "count", 1)
 
 	if count = -1 then
 		count = node.getChildCount()
@@ -1250,25 +1251,25 @@ function processRemoveNodeChildrenRequest(args as Object) as Object
 end function
 
 function getBaseObject(args as Object) as Dynamic
-	baseType = getStringAtKeyPath(args, "base")
+	baseType = RTA_getStringAtKeyPath(args, "base")
 	if baseType = "global" then return m.global
 	if baseType = "scene" then return m.top.getScene()
-	if baseType = "focusedNode" then return getFocusedNode()
+	if baseType = "focusedNode" then return RTA_getFocusedNode()
 	if baseType = "nodeRef" then
-		nodeRefKey = getStringAtKeyPath(args, "nodeRefKey")
+		nodeRefKey = RTA_getStringAtKeyPath(args, "nodeRefKey")
 		base = m.nodeReferences[nodeRefKey]
 		if base = Invalid then
-			return buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
+			return RTA_buildErrorResponseObject("Invalid nodeRefKey supplied '" + nodeRefKey + "'. Make sure you have stored first")
 		else
 			return base
 		end if
 	end if
-	return buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
+	return RTA_buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
 end function
 
 sub sendResponseToTask(request as Object, response as Object)
-	if getBooleanAtKeyPath(request, "args.convertResponseToJsonCompatible", true) then
-		response = recursivelyConvertValueToJsonCompatible(response, getNumberAtKeyPath(request, "args.responseMaxChildDepth"))
+	if RTA_getBooleanAtKeyPath(request, "args.convertResponseToJsonCompatible", true) then
+		response = recursivelyConvertValueToJsonCompatible(response, RTA_getNumberAtKeyPath(request, "args.responseMaxChildDepth"))
 	end if
 
 	response.id = request.id
@@ -1277,15 +1278,15 @@ sub sendResponseToTask(request as Object, response as Object)
 end sub
 
 function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth as Integer, depth = -1 as Integer) as Object
-	if isArray(value) then
-		for i = 0 to getLastIndex(value)
+	if RTA_isArray(value) then
+		for i = 0 to RTA_getLastIndex(value)
 			value[i] = recursivelyConvertValueToJsonCompatible(value[i], maxChildDepth, depth)
 		end for
-	else if isAA(value) then
+	else if RTA_isAA(value) then
 		for each key in value
 			value[key] = recursivelyConvertValueToJsonCompatible(value[key], maxChildDepth, depth)
 		end for
-	else if isNode(value) then
+	else if RTA_isNode(value) then
 		depth++
 		node = value
 		if maxChildDepth < depth then

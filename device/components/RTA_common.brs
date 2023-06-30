@@ -1,8 +1,58 @@
 '*************************************************************************
-'#region *** RTA HELPERS
+'#region *** Client functions - Only these should be called directly by client code
 '*************************************************************************
 
-function buildErrorResponseObject(message as String) as Object
+' /**
+' * @description Helper to allow using RTA proxy functionality by injecting proxy address into urls
+' * @param {String} url - Url we want to prepend proxy address to
+' */
+function RTA_injectProxy(url as String) as String
+	sec = createObject("roRegistrySection", "rokuTestAutomation")
+	proxyAddress = sec.read("proxyAddress")
+	if proxyAddress <> "" then
+		url = "http://" + proxyAddress + "/;" + url
+	end if
+	return url
+end function
+
+'*************************************************************************
+'#endregion *** Client functions
+'*************************************************************************
+
+'*************************************************************************
+'#region *** Injected Functions -
+'*************************************************************************
+
+' /**
+' * @description Gets injected into components to allow additional functionality
+' * @param {String} name - Name of the operation we would like to run
+' * @param {Array} args - Array of arguments that are used for the current operation
+' */
+function RTA_componentOperation(name as String, args = [])
+	success = true
+	response = Invalid
+	if name = "getComponentGlobalAAKeyPath" then
+		keyPath = args[0]
+		response = RTA_getValueAtKeyPath(m, keyPath)
+	else if name = "setComponentGlobalAAKeyPath" then
+		keyPath = args[0]
+		value = args[1]
+		response = RTA_setValueAtKeyPath(m, keyPath, value)
+	else
+		success = false
+	end if
+
+	return {
+		"success": success
+		"response": response
+	}
+end function
+
+'*************************************************************************
+'#region *** RTA helpers
+'*************************************************************************
+
+function RTA_buildErrorResponseObject(message as String) as Object
 	return {
 		"success": false
 		"error": {
@@ -11,14 +61,14 @@ function buildErrorResponseObject(message as String) as Object
 	}
 end function
 
-function isErrorObject(value as Dynamic) as Boolean
-	if isAA(value) AND isAA(value.error) then
+function RTA_isErrorObject(value as Dynamic) as Boolean
+	if RTA_isAA(value) AND RTA_isAA(value.error) then
 		return true
 	end if
 	return false
 end function
 
-function safeDivide(dividend as Integer, divisor as Integer) as Float
+function RTA_safeDivide(dividend as Integer, divisor as Integer) as Float
 	if divisor = 0 then
 		return 0
 	end if
@@ -26,13 +76,12 @@ function safeDivide(dividend as Integer, divisor as Integer) as Float
 	return dividend / divisor
 end function
 
+'*************************************************************************
+'#endregion *** RTA helpers
+'*************************************************************************
 
 '*************************************************************************
-'#endregion *** RTA HELPERS
-'*************************************************************************
-
-'*************************************************************************
-'#region *** TYPE CHECKING
+'#region *** Type Checking
 '*************************************************************************
 
 ' /**
@@ -40,7 +89,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isInteger(value as Dynamic) as Boolean
+function RTA_isInteger(value as Dynamic) as Boolean
 	valueType = type(value)
 	return (valueType = "Integer") OR (valueType = "roInt") OR (valueType = "roInteger") OR (valueType = "LongInteger")
 end function
@@ -50,7 +99,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isFloat(value as Dynamic) as Boolean
+function RTA_isFloat(value as Dynamic) as Boolean
 	valueType = type(value)
 	return (valueType = "Float") OR (valueType = "roFloat")
 end function
@@ -60,7 +109,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isDouble(value as Dynamic) as Boolean
+function RTA_isDouble(value as Dynamic) as Boolean
 	valueType = type(value)
 	return (valueType = "Double") OR (valueType = "roDouble") OR (valueType = "roIntrinsicDouble")
 end function
@@ -70,10 +119,10 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isNumber(obj as Dynamic) as Boolean
-	if isInteger(obj) then return true
-	if isFloat(obj) then return true
-	if isDouble(obj) then return true
+function RTA_isNumber(obj as Dynamic) as Boolean
+	if RTA_isInteger(obj) then return true
+	if RTA_isFloat(obj) then return true
+	if RTA_isDouble(obj) then return true
 	return false
 end function
 
@@ -82,7 +131,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isString(value as Dynamic) as Boolean
+function RTA_isString(value as Dynamic) as Boolean
 	valueType = type(value)
 	return (valueType = "String") OR (valueType = "roString")
 end function
@@ -92,8 +141,8 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isNonEmptyString(value as Dynamic) as Boolean
-	if isString(value) AND value <> "" then return true
+function RTA_isNonEmptyString(value as Dynamic) as Boolean
+	if RTA_isString(value) AND value <> "" then return true
 	return false
 end function
 
@@ -102,7 +151,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isArray(value as Dynamic) as Boolean
+function RTA_isArray(value as Dynamic) as Boolean
 	return type(value) = "roArray"
 end function
 
@@ -111,8 +160,8 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isNonEmptyArray(value as Dynamic) as Boolean
-	return (isArray(value) AND NOT value.isEmpty())
+function RTA_isNonEmptyArray(value as Dynamic) as Boolean
+	return (RTA_isArray(value) AND NOT value.isEmpty())
 end function
 
 ' /**
@@ -120,7 +169,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isKeyedValueType(value as Dynamic) as Boolean
+function RTA_isKeyedValueType(value as Dynamic) as Boolean
 	return getInterface(value, "ifAssociativeArray") <> Invalid
 end function
 
@@ -129,7 +178,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isAA(value as Dynamic) as Boolean
+function RTA_isAA(value as Dynamic) as Boolean
 	return type(value) = "roAssociativeArray"
 end function
 
@@ -138,8 +187,8 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isNonEmptyAA(value as Dynamic) as Boolean
-	return (isAA(value) AND NOT value.isEmpty())
+function RTA_isNonEmptyAA(value as Dynamic) as Boolean
+	return (RTA_isAA(value) AND NOT value.isEmpty())
 end function
 
 ' /**
@@ -147,7 +196,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isNotInvalid(value as Dynamic) as Boolean
+function RTA_isNotInvalid(value as Dynamic) as Boolean
 	return (type(value) <> "<uninitialized>" AND value <> Invalid)
 end function
 
@@ -156,7 +205,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isBoolean(value as Dynamic) as Boolean
+function RTA_isBoolean(value as Dynamic) as Boolean
 	valueType = type(value)
 	return (valueType = "Boolean") OR (valueType = "roBoolean")
 end function
@@ -166,7 +215,7 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isNode(value as Dynamic) as Boolean
+function RTA_isNode(value as Dynamic) as Boolean
 	return type(value) = "roSGNode"
 end function
 
@@ -175,37 +224,32 @@ end function
 ' * @param {Dynamic} value The variable to be checked
 ' * @return {Boolean} Results of the check
 ' */
-function isFunction(value as Dynamic) as Boolean
+function RTA_isFunction(value as Dynamic) as Boolean
 	valueType = type(value)
 	return (valueType = "roFunction") OR (valueType = "Function")
 end function
 
 '*************************************************************************
-'#endregion *** TYPE CHECKING
+'#endregion *** Type Checking
 '*************************************************************************
 
 '*************************************************************************
-'#region *** SG NODE UTILITIES
+'#region *** SG Node Utilities
 '*************************************************************************
 
-function createNode(nodeType = "Node" as String) as Object
-	return createObject("roSGNode", nodeType)
-end function
-
-
-function findChildNodeWithId(parentNode as Object, id as String, maxDepth = 10 as Integer, depth = 0 as Integer) as Dynamic
+function RTA_findChildNodeWithId(parentNode as Object, id as String, maxDepth = 10 as Integer, depth = 0 as Integer) as Dynamic
 	if depth > maxDepth then
-		logWarn(depth.toStr() + " exceeded maximum depth of " + maxDepth.toStr() + " searching for node with id '" + id + "'")
+		RTA_logWarn(depth.toStr() + " exceeded maximum depth of " + maxDepth.toStr() + " searching for node with id '" + id + "'")
 		return Invalid
 	end if
 
-	for i = 0 to getLastIndex(parentNode)
+	for i = 0 to RTA_getLastIndex(parentNode)
 		child = parentNode.getChild(i)
 		if child.id = id then
 			return child
 		end if
 
-		match = findChildNodeWithId(child, id, maxDepth, depth + 1)
+		match = RTA_findChildNodeWithId(child, id, maxDepth, depth + 1)
 		if match <> Invalid then
 			return match
 		end if
@@ -219,9 +263,9 @@ end function
 ' * @param {Node} parent we are searching for the children of
 ' * @return {Integer} Result or -1
 ' */
-function getNodeParentIndex(node as Object, parent) as Integer
-	if isNode(node) then
-		for i = 0 to getLastIndex(parent)
+function RTA_getNodeParentIndex(node as Object, parent) as Integer
+	if RTA_isNode(node) then
+		for i = 0 to RTA_getLastIndex(parent)
 			if node.isSameNode(parent.getChild(i)) then
 				return i
 			end if
@@ -230,7 +274,7 @@ function getNodeParentIndex(node as Object, parent) as Integer
 	return -1
 end function
 
-function getFocusedNode() as Dynamic
+function RTA_getFocusedNode() as Dynamic
 	node = m.top.getScene()
 	while true
 		child = node.focusedChild
@@ -243,19 +287,19 @@ function getFocusedNode() as Dynamic
 	return node
 end function
 
-function getNodeSubtype(node as Object) as String
-	if isNode(node) then
+function RTA_getNodeSubtype(node as Object) as String
+	if RTA_isNode(node) then
 		return node.subtype()
 	end if
 	return ""
 end function
 
 '*************************************************************************
-'#endregion *** SG NODE UTILITIES
+'#endregion *** SG Node Utilities
 '*************************************************************************
 
 '*************************************************************************
-'#region *** ASSOCIATIVE ARRAY UTILITIES
+'#region *** AssociativeArray Utilities
 '*************************************************************************
 
 ' /**
@@ -265,97 +309,97 @@ end function
 ' * @param {Dynamic} value Initial value.
 ' * @return {AssociativeArray}
 ' */
-function createCaseSensitiveAA(key = "" as String, value = Invalid as Dynamic) as Object
+function RTA_createCaseSensitiveAA(key = "" as String, value = Invalid as Dynamic) as Object
 	aa = {}
 	aa.setModeCaseSensitive()
-	if isNonEmptyString(key) then aa[key] = value
+	if RTA_isNonEmptyString(key) then aa[key] = value
 	return aa
 end function
 
 '*************************************************************************
-'#endregion *** ASSOCIATIVE ARRAY UTILITIES
+'#endregion *** AssociativeArray Utilities
 '*************************************************************************
 
 '*************************************************************************
-'#region *** KEYED VALUE UTILITIES
+'#region *** Keyed Value Utilities
 '*************************************************************************
 
 ' /**
-' * @description Helper for getValueAtKeyPath to break out
+' * @description Helper for RTA_getValueAtKeyPath to break out
 ' * @param {Object} key - Key of the function the user is asking us to call
 ' * @param {Dynamic} level - The variable we are calling the function call on
 ' */
-function callBrightscriptInterfaceFunction(functionName as string, callOn as Dynamic) as Dynamic
+function RTA_callBrightscriptInterfaceFunction(functionName as string, callOn as Dynamic) as Dynamic
 	if functionName = "getParent()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.getParent()
 		else
-			logWarn("tried to call getParent() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call getParent() on non node of type " + type(callOn))
 		end if
 	else if functionName = "count()" then
-		if isArray(callOn) OR isKeyedValueType(callOn) then
+		if RTA_isArray(callOn) OR RTA_isKeyedValueType(callOn) then
 			return callOn.count()
 		else
-			logWarn("tried to call count() on non AA or array of type " + type(callOn))
+			RTA_logWarn("tried to call count() on non AA or array of type " + type(callOn))
 		end if
 	else if functionName = "keys()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.keys().toArray() ' keys() returns an roList when called on a node. We have to convert to array as all of our array checks are specifically looking for an array
-		else if isAA(callOn) then
+		else if RTA_isAA(callOn) then
 			return callOn.keys()
 		else
-			logWarn("tried to call keys() on non keyed value of type " + type(callOn))
+			RTA_logWarn("tried to call keys() on non keyed value of type " + type(callOn))
 		end if
 	else if functionName = "len()" then
-		if isString(callOn) then
+		if RTA_isString(callOn) then
 			return callOn.len()
 		else
-			logWarn("tried to call len() on non string of type " + type(callOn))
+			RTA_logWarn("tried to call len() on non string of type " + type(callOn))
 		end if
 	else if functionName = "getChildCount()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.getChildCount()
 		else
-			logWarn("tried to call getChildCount() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call getChildCount() on non node of type " + type(callOn))
 		end if
 	else if functionName = "threadinfo()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.threadinfo()
 		else
-			logWarn("tried to call threadinfo() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call threadinfo() on non node of type " + type(callOn))
 		end if
 	else if functionName = "getFieldTypes()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.getFieldTypes()
 		else
-			logWarn("tried to call getFieldTypes() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call getFieldTypes() on non node of type " + type(callOn))
 		end if
 	else if functionName = "subtype()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.subtype()
 		else
-			logWarn("tried to call subtype() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call subtype() on non node of type " + type(callOn))
 		end if
 	else if functionName = "boundingRect()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.boundingRect()
 		else
-			logWarn("tried to call boundingRect() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call boundingRect() on non node of type " + type(callOn))
 		end if
 	else if functionName = "localBoundingRect()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.localBoundingRect()
 		else
-			logWarn("tried to call localBoundingRect() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call localBoundingRect() on non node of type " + type(callOn))
 		end if
 	else if functionName = "sceneBoundingRect()" then
-		if isNode(callOn) then
+		if RTA_isNode(callOn) then
 			return callOn.sceneBoundingRect()
 		else
-			logWarn("tried to call sceneBoundingRect() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call sceneBoundingRect() on non node of type " + type(callOn))
 		end if
 	else
-		logWarn("tried to call unknown function" + functionName)
+		RTA_logWarn("tried to call unknown function" + functionName)
 	end if
 
 	return Invalid
@@ -369,8 +413,8 @@ end function
 ' * @param {Function} validator - A function used to validate the output value matches what you expected.
 ' * @return {Dynamic} The result of the drill down process
 ' */
-function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid as Dynamic, validator = isNotInvalid as Function) as Dynamic
-	if NOT isKeyedValueType(base) AND NOT isNonEmptyArray(base) then return fallback
+function RTA_getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid as Dynamic, validator = RTA_isNotInvalid as Function) as Dynamic
+	if NOT RTA_isKeyedValueType(base) AND NOT RTA_isNonEmptyArray(base) then return fallback
 	if keyPath = "" then return fallback
 
 	keys = keyPath.tokenize(".")
@@ -380,13 +424,13 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 		key = keys.shift()
 		' Check for any Brightscript interface function calls
 		if key.Instr("()") > 0 then
-			level = callBrightscriptInterfaceFunction(key, level)
-		else if isKeyedValueType(level) then
+			level = RTA_callBrightscriptInterfaceFunction(key, level)
+		else if RTA_isKeyedValueType(level) then
 			nextLevel = level[key]
-			if nextLevel = Invalid AND isNode(level) then
+			if nextLevel = Invalid AND RTA_isNode(level) then
 				if key.left(1) = "#" then
 					id = key.mid(1)
-					nextLevel = findChildNodeWithId(level, id)
+					nextLevel = RTA_findChildNodeWithId(level, id)
 				else
 					index = key.toInt()
 					if index <> 0 OR key = "0" then
@@ -399,11 +443,11 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 
 				if nextLevel = Invalid then
 					keys.unshift(key)
-					nextLevel = getArrayGridChild(level, keys)
+					nextLevel = RTA_getArrayGridChild(level, keys)
 				end if
 			end if
 			level = nextLevel
-		else if isNonEmptyArray(level) then
+		else if RTA_isNonEmptyArray(level) then
 			index = key.toInt()
 			if index <> 0 OR key = "0" then
 				if index < 0 then
@@ -421,8 +465,8 @@ function getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid
 	return level
 end function
 
-function getArrayGridChild(node as Object, keys as Object) as Dynamic
-	if NOT node.isSubtype("ArrayGrid") OR NOT isNode(node.content) then
+function RTA_getArrayGridChild(node as Object, keys as Object) as Dynamic
+	if NOT node.isSubtype("ArrayGrid") OR NOT RTA_isNode(node.content) then
 		return Invalid
 	end if
 
@@ -482,8 +526,8 @@ end function
 ' * @param {Dynamic} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
 ' * @return {Dynamic} The result of the drill down process
 ' */
-function getNumberAtKeyPath(aa as Object, keyPath as String, fallback = 0 as Dynamic)
-	return getValueAtKeyPath(aa, keyPath, fallback, isNumber)
+function RTA_getNumberAtKeyPath(aa as Object, keyPath as String, fallback = 0 as Dynamic)
+	return RTA_getValueAtKeyPath(aa, keyPath, fallback, RTA_isNumber)
 end function
 
 ' /**
@@ -493,16 +537,16 @@ end function
 ' * @param {Dynamic} value - The value to be set.
 ' * @return {Boolean} True if set successfully.
 ' */
-function setValueAtKeyPath(base as Object, keyPath as String, value as Dynamic) as Boolean
-	if NOT isAA(base) AND NOT isArray(base) then return false
+function RTA_setValueAtKeyPath(base as Object, keyPath as String, value as Dynamic) as Boolean
+	if NOT RTA_isAA(base) AND NOT RTA_isArray(base) then return false
 
 	level = base
 	keys = keyPath.tokenize(".")
 	while keys.count() > 1
 		key = keys.shift()
-		if isAA(level[key]) then
+		if RTA_isAA(level[key]) then
 			level = level[key]
-		else if isNonEmptyArray(level) then
+		else if RTA_isNonEmptyArray(level) then
 			key = key.toInt()
 			if key < 0 then
 				key = level.count() - key
@@ -525,8 +569,8 @@ end function
 ' * @param {Boolean} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
 ' * @return {Dynamic} The result of the drill down process
 ' */
-function getBooleanAtKeyPath(aa as Object, keyPath as String, fallback = false as Boolean)
-	return getValueAtKeyPath(aa, keyPath, fallback, isBoolean)
+function RTA_getBooleanAtKeyPath(aa as Object, keyPath as String, fallback = false as Boolean)
+	return RTA_getValueAtKeyPath(aa, keyPath, fallback, RTA_isBoolean)
 end function
 
 ' /**
@@ -536,27 +580,16 @@ end function
 ' * @param {Dynamic} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
 ' * @return {Dynamic} The result of the drill down process
 ' */
-function getStringAtKeyPath(aa as Object, keyPath as String, fallback = "" as String)
-	return getValueAtKeyPath(aa, keyPath, fallback, isNonEmptyString)
-end function
-
-' /**
-' * @description Used to find a nested Array value in an object
-' * @param {Object} aa Object to drill down into.
-' * @param {String} keyPath A dot notation based string to the expected value.
-' * @param {Dynamic} fallback A return fallback value if the requested field could not be found or did not pass the validator function.
-' * @return {Dynamic} The result of the drill down process
-' */
-function getArrayAtKeyPath(aa as Object, keyPath as String, fallback = [] as Object)
-	return getValueAtKeyPath(aa, keyPath, fallback, isArray)
+function RTA_getStringAtKeyPath(aa as Object, keyPath as String, fallback = "" as String)
+	return RTA_getValueAtKeyPath(aa, keyPath, fallback, RTA_isNonEmptyString)
 end function
 
 '*************************************************************************
-'#endregion *** KEYED VALUE UTILITIES
+'#endregion *** Keyed Value Utilities
 '*************************************************************************
 
 '*************************************************************************
-'#region *** ITERATION HELPERS
+'#region *** Iteration Helpers
 '*************************************************************************
 
 ' /**
@@ -564,72 +597,60 @@ end function
 ' * @param {Object} value Object to get the top index from.
 ' * @return {Integer} Result or -1 if not supported or empty.
 ' */
-function getLastIndex(value as Object) as Integer
-	if isNode(value) then
+function RTA_getLastIndex(value as Object) as Integer
+	if RTA_isNode(value) then
 		return value.getChildCount() - 1
-	else if isArray(value) OR isAA(value) then
+	else if RTA_isArray(value) OR RTA_isAA(value) then
 		return value.count() - 1
 	end if
 	return -1
 end function
 
-
-' /**
-' * @description Gets all the children nodes of the supplied node
-' * @param {roSGNode} node The node to get children from.
-' * @return {Array} Array containing the child nodes retrieved.
-' */
-function getAllChildren(node as Object) as Object
-	children = []
-	if isNode(node) then children.append(node.getChildren(-1, 0))
-	return children
-end function
-
 '*************************************************************************
-'#endregion *** ITERATION HELPERS
+'#endregion *** Iteration Helpers
 '*************************************************************************
 
 '*************************************************************************
-'#region *** LOGGING
+'#region *** Logging
 '*************************************************************************
 
-function convertLogLevelStringToInteger(logLevel as String) as Integer
+function RTA_convertLogLevelStringToInteger(logLevel as String) as Integer
 	if logLevel = "verbose" then return 5
 	if logLevel = "debug" then return 4
 	if logLevel = "info" then return 3
 	if logLevel = "warn" then return 2
 	if logLevel = "error" then return 1
 	if logLevel = "off" then return 0
-	logWarn("Invalid logLevel passed in '" + logLevel + "'")
+	RTA_logWarn("Invalid logLevel passed in '" + logLevel + "'")
 	return 0
 end function
 
 sub setLogLevel(logLevel as String)
-	m.logLevel = convertLogLevelStringToInteger(logLevel)
+	m.logLevel = RTA_convertLogLevelStringToInteger(logLevel)
 end sub
 
-sub logVerbose(message as String, value = "nil" as Dynamic)
-	_log(5, message, value)
+sub RTA_logVerbose(message as String, value = "nil" as Dynamic)
+	RTA_log(5, message, value)
 end sub
 
-sub logDebug(message as String, value = "nil" as Dynamic)
-	_log(4, message, value)
+sub RTA_logDebug(message as String, value = "nil" as Dynamic)
+	RTA_log(4, message, value)
 end sub
 
-sub logInfo(message as String, value = "nil" as Dynamic)
-	_log(3, message, value)
+sub RTA_logInfo(message as String, value = "nil" as Dynamic)
+	RTA_log(3, message, value)
 end sub
 
-sub logWarn(message as String, value = "nil" as Dynamic)
-	_log(2, message, value)
+sub RTA_logWarn(message as String, value = "nil" as Dynamic)
+	RTA_log(2, message, value)
 end sub
 
-sub logError(message as String, value = "nil" as Dynamic)
-	_log(1, message, value)
+sub RTA_logError(message as String, value = "nil" as Dynamic)
+	RTA_log(1, message, value)
 end sub
 
-sub _log(level as Integer, message as String, value = "nil" as Dynamic)
-	if isNumber(m.logLevel) AND m.logLevel < level then return
+sub RTA_log(level as Integer, message as String, value = "nil" as Dynamic)
+	if RTA_isNumber(m.logLevel) AND m.logLevel < level then return
 
 	levels = [
 		"OFF"
@@ -640,18 +661,18 @@ sub _log(level as Integer, message as String, value = "nil" as Dynamic)
 		"VERBOSE"
 	]
 
-    date = createObject("roDateTime")
+	date = createObject("roDateTime")
 	date.toLocalTime()
-	formattedDate = lpad(date.getMonth()) + "-" + lpad(date.getDayOfMonth()) + " " + lpad(date.getHours()) + ":" + lpad(date.getMinutes()) + ":" + lpad(date.getSeconds()) + "." + lpad(date.getMilliseconds(), 3)
+	formattedDate = RTA_lpad(date.getMonth()) + "-" + RTA_lpad(date.getDayOfMonth()) + " " + RTA_lpad(date.getHours()) + ":" + RTA_lpad(date.getMinutes()) + ":" + RTA_lpad(date.getSeconds()) + "." + RTA_lpad(date.getMilliseconds(), 3)
 	message = formattedDate + " [RTA][" + levels[level] + "] " + message
-	if isString(value) AND value = "nil" then
+	if RTA_isString(value) AND value = "nil" then
 		print message
 	else
 		print message value
 	end if
 end sub
 
-function lpad(value as Dynamic, padLength = 2 as Integer, padCharacter = "0" as String)
+function RTA_lpad(value as Dynamic, padLength = 2 as Integer, padCharacter = "0" as String)
 	value = value.toStr()
 	while value.len() < padLength
 		value = padCharacter + value
@@ -660,5 +681,5 @@ function lpad(value as Dynamic, padLength = 2 as Integer, padCharacter = "0" as 
 End function
 
 '*************************************************************************
-'#endregion *** LOGGING
+'#endregion *** Logging
 '*************************************************************************

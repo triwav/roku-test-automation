@@ -66,14 +66,38 @@ export class RokuDevice {
 		}
 
 		await rokuDeploy.deploy(options, (info) => {
+			// Manifest modification
 			const manifestPath = `${info.stagingDir}/manifest`;
 			const manifestContents = fsExtra.readFileSync(manifestPath, 'utf-8').replace('ENABLE_RTA=false', 'ENABLE_RTA=true');
 			fsExtra.writeFileSync(manifestPath, manifestContents);
+
+			// update the xml components that we are injecting into
+			const paths = this.config?.OnDeviceComponent?.injectFunctionsIntoComponents;
+			for (const path of paths ?? []) {
+				const xmlComponentContents = fsExtra.readFileSync(`${info.stagingDir}/${path}`, 'utf-8');
+				const updatedContents = this.injectFunctionsIntoComponentContents(xmlComponentContents);
+				fsExtra.writeFileSync(`${info.stagingDir}/${path}`, updatedContents);
+			}
+
 			if (beforeZipCallback) {
 				beforeZipCallback(info);
 			}
 		});
 		this.deployed = true;
+	}
+
+	private injectFunctionsIntoComponentContents(contents: string) {
+		// Find the position where we close the interface
+		const searchForString = '</interface>';
+		const endInterfacePosition = contents.indexOf(searchForString);
+
+		// Now update the contents with our new injected content
+		let updatedContents = contents.substring(0, endInterfacePosition);
+		updatedContents += `<function name="RTA_componentOperation" />`;
+		updatedContents += searchForString;
+		updatedContents += `<script type="text/brightscript" uri="pkg:/components/RTA_common.brs" />`;
+		updatedContents += contents.substring(endInterfacePosition + searchForString.length);
+		return updatedContents;
 	}
 
 	public sendEcpPost(path: string, params = {}, body: needle.BodyData = ''): Promise<needle.NeedleResponse> {

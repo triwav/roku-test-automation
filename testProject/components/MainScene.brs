@@ -1,4 +1,5 @@
 sub init()
+	m.testingGetGlobalAA = "yup it works"
 	#if ENABLE_RTA
 		m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
 	#else
@@ -36,5 +37,5 @@ function multiplyNumbers(a as Dynamic, b as Dynamic) as Dynamic
 end function
 
 function setPosterUrl(url as String) as Dynamic
-	m.poster.uri = RTA_injectProxy(url)
+	m.poster.uri = injectProxy(url)
 end function

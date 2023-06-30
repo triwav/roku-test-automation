@@ -1392,6 +1392,39 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('getComponentGlobalAAKeyPath', function () {
+		it(`should return the specified key path`, async () => {
+			const {value} = await odc.getComponentGlobalAAKeyPath({
+				componentGlobalAAKeyPath: 'testingGetGlobalAA'
+			});
+			expect(value).to.equal('yup it works');
+		});
+
+		it(`should work with the full key path logic`, async () => {
+			const {value} = await odc.getComponentGlobalAAKeyPath({
+				componentGlobalAAKeyPath: 'top.subtype()'
+			});
+			expect(value).to.equal('MainScene');
+		});
+	});
+
+	describe('setComponentGlobalAAKeyPath', function () {
+		it(`should be able to set values at the specified key path`, async () => {
+			const keyPath = 'testingGetGlobalAAWrite';
+			const randomValue = utils.randomStringGenerator();
+			await odc.setComponentGlobalAAKeyPath({
+				componentGlobalAAKeyPath: keyPath,
+				componentGlobalAAKeyPathValue: randomValue
+			});
+
+			const {value} = await odc.getComponentGlobalAAKeyPath({
+				componentGlobalAAKeyPath: keyPath
+			});
+
+			expect(value).to.equal(randomValue);
+		});
+	});
+
 	describe('registry', function () {
 		const firstSectionName = 'rtaFirstSectionName';
 		const secondSectionName = 'rtaSecondSectionName';

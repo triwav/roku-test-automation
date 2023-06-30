@@ -74,6 +74,9 @@ export interface OnDeviceComponentConfigOptions {
 
 	/** The resolution we will use when specifying pixel values. If not specified defaults to `fhd` */
 	uiResolution?: 'fhd' | 'hd'
+
+	/** List of paths to xml components to inject additional functions into to allow additional functionality */
+	injectFunctionsIntoComponents?: string[]
 }
 
 export interface NetworkProxyOptions {

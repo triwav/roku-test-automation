@@ -50,6 +50,27 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	public async getComponentGlobalAAKeyPath(args: ODC.GetComponentGlobalAAKeyPath, options: ODC.RequestOptions = {}) {
+		const callFuncArgs: ODC.CallFuncArgs = {
+			...args,
+			funcName: 'getComponentGlobalAAKeyPath',
+			funcParams: [args.componentGlobalAAKeyPath]
+		};
+		delete callFuncArgs['componentGlobalAAKeyPath'];
+		return await this.callFunc(callFuncArgs, options) ;
+	}
+
+	public async setComponentGlobalAAKeyPath(args: ODC.SetComponentGlobalAAKeyPath, options: ODC.RequestOptions = {}) {
+		const callFuncArgs: ODC.CallFuncArgs = {
+			...args,
+			funcName: 'setComponentGlobalAAKeyPath',
+			funcParams: [args.componentGlobalAAKeyPath, args.componentGlobalAAKeyPathValue]
+		};
+		delete callFuncArgs['componentGlobalAAKeyPath'];
+		delete callFuncArgs['componentGlobalAAKeyPathValue'];
+		await this.callFunc(callFuncArgs, options);
+	}
+
 	public async getValue(args: ODC.GetValueArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
