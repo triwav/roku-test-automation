@@ -20,7 +20,7 @@ sub onRenderThreadRequestChange(event as Object)
 	response = Invalid
 	if requestType = "callFunc" then
 		response = processCallFuncRequest(args)
-	else if requestType = "RTA_getFocusedNode" then
+	else if requestType = "getFocusedNode" then
 		response = processRTA_getFocusedNodeRequest(args)
 	else if requestType = "getValue" then
 		response = processGetValueRequest(args)

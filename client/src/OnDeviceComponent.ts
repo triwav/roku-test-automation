@@ -53,22 +53,46 @@ export class OnDeviceComponent {
 	public async getComponentGlobalAAKeyPath(args: ODC.GetComponentGlobalAAKeyPath, options: ODC.RequestOptions = {}) {
 		const callFuncArgs: ODC.CallFuncArgs = {
 			...args,
-			funcName: 'getComponentGlobalAAKeyPath',
-			funcParams: [args.componentGlobalAAKeyPath]
+			funcName: 'RTA_componentOperation',
+			funcParams: ['getComponentGlobalAAKeyPath', {
+				componentGlobalAAKeyPath: args.componentGlobalAAKeyPath
+			}]
 		};
 		delete callFuncArgs['componentGlobalAAKeyPath'];
-		return await this.callFunc(callFuncArgs, options) ;
+
+		const output = await this.callFunc(callFuncArgs, options);
+
+		if (!output) {
+			throw new Error('Could not handle getComponentGlobalAAKeyPath request. Make sure you have added the current component xml path to injectFunctionsIntoComponents in your config');
+		} else if (output.value.error) {
+			throw new Error(output.value.error);
+		} else {
+			output.value = output.value.result;
+		}
+		return output;
 	}
 
 	public async setComponentGlobalAAKeyPath(args: ODC.SetComponentGlobalAAKeyPath, options: ODC.RequestOptions = {}) {
 		const callFuncArgs: ODC.CallFuncArgs = {
 			...args,
-			funcName: 'setComponentGlobalAAKeyPath',
-			funcParams: [args.componentGlobalAAKeyPath, args.componentGlobalAAKeyPathValue]
+			funcName: 'RTA_componentOperation',
+			funcParams: ['setComponentGlobalAAKeyPath', {
+				componentGlobalAAKeyPath: args.componentGlobalAAKeyPath,
+				componentGlobalAAKeyPathValue: args.componentGlobalAAKeyPathValue
+			}]
 		};
 		delete callFuncArgs['componentGlobalAAKeyPath'];
 		delete callFuncArgs['componentGlobalAAKeyPathValue'];
-		await this.callFunc(callFuncArgs, options);
+
+		const output = await this.callFunc(callFuncArgs, options);
+		if (!output) {
+			throw new Error('Could not handle setComponentGlobalAAKeyPath request. Make sure you have added the current component xml path to injectFunctionsIntoComponents in your config');
+		} else if (output.value.error) {
+			throw new Error(output.value.error);
+		} else {
+			output.value = output.value.result;
+		}
+		return output;
 	}
 
 	public async getValue(args: ODC.GetValueArgs, options: ODC.RequestOptions = {}) {

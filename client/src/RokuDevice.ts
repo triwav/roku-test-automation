@@ -91,11 +91,11 @@ export class RokuDevice {
 		const searchForString = '</interface>';
 		const endInterfacePosition = contents.indexOf(searchForString);
 
-		// Now update the contents with our new injected content
+		// Now update the contents with our new injected content. Maintains single line to avoid line numbers getting off
 		let updatedContents = contents.substring(0, endInterfacePosition);
 		updatedContents += `<function name="RTA_componentOperation" />`;
 		updatedContents += searchForString;
-		updatedContents += `<script type="text/brightscript" uri="pkg:/components/RTA_common.brs" />`;
+		updatedContents += `<script type="text/brightscript" uri="pkg:/components/RTA_lib.brs" />`;
 		updatedContents += contents.substring(endInterfacePosition + searchForString.length);
 		return updatedContents;
 	}

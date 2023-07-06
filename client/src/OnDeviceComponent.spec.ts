@@ -793,10 +793,10 @@ describe('OnDeviceComponent', function () {
 			describe('boundingRect()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.boundingRect()'});
-					expect(value.height).to.equal(438);
-					expect(value.width).to.equal(1958);
-					expect(value.x).to.equal(131);
-					expect(value.y).to.equal(681);
+					expect(value.height).to.equal(444);
+					expect(value.width).to.equal(1964);
+					expect(value.x).to.equal(128);
+					expect(value.y).to.equal(678);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -808,10 +808,10 @@ describe('OnDeviceComponent', function () {
 			describe('localBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()'});
-					expect(value.height).to.equal(438);
-					expect(value.width).to.equal(1958);
-					expect(value.x).to.equal(-19);
-					expect(value.y).to.equal(-19);
+					expect(value.height).to.equal(444);
+					expect(value.width).to.equal(1964);
+					expect(value.x).to.equal(-22);
+					expect(value.y).to.equal(-22);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -823,10 +823,10 @@ describe('OnDeviceComponent', function () {
 			describe('sceneBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()'});
-					expect(value.height).to.equal(438);
-					expect(value.width).to.equal(1958);
-					expect(value.x).to.equal(131);
-					expect(value.y).to.equal(681);
+					expect(value.height).to.equal(444);
+					expect(value.width).to.equal(1964);
+					expect(value.x).to.equal(128);
+					expect(value.y).to.equal(678);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -1406,16 +1406,24 @@ describe('OnDeviceComponent', function () {
 			});
 			expect(value).to.equal('MainScene');
 		});
+
+		it(`should return null if value does not exist`, async () => {
+			const {value} = await odc.getComponentGlobalAAKeyPath({
+				componentGlobalAAKeyPath: 'does.not.exist'
+			});
+			expect(value).to.be.null;
+		});
 	});
 
 	describe('setComponentGlobalAAKeyPath', function () {
 		it(`should be able to set values at the specified key path`, async () => {
 			const keyPath = 'testingGetGlobalAAWrite';
 			const randomValue = utils.randomStringGenerator();
-			await odc.setComponentGlobalAAKeyPath({
+			const result = await odc.setComponentGlobalAAKeyPath({
 				componentGlobalAAKeyPath: keyPath,
 				componentGlobalAAKeyPathValue: randomValue
 			});
+			expect(result.value).to.be.true;
 
 			const {value} = await odc.getComponentGlobalAAKeyPath({
 				componentGlobalAAKeyPath: keyPath

@@ -20,32 +20,25 @@ end function
 '*************************************************************************
 
 '*************************************************************************
-'#region *** Injected Functions -
+'#region *** Injected Functions - functions that are injected my RTA as part of the build process through RokuDevice.deploy()
 '*************************************************************************
 
 ' /**
 ' * @description Gets injected into components to allow additional functionality
 ' * @param {String} name - Name of the operation we would like to run
-' * @param {Array} args - Array of arguments that are used for the current operation
+' * @param {AssociativeArray} args - AA of arguments that are used for the current operation
 ' */
-function RTA_componentOperation(name as String, args = [])
-	success = true
-	response = Invalid
+function RTA_componentOperation(name as String, args = {} as Object)
+	response = {}
 	if name = "getComponentGlobalAAKeyPath" then
-		keyPath = args[0]
-		response = RTA_getValueAtKeyPath(m, keyPath)
+		response.result = RTA_getValueAtKeyPath(m, args.componentGlobalAAKeyPath)
 	else if name = "setComponentGlobalAAKeyPath" then
-		keyPath = args[0]
-		value = args[1]
-		response = RTA_setValueAtKeyPath(m, keyPath, value)
+		response.result = RTA_setValueAtKeyPath(m, args.componentGlobalAAKeyPath, args.componentGlobalAAKeyPathValue)
 	else
-		success = false
+		response.error = "Could not handle unknown '" + name + "' operation"
 	end if
 
-	return {
-		"success": success
-		"response": response
-	}
+	return response
 end function
 
 '*************************************************************************
