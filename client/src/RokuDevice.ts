@@ -95,7 +95,7 @@ export class RokuDevice {
 		let updatedContents = contents.substring(0, endInterfacePosition);
 		updatedContents += `<function name="RTA_componentOperation" />`;
 		updatedContents += searchForString;
-		updatedContents += `<script type="text/brightscript" uri="pkg:/components/RTA_lib.brs" />`;
+		updatedContents += `<script type="text/brightscript" uri="pkg:/components/RTA_helpers.brs" />`;
 		updatedContents += contents.substring(endInterfacePosition + searchForString.length);
 		return updatedContents;
 	}
