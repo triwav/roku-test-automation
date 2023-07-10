@@ -72,11 +72,13 @@ export class RokuDevice {
 			fsExtra.writeFileSync(manifestPath, manifestContents);
 
 			// update the xml components that we are injecting into
-			const paths = this.config?.OnDeviceComponent?.injectFunctionsIntoComponents;
-			for (const path of paths ?? []) {
-				const xmlComponentContents = fsExtra.readFileSync(`${info.stagingDir}/${path}`, 'utf-8');
-				const updatedContents = this.injectFunctionsIntoComponentContents(xmlComponentContents);
-				fsExtra.writeFileSync(`${info.stagingDir}/${path}`, updatedContents);
+			const helperInjection = this.config?.OnDeviceComponent?.helperInjection;
+			if (helperInjection && helperInjection.enabled !== false) {
+				for (const path of helperInjection.componentPaths) {
+					const xmlComponentContents = fsExtra.readFileSync(`${info.stagingDir}/${path}`, 'utf-8');
+					const updatedContents = this.injectRtaHelpersIntoComponentContents(xmlComponentContents);
+					fsExtra.writeFileSync(`${info.stagingDir}/${path}`, updatedContents);
+				}
 			}
 
 			if (beforeZipCallback) {
@@ -86,7 +88,7 @@ export class RokuDevice {
 		this.deployed = true;
 	}
 
-	private injectFunctionsIntoComponentContents(contents: string) {
+	private injectRtaHelpersIntoComponentContents(contents: string) {
 		// Find the position where we close the interface
 		const searchForString = '</interface>';
 		const endInterfacePosition = contents.indexOf(searchForString);

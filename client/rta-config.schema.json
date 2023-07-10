@@ -69,12 +69,26 @@
                     "description": "We normally pull the telnet logs if the request timed out. If the telnet connection is already in use then this just adds additional noise in the output",
                     "type": "boolean"
                 },
-                "injectFunctionsIntoComponents": {
-                    "description": "List of paths to xml components to inject additional functions into to allow additional functionality",
-                    "items": {
-                        "type": "string"
+                "helperInjection": {
+                    "additionalProperties": false,
+                    "description": "Used to inject additional helpers to allow additional functionality",
+                    "properties": {
+                        "componentPaths": {
+                            "description": "List of paths to xml components to inject additional helpers into",
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        "enabled": {
+                            "description": "Gives a simple way to enable to disable helper injection. Defaults to true",
+                            "type": "boolean"
+                        }
                     },
-                    "type": "array"
+                    "required": [
+                        "componentPaths"
+                    ],
+                    "type": "object"
                 },
                 "logLevel": {
                     "description": "Device side log output level",
