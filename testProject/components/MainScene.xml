@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MainScene" extends="Scene">
 	<script type="text/brightscript" uri="MainScene.brs" />
-	<script type="text/brightscript" uri="RTA_common.brs" />
 	<script type="text/brightscript" uri="pkg:/source/common.brs" />
-	<script type="text/brightscript" uri="pkg:/source/RTA_helpers.brs" />
 	<interface>
 		<field id="pagesContainer" type="node" />
 		<function name="multiplyNumbers" />

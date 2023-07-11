@@ -58,7 +58,7 @@ export interface OnDeviceComponentConfigOptions {
 	clientDebugLogging?: boolean;
 
 	/** Allows specifying the default base that will be used if one was not provided in the args for a request */
-	defaultBase?: ODC.BaseType
+	defaultBase?: ODC.BaseType;
 
 	/**
 	 * Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.
@@ -67,13 +67,22 @@ export interface OnDeviceComponentConfigOptions {
 	restoreRegistry?: boolean;
 
 	/** We normally pull the telnet logs if the request timed out. If the telnet connection is already in use then this just adds additional noise in the output */
-	disableTelnet?: boolean
+	disableTelnet?: boolean;
 
 	/** We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line */
-	disableCallOriginationLine?: boolean
+	disableCallOriginationLine?: boolean;
 
 	/** The resolution we will use when specifying pixel values. If not specified defaults to `fhd` */
-	uiResolution?: 'fhd' | 'hd'
+	uiResolution?: 'fhd' | 'hd';
+
+	/** Used to inject additional helpers to allow additional functionality */
+	helperInjection?: {
+		/** List of paths to xml components to inject additional helpers into */
+		componentPaths: string[],
+
+		/** Gives a simple way to enable to disable helper injection. Defaults to true */
+		enabled?: boolean;
+	}
 }
 
 export interface NetworkProxyOptions {
@@ -98,7 +107,7 @@ export interface SuitestOptions {
 	tokenPassword?: string;
 
 	/** AppId of the application we're retrieving tests from from Suitest */
-	appId?: string
+	appId?: string;
 
 	/** The version of the application we're retrieving for */
 	version?: string;
