@@ -42,8 +42,8 @@ export interface DeviceConfigOptions {
 
 export interface ECPConfigOptions {
 	default?: {
-		/** The default keyPressDelay to use if not provided at the call site */
-		keyPressDelay?: number;
+		/** The default keypressDelay to use if not provided at the call site */
+		keypressDelay?: number;
 
 		/** The default channel id to launch if one isn't passed in */
 		launchChannelId?: string;

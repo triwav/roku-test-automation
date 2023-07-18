@@ -12,8 +12,8 @@
                 "default": {
                     "additionalProperties": false,
                     "properties": {
-                        "keyPressDelay": {
-                            "description": "The default keyPressDelay to use if not provided at the call site",
+                        "keypressDelay": {
+                            "description": "The default keypressDelay to use if not provided at the call site",
                             "type": "number"
                         },
                         "launchChannelId": {
@@ -209,4 +209,3 @@
     ],
     "type": "object"
 }
-

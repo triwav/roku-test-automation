@@ -57,15 +57,15 @@ export class ECP {
 		return this.config?.ECP;
 	}
 
-	public async sendText(text: string, options?: SendKeyPressOptions & {raspTemplateVariable?: 'script-login' | 'script-password'}) {
+	public async sendText(text: string, options?: SendKeypressOptions & {raspTemplateVariable?: 'script-login' | 'script-password'}) {
 		this.addRaspFileStep(`text: ${options?.raspTemplateVariable ?? text}`);
 		for (const char of text) {
 			const value: any = `LIT_${char}`;
-			await this.sendKeyPress(value, options);
+			await this.sendKeypress(value, options);
 		}
 	}
 
-	public async sendKeyPress(key: Key, options?: SendKeyPressOptions) {
+	public async sendKeypress(key: Key, options?: SendKeypressOptions) {
 		if (typeof options === 'number') {
 			options = {
 				wait: options
@@ -73,7 +73,7 @@ export class ECP {
 		}
 
 		if (options?.count) {
-			return this.sendKeyPressSequence([key], options);
+			return this.sendKeypressSequence([key], options);
 		}
 
 		const raspEquivalent = this.convertKeyToRaspEquivalent(key);
@@ -82,10 +82,10 @@ export class ECP {
 		}
 		await this.device.sendEcpPost(`keypress/${encodeURIComponent(key)}`);
 
-		const keyPressDelay = this.getConfig()?.default?.keyPressDelay;
+		const keypressDelay = this.getConfig()?.default?.keypressDelay;
 		let wait = options?.wait;
-		if (!wait && keyPressDelay) {
-			wait = keyPressDelay;
+		if (!wait && keypressDelay) {
+			wait = keypressDelay;
 		}
 
 		if (wait) await this.utils.sleep(wait);
@@ -134,7 +134,7 @@ export class ECP {
 		}
 	}
 
-	public async sendKeyPressSequence(keys: Key[], options?: SendKeyPressOptions) {
+	public async sendKeypressSequence(keys: Key[], options?: SendKeypressOptions) {
 		if (typeof options !== 'number') {
 			const count = options?.count;
 			if (count !== undefined) {
@@ -149,7 +149,7 @@ export class ECP {
 		}
 
 		for (const key of keys) {
-			await this.sendKeyPress(key, options);
+			await this.sendKeypress(key, options);
 		}
 	}
 
@@ -324,7 +324,7 @@ export class ECP {
 		}
 
 		if (defaultKeypressWait === undefined) {
-			defaultKeypressWait = this.getConfig()?.default?.keyPressDelay;
+			defaultKeypressWait = this.getConfig()?.default?.keypressDelay;
 			if (defaultKeypressWait === undefined) {
 				// Default that Roku uses in Remote Tool
 				defaultKeypressWait = 2;
@@ -343,7 +343,7 @@ export class ECP {
 }
 
 /** If value is a number then we convert it to an object with the number used for wait  */
-type SendKeyPressOptions = number | {
+type SendKeypressOptions = number | {
 	wait?: number;
 	count?: number;
 }
