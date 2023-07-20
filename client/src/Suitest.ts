@@ -347,7 +347,7 @@ export class Suitest {
 			for (const id of testLine.ids) {
 				const key = this.buttonIdToKeyMap[id];
 				if (key) {
-					await this.ecp.sendKeyPress(key, { wait: utils.convertValueToNumber(testLine.delay) * 1.1 }) ; // Some tests seem to fail with the same delay likely due to Suitest's functions being quite a bit slower evaluating
+					await this.ecp.sendKeypress(key, { wait: utils.convertValueToNumber(testLine.delay) * 1.1 }) ; // Some tests seem to fail with the same delay likely due to Suitest's functions being quite a bit slower evaluating
 				} else {
 					debugger;
 				}

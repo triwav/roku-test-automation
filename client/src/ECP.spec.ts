@@ -63,12 +63,12 @@ describe('ECP', function () {
 		});
 	});
 
-	describe('sendKeyPressSequence', function () {
+	describe('sendKeypressSequence', function () {
 		it('calls_device_sendEcpPost_for_each_key', async () => {
 			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
 
 			const keys = [ECP.Key.Forward, ECP.Key.Play, ECP.Key.Rewind];
-			await ecp.sendKeyPressSequence(keys);
+			await ecp.sendKeypressSequence(keys);
 			expect(stub.callCount).to.equal(keys.length);
 		});
 
@@ -85,7 +85,7 @@ describe('ECP', function () {
 				}
 			}) as any);
 
-			await ecp.sendKeyPressSequence(keys, {count: count});
+			await ecp.sendKeypressSequence(keys, {count: count});
 			expect(stub.callCount).to.equal(keys.length * count);
 		});
 
@@ -94,18 +94,18 @@ describe('ECP', function () {
 
 			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
 
-			await ecp.sendKeyPressSequence(keys, {count: 0});
+			await ecp.sendKeypressSequence(keys, {count: 0});
 			expect(stub.callCount).to.equal(0);
 		});
 	});
 
-	describe('sendKeyPress', function () {
+	describe('sendKeypress', function () {
 		it('calls_device_sendEcpPost', async () => {
 			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(ECP.Key.Home);
 			}) as any);
 
-			await ecp.sendKeyPress(ECP.Key.Home, 0);
+			await ecp.sendKeypress(ECP.Key.Home, 0);
 
 			if (stub.notCalled) {
 				assert.fail('device.sendEcpPost not called');
@@ -115,7 +115,7 @@ describe('ECP', function () {
 		it('does_not_sleep_if_not_requested', async () => {
 			const stub = sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
 
-			await ecp.sendKeyPress(ECP.Key.Home, 0);
+			await ecp.sendKeypress(ECP.Key.Home, 0);
 
 			if (stub.called) {
 				assert.fail('sleep was called');
@@ -128,7 +128,7 @@ describe('ECP', function () {
 				expect(milliseconds).to.equal(wait);
 			}) as any);
 
-			await ecp.sendKeyPress(ECP.Key.Home, wait);
+			await ecp.sendKeypress(ECP.Key.Home, wait);
 
 			if (stub.notCalled) {
 				assert.fail('sleep was not called');
@@ -139,7 +139,7 @@ describe('ECP', function () {
 			const wait = 1000;
 			config.ECP = {
 				default: {
-					keyPressDelay: wait
+					keypressDelay: wait
 				}
 			};
 
@@ -147,7 +147,7 @@ describe('ECP', function () {
 				expect(milliseconds).to.equal(wait);
 			}) as any);
 
-			await ecp.sendKeyPress(ECP.Key.Home);
+			await ecp.sendKeypress(ECP.Key.Home);
 
 			if (stub.notCalled) {
 				assert.fail('sleep was not called');
@@ -158,7 +158,7 @@ describe('ECP', function () {
 			const wait = 1000;
 			config.ECP = {
 				default: {
-					keyPressDelay: 2000
+					keypressDelay: 2000
 				}
 			};
 
@@ -166,7 +166,7 @@ describe('ECP', function () {
 				expect(milliseconds).to.equal(wait);
 			}) as any);
 
-			await ecp.sendKeyPress(ECP.Key.Home, wait);
+			await ecp.sendKeypress(ECP.Key.Home, wait);
 
 			if (stub.notCalled) {
 				assert.fail('sleep was not called');
@@ -438,21 +438,21 @@ describe('ECP', function () {
 			sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
 			config.ECP = {
 				default: {
-					keyPressDelay: 1500
+					keypressDelay: 1500
 				}
 			};
 
 			ecp.startRaspFileCreation();
-			await ecp.sendKeyPress(ecp.Key.Up, 1);
-			await ecp.sendKeyPress(ecp.Key.Up, 1);
-			await ecp.sendKeyPress(ecp.Key.Down, 1);
-			await ecp.sendKeyPress(ecp.Key.Down, 1);
-			await ecp.sendKeyPress(ecp.Key.Left, 1);
-			await ecp.sendKeyPress(ecp.Key.Right, 1);
-			await ecp.sendKeyPress(ecp.Key.Left, 1);
-			await ecp.sendKeyPress(ecp.Key.Right, 1);
+			await ecp.sendKeypress(ecp.Key.Up, 1);
+			await ecp.sendKeypress(ecp.Key.Up, 1);
+			await ecp.sendKeypress(ecp.Key.Down, 1);
+			await ecp.sendKeypress(ecp.Key.Down, 1);
+			await ecp.sendKeypress(ecp.Key.Left, 1);
+			await ecp.sendKeypress(ecp.Key.Right, 1);
+			await ecp.sendKeypress(ecp.Key.Left, 1);
+			await ecp.sendKeypress(ecp.Key.Right, 1);
 			await ecp.sleep(100);
-			await ecp.sendKeyPress(ecp.Key.Ok, 1);
+			await ecp.sendKeypress(ecp.Key.Ok, 1);
 			ecp.finishRaspFileCreation(outputPath);
 			const expectedContents =
 `params:
