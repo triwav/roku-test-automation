@@ -6,7 +6,7 @@
     "typings": "client/dist/index.d.ts",
     "scripts": {
         "build": "rm -f tsconfig.tsbuildinfo && rimraf dist && tsc",
-        "test": "npm run build && nyc mocha ./dist/ECP.spec.js",
+        "test": "npm run build && nyc mocha ./dist/ECP.spec.js ./dist/utils.spec.js",
         "lint": "eslint \"./src/**/*.ts\"",
         "test:device": "npm run build && mocha dist/RokuDevice.spec.js dist/OnDeviceComponent.spec.js",
         "test:all": "npm run build && mocha dist/**/*.spec.js",

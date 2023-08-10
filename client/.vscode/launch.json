@@ -9,7 +9,7 @@
 			"request": "launch",
 			"cwd": "${workspaceFolder}",
 			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-			"args": ["--bail", "./dist/ECP.spec.js"],
+			"args": ["--bail", "./dist/ECP.spec.js", "./dist/utils.spec.js"],
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "neverOpen"
 		}, {
