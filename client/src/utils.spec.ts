@@ -6,7 +6,7 @@ import {utils} from './utils';
 
 describe('utils', function () {
 	describe('getConfigFromConfigFile', function () {
-		it('allows us to extend the config and have the correct values', () => {
+		it('allows us to extend the config and have the correct values from both config files', () => {
 			const config = utils.getConfigFromConfigFile('rta-config.json');
 
 			expect(config.RokuDevice.devices.length).to.be.greaterThan(0);
