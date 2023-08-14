@@ -78,7 +78,7 @@ class Utils {
 		if (config.extends) {
 			const baseConfigFilePath = path.resolve(config.extends);
 			if (parentConfigPaths.includes(baseConfigFilePath)) {
-				throw new Error(`Circular dependency detected. '${configFilePath}' already included '${baseConfigFilePath}'`);
+				throw new Error(`Circular dependency detected. '${baseConfigFilePath}' has already been included`);
 			}
 
 			const baseConfig = this.getConfigFromConfigFileCore(baseConfigFilePath, parentConfigPaths);
