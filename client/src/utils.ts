@@ -69,9 +69,11 @@ class Utils {
 
 	private getConfigFromConfigFileCore(configFilePath = 'rta-config.json', parentConfigPaths: string[] = []) {
 		configFilePath = path.resolve(configFilePath);
-		let config: ConfigOptions = this.parseJsonFile(configFilePath);
-		if (!config) {
-			throw utils.makeError('NoConfigFound', 'Config could not be found');
+		let config: ConfigOptions;
+		try {
+			config = this.parseJsonFile(configFilePath);
+		} catch(e) {
+			throw utils.makeError('NoConfigFound', 'Config could not be found or parsed correctly.');
 		}
 		parentConfigPaths.push(configFilePath);
 
