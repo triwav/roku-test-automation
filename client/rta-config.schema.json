@@ -202,6 +202,10 @@
                 }
             },
             "type": "object"
+        },
+        "extends": {
+            "description": "Allows this config to extend another rta-config.json file",
+            "type": "string"
         }
     },
     "required": [
@@ -209,3 +213,4 @@
     ],
     "type": "object"
 }
+

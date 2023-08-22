@@ -1,3 +1,4 @@
+/* This file is largely unmaintained and may be removed in the future */
 /* eslint-disable no-debugger */
 /* eslint-disable @typescript-eslint/quotes */
 import * as needle from 'needle';

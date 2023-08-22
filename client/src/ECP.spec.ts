@@ -35,8 +35,8 @@ describe('ECP', function () {
 			}
 		};
 		ecp = new ECP(config);
-		(ecp as any).device = device;
-		ecpUtils = (ecp as any).utils;
+		ecp['device'] = device;
+		ecpUtils = ecp['utils'];
 		ecpResponse = '';
 	});
 

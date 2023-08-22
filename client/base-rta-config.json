@@ -1,0 +1,24 @@
+{
+    "$schema": "./rta-config.schema.json",
+    "RokuDevice": {
+        "devices": []
+    },
+    "OnDeviceComponent": {
+        "logLevel": "error",
+        "clientDebugLogging": false,
+        "disableCallOriginationLine": false,
+        "disableTelnet": true,
+        "helperInjection": {
+            "componentPaths": ["components/MainScene.xml"]
+        }
+    },
+    "NetworkProxy": {
+        "clientDebugLogging": false
+    },
+    "ECP": {
+        "default": {
+            "keypressDelay": 0,
+            "launchChannelId": "dev"
+        }
+    }
+}

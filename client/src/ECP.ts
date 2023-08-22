@@ -38,10 +38,10 @@ export class ECP {
 	public readonly Key = Key;
 
 	constructor(config?: ConfigOptions) {
+		this.device = new RokuDevice(config);
 		if (config) {
 			this.setConfig(config);
 		}
-		this.device = new RokuDevice(config);
 	}
 
 	public setConfig(config: ConfigOptions) {

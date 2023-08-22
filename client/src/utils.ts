@@ -1,5 +1,5 @@
 import type * as fsExtra from 'fs-extra';
-import type * as path from 'path';
+import * as path from 'path';
 import type * as Mocha from 'mocha';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
@@ -61,12 +61,41 @@ class Utils {
 	}
 
 	public getConfigFromConfigFile(configFilePath = 'rta-config.json') {
-		const config: ConfigOptions = this.parseJsonFile(configFilePath);
-		if (!config) {
-			throw utils.makeError('NoConfigFound', 'Config could not be found');
-		}
-
+		const config = this.getConfigFromConfigFileCore(configFilePath);
 		this.validateRTAConfigSchema(config);
+
+		return config;
+	}
+
+	private getConfigFromConfigFileCore(configFilePath = 'rta-config.json', parentConfigPaths: string[] = []) {
+		configFilePath = path.resolve(configFilePath);
+		let config: ConfigOptions;
+		try {
+			config = this.parseJsonFile(configFilePath);
+		} catch(e) {
+			throw utils.makeError('NoConfigFound', 'Config could not be found or parsed correctly.');
+		}
+		parentConfigPaths.push(configFilePath);
+
+		if (config.extends) {
+			const baseConfigFilePath = path.resolve(config.extends);
+			if (parentConfigPaths.includes(baseConfigFilePath)) {
+				throw new Error(`Circular dependency detected. '${baseConfigFilePath}' has already been included`);
+			}
+
+			const baseConfig = this.getConfigFromConfigFileCore(baseConfigFilePath, parentConfigPaths);
+
+			for (const section of ['RokuDevice', 'ECP', 'OnDeviceComponent', 'NetworkProxy', 'NetworkProxy']) {
+				// Override every field that was specified in the child
+				for (const key in config[section]) {
+					if (!baseConfig[section]) {
+						baseConfig[section] = {};
+					}
+					baseConfig[section][key] = config[section][key];
+				}
+			}
+			config = baseConfig;
+		}
 
 		return config;
 	}

@@ -3,10 +3,18 @@ import type * as ODC from './OnDeviceComponent';
 export interface ConfigOptions {
 	/** strictly for schema validation not used internally */
 	$schema?: string;
+
+	/** Allows this config to extend another rta-config.json file */
+	extends?: string;
+
 	RokuDevice: RokuDeviceConfigOptions;
+
 	ECP?: ECPConfigOptions;
+
 	OnDeviceComponent?: OnDeviceComponentConfigOptions;
+
 	NetworkProxy?: NetworkProxyOptions;
+
 	Suitest?: SuitestOptions;
 }
 
