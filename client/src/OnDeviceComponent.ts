@@ -580,6 +580,16 @@ export class OnDeviceComponent {
 		const result = await this.sendRequest(ODC.RequestType.removeNodeChildren, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
+
+	public async isShowingOnScreen(args: ODC.GetValueArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+		const result = await this.sendRequest(ODC.RequestType.isShowingOnScreen, args, options);
+		return result.json as ODC.ReturnTimeTaken & {
+			isShowing: boolean;
+			isFullyShowing: boolean;
+		};
+	}
 	//#endregion
 
 	//#region requests run on task thread

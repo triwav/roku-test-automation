@@ -51,7 +51,10 @@ Some incompatibility changes were made in v2.0. These include:
 - In v1.0 server was used to refer to the computer connecting to the Roku device. This is now the client and config settings related to this has been changed to reflect this
 - `ECPKeys` was renamed to `Key` and its cases were switched from upper case to pascal case and `OPTIONS` is now `Option`
 - `keyPress` was renamed to `keypress`
-- In an effort to provide clarity and to avoid shadowing cases, keys in keyPaths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a child node with an id of `poster` you will now need to have a keyPath of `0.#poster`
+- `key` param for key path requests has been renamed to `nodeRefKey` for easier autocomplete and more clarity
+- `RequestTypes` and `BaseTypes` have been renamed to `RequestType` and `BaseType`
+- `NodeTree` has been renamed to `TreeNode`
+- In an effort to provide clarity and to avoid shadowing cases, keys in key paths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a child node with an id of `poster` you will now need to have a keyPath of `0.#poster`. If you wanted to access the `uri` field though, that would not include the `#` character since you are accessing a field and the key path would be `0.#poster.uri`
 
 v2.0 also includes changing to using TCP sockets for all communication which should simplify setup communicating with Roku devices not on the same local network.
 
@@ -95,7 +98,7 @@ Currently the only necessary part of the config is at least one device host and 
 }
 ```
 
-save that wherever you store config files for your project. Since device host and passwords are specific to you, you should likely also add it to your `.gitignore` file.
+RTA by default looks for `./rta-config.json` so saving it there is the easiest way to use it. Since device host and passwords are specific to you, you should likely also add it to your `.gitignore` file. If you have settings you want stored in the repo then you can make a base config like and use the `extends` key in main config to pull in the keys from the other file.
 
 To keep a single config file and aid in running multiple tests at once, RTA reads its config from the environment variable `process.env.rtaConfig`. For a basic setup you can use the helper
 
@@ -151,14 +154,14 @@ Once setup you can send requests to the device to either kick off an event or ch
 
 #### `getValue`
 
-> getValue(args: [ODC.GetValueArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {found: boolean, value}
+> getValue(args: [ODC.GetValueArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {found: boolean, value}
 
 At the heart of almost all requests internally is `getValue`. It serves as your entry point from which you execute other requests but can also be used by itself to return a requested value. `args` takes two properties:
 
 - `base?: string` can be either `global`, `scene`, `nodeRef` or `focusedNode`. If not supplied it defaults to `global`
-- `keyPath: string` builds off of the base and supplies the path to what you are interested in getting the value for. A simple example might be something like `AuthManager.isLoggedIn` which would let you check if a user is logged in or not. It can operate on much more than just keyed type fields though.
+- `keyPath?: string` builds off of the base and supplies the path to what you are interested in getting the value for. A simple example might be something like `AuthManager.isLoggedIn` which would let you check if a user is logged in or not. It can operate on much more than just keyed type fields though.
 
-Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.idOfChildNodeToInspect`. The [`getValue` unit tests](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provide a full list of what is possible for a key path.
+Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.#idOfChildNodeToInspect`. The [`getValue` unit tests](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provide a full list of what is possible for a key path.
 
 ```ts
 await odc.getValue({
@@ -189,8 +192,7 @@ await odc.getValue({
 });
 ```
 
-As of v2.0 you can now access ArrayGrid children. To do this, we have added two special keywords in the keyPath: `items` and `title`. These don't actually exist at runtime, but RTA understands how to translate them into the proper lookup mechanisms on-device. 
-
+As of v2.0 you can now access ArrayGrid children. To do this, we have added two special keywords in the keyPath: `items` and `title`. These don't actually exist at runtime, but RTA understands how to translate them into the proper lookup mechanisms on-device.
 
 Here's an example showing how to access the 3rd item component in the second row:
 
@@ -208,6 +210,7 @@ If you wanted to access the `title` component for the second row, you would do:
 await odc.getValue({
   keyPath: '#rowList.1.title',
 });
+```
 
 Again notice the special keyword `title` to identify we are accessing a title component.
 
@@ -225,7 +228,7 @@ In addition as of v2.0 `keyPath` is no longer required if just accessing the bas
 
 #### `getValues`
 
-> getValues(args: [ODC.GetValuesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetValuesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {results: {[key: string]: {found: boolean; value?: any; }}, timeTaken: number}
+> getValues(args: [ODC.GetValuesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetValuesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {results: {[key: string]: {found: boolean; value?: any; }}, timeTaken: number}
 
 `getValues` allows you to retrieve multiple values with a single request. It takes one property for `args`:
 
@@ -235,7 +238,7 @@ The [`getValues` unit test](./client/src/OnDeviceComponent.spec.ts#:~:text=%27ge
 
 #### `getNodesInfo`
 
-> getNodesInfo(args: [ODC.GetNodesInfoArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetNodesInfoArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): results: {[key: string]: {
+> getNodesInfo(args: [ODC.GetNodesInfoArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetNodesInfoArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): results: {[key: string]: {
 					subtype: string;
 					fields: {
 						[key: string]: {
@@ -254,7 +257,7 @@ Sometimes it may be necessary to know the type of a field on a node. This is pri
 
 #### `setValue`
 
-> setValue(args: [ODC.SetValueArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20SetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> setValue(args: [ODC.SetValueArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20SetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
 
 Allows you to set a value at a key path. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
@@ -270,7 +273,7 @@ await odc.setValue({
 
 #### `callFunc`
 
-> callFunc(args: [ODC.CallFuncArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20CallFuncArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {value: any, timeTaken: number}
+> callFunc(args: [ODC.CallFuncArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20CallFuncArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {value: any, timeTaken: number}
 
 Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-program/core-concepts/handling-application-events.md#functional-fields) on a node. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
@@ -288,7 +291,7 @@ await odc.callFunc({
 
 #### `getFocusedNode`
 
-> getFocusedNode(args: [ODC.GetFocusedNodeArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetFocusedNodeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {node: NodeRepresentation, ref?: number, timeTaken: number}
+> getFocusedNode(args: [ODC.GetFocusedNodeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetFocusedNodeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {node?: NodeRepresentation, ref?: number, keyPath?: string, timeTaken: number}
 
 Gets the currently focused node. `args` includes the following:
 
@@ -301,13 +304,13 @@ let focusedNode = await odc.getFocusedNode();
 
 #### `hasFocus`
 
-> hasFocus(args: [ODC.HasFocusArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20HasFocusArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): boolean
+> hasFocus(args: [ODC.HasFocusArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20HasFocusArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): boolean
 
 Check if the node at the supplied key path has focus or not. It takes the standard `base` and `keyPath` properties.
 
 #### `isInFocusChain`
 
-> isInFocusChain(args: [ODC.IsInFocusChainArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20IsInFocusChainArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): boolean
+> isInFocusChain(args: [ODC.IsInFocusChainArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20IsInFocusChainArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): boolean
 
 Check if the node at the supplied key path is in the focus chain. It takes the standard `base` and `keyPath` properties.
 
@@ -319,7 +322,7 @@ const isBtnInFocusChain = await odc.isInFocusChain({
 
 #### `onFieldChangeOnce`
 
-> onFieldChangeOnce(args: [ODC.OnFieldChangeOnceArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20OnFieldChangeOnceArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
+> onFieldChangeOnce(args: [ODC.OnFieldChangeOnceArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20OnFieldChangeOnceArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
 
 Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use `onFieldChangeOnce` to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
@@ -352,7 +355,7 @@ to help distinguish if the observer actually fired the property `observerFired` 
 
 #### `getNodesWithProperties`
 
-> getNodesWithProperties(args: [ODC.GetNodesWithPropertiesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20OnGetNodesWithPropertiesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {nodes: ODC.NodeRepresentation[], nodeRefs, number[]}
+> getNodesWithProperties(args: [ODC.GetNodesWithPropertiesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20OnGetNodesWithPropertiesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {nodes: ODC.NodeRepresentation[], nodeRefs, number[]}
 
 If you are trying to find a node but are unsure of where it is in the tree you can use `getNodesWithProperties`. As an example, let's say you wanted to find all nodes with the a text field with the value of `Play Movie` you could do:
 
@@ -367,7 +370,7 @@ const result = await odc.getNodesWithProperties({
 
 You'll notice that `properties` is an array. If more than object is provided then each check will be done one after the other. Only nodes that match all properties will be returned.
 
-By default an equal to check is performed. Let's take the previous case and say we wanted to match anything that just has `Play` in its text field we could do:
+By default an equal to check is performed. Let's take the previous case and say we wanted to match anything that contains `Play` in its text field we could do:
 
 ```ts
 const result = await odc.getNodesWithProperties({
@@ -386,57 +389,69 @@ There are number of comparison operators that can be used:
 
 #### `getAllCount`
 
-> getAllCount(args: [ODC.GetAllCountArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetAllCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> getAllCount(args: [ODC.GetAllCountArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetAllCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {totalNodes: number, nodeCountByType: {[key: string]: number}, timeTaken: number}
 
 Returns both the total number of nodes as returned by `getAll()` on the field `totalNodes` as well as the total count of each node subtype on the field `nodeCountByType`.
 
 #### `getRootsCount`
 
-> getRootsCount(args: [ODC.GetRootsCountArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20GetRootsCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> getRootsCount(args: [ODC.GetRootsCountArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetRootsCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {totalNodes: number, nodeCountByType: {[key: string]: number}, timeTaken: number}
 
 Returns both the total number of nodes as returned by `getRoots()` on the field `totalNodes` as well as the total count of each node subtype on the field `nodeCountByType`.
 
 #### `storeNodeReferences`
 
-> storeNodeReferences(args: [ODC.StoreNodeReferencesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20StoreNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> storeNodeReferences(args: [ODC.StoreNodeReferencesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20StoreNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): [StoreNodeReferencesResponse](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20StoreNodeReferencesResponse)
 
 Creates a list of nodes in the currently running application by traversing the node tree. The returned node indexes can then be used as the base for other functions such as [getValue](#getvalue)
 
 #### `deleteNodeReferences`
 
-> deleteNodeReferences(args: [ODC.DeleteNodeReferencesArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+> deleteNodeReferences(args: [ODC.DeleteNodeReferencesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DeleteNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
 
-Deletes the list of nodes previously stored by [storeNodeReferences](#storeNodeReferences) on the specified key
-
-#### `disableScreenSaver`
-
-> disableScreenSaver(args: [ODC.DisableScreensaverArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DisableScreensaverArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
-
-Allows for disabling the screen saver in the application. While the screen saver is running communication between the on device component and server is not possible. This can help avoid these issues.
+Deletes the list of nodes previously stored by [storeNodeReferences](#storenodereferences) on the specified key
 
 #### `readRegistry`
 
-> readRegistry(args: [ODC.ReadRegistryArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20ReadRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions)): {values: { [section: string]: {[sectionItemKey: string]: string}}}
+> readRegistry(args: [ODC.ReadRegistryArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20ReadRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {values: { [section: string]: {[sectionItemKey: string]: string}}}
 
 Allows for reading from the registry. If no specific sections are requested then it will return the entire contents of the registry.
 
 #### `writeRegistry`
 
-> writeRegistry(args: [ODC.WriteRegistryArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20WriteRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
+> writeRegistry(args: [ODC.WriteRegistryArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20WriteRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions))
 
 Allows for writing to the registry. If `null` is passed for a sectionItemKey that key will be deleted. If `null` is passed for a section that entire section will be deleted.
 
 #### `deleteRegistrySections`
 
-> deleteRegistrySections(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
+> deleteRegistrySections(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions))
 
 Allows for deleting sections from the registry. Similar functionality can be achieved with `writeRegistry` passing null sections but helps to make it clearer if a mixed model isn't needed.
 
 #### `deleteEntireRegistry`
 
-> deleteEntireRegistry(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponentRequest.ts#:~:text=export%20interface%20RequestOptions))
+> deleteEntireRegistry(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions))
 
 Provides a way to clear out all sections in registry. Uses `deleteRegistrySections` under the hood but makes it clearer what is being done.
+
+#### `removeNodeChildren`
+
+> removeNodeChildren(args: [ODC.RemoveNodeChildrenArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%RemoveNodeChildrenArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Allows removing children of the node at the specified key path
+
+#### `getApplicationStartTime`
+
+> getApplicationStartTime(args: [ODC.GetApplicationStartTimeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%GetApplicationStartTimeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {startTime: number, timeTaken: number}
+
+Gives access to Roku's [roAppManager.getUptime()](https://developer.roku.com/en-gb/docs/references/brightscript/interfaces/ifappmanager.md#getuptime-as-object) to allow a highly accurate time since application load that can be useful in performance tests.
+
+#### `disableScreenSaver`
+
+> disableScreenSaver(args: [ODC.DisableScreensaverArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DisableScreensaverArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Allows for disabling the screen saver in the application. While the screen saver is running communication between the on device component and server is not possible. This can help avoid these issues.
 
 ---
 

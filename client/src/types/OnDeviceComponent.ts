@@ -24,6 +24,7 @@ export enum RequestType {
 	getVolumeList = 'getVolumeList',
 	hasFocus = 'hasFocus',
 	isInFocusChain = 'isInFocusChain',
+	isShowingOnScreen = 'isShowingOnScreen',
 	onFieldChangeOnce = 'onFieldChangeOnce',
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
