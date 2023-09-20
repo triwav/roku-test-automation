@@ -3,6 +3,31 @@ sub init()
 	m.task = m.top.createChild("RTA_OnDeviceComponentTask")
 	m.task.observeFieldScoped("renderThreadRequest", "onRenderThreadRequestChange")
 	m.task.control = "RUN"
+	m.validRequestTypes = {
+		"callFunc": processCallFuncRequest
+		"getFocusedNode": processGetFocusedNodeRequest
+		"callFunc": processCallFuncRequest
+		"getValue": processGetValueRequest
+		"getValues": processGetValuesRequest
+		"hasFocus": processHasFocusRequest
+		"isInFocusChain": processIsInFocusChainRequest
+		"onFieldChangeOnce": processOnFieldChangeOnceRequest
+		"setValue": processSetValueRequest
+		"getAllCount": processGetAllCountRequest
+		"getRootsCount": processGetRootsCountRequest
+		"storeNodeReferences": processStoreNodeReferencesRequest
+		"deleteNodeReferences": processDeleteNodeReferencesRequest
+		"getNodesInfo": processGetNodesInfoRequest
+		"getNodesWithProperties": processGetNodesWithPropertiesRequest
+		"startResponsivenessTesting": processStartResponsivenessTestingRequest
+		"getResponsivenessTestingData": processGetResponsivenessTestingDataRequest
+		"stopResponsivenessTesting": processStopResponsivenessTestingRequest
+		"disableScreenSaver": processDisableScreenSaverRequest
+		"focusNode": processFocusNodeRequest
+		"removeNodeChildren": processRemoveNodeChildrenRequest
+		"isShowingOnScreen": processIsShowingOnScreenRequest
+		"setSettings": processSetSettingsRequest
+	}
 
 	m.activeObserveFieldRequests = {}
 
@@ -17,50 +42,9 @@ sub onRenderThreadRequestChange(event as Object)
 	args = request.args
 	request.timespan = createObject("roTimespan")
 
-	response = Invalid
-	if requestType = "callFunc" then
-		response = processCallFuncRequest(args)
-	else if requestType = "getFocusedNode" then
-		response = processRTA_getFocusedNodeRequest(args)
-	else if requestType = "getValue" then
-		response = processGetValueRequest(args)
-	else if requestType = "getValues" then
-		response = processGetValuesRequest(args)
-	else if requestType = "hasFocus" then
-		response = processHasFocusRequest(args)
-	else if requestType = "isInFocusChain" then
-		response = processIsInFocusChainRequest(args)
-	else if requestType = "onFieldChangeOnce" then
-		response = processOnFieldChangeOnceRequest(request)
-	else if requestType = "setValue" then
-		response = processSetValueRequest(args)
-	else if requestType = "getAllCount" then
-		response = processGetAllCountRequest(args)
-	else if requestType = "getRootsCount" then
-		response = processGetRootsCountRequest(args)
-	else if requestType = "storeNodeReferences" then
-		response = processStoreNodeReferencesRequest(args)
-	else if requestType = "deleteNodeReferences" then
-		response = processDeleteNodeReferencesRequest(args)
-	else if requestType = "getNodesInfo" then
-		response = processGetNodesInfoRequest(args)
-	else if requestType = "getNodesWithProperties" then
-		response = processGetNodesWithPropertiesRequest(args)
-	else if requestType = "startResponsivenessTesting" then
-		response = processStartResponsivenessTestingRequest(args)
-	else if requestType = "getResponsivenessTestingData" then
-		response = processGetResponsivenessTestingDataRequest(args)
-	else if requestType = "stopResponsivenessTesting" then
-		response = processStopResponsivenessTestingRequest(args)
-	else if requestType = "disableScreenSaver" then
-		response = processDisableScreenSaverRequest(args)
-	else if requestType = "focusNode" then
-		response = processFocusNodeRequest(args)
-	else if requestType = "removeNodeChildren" then
-		response = processRemoveNodeChildrenRequest(args)
-	else if requestType = "setSettings" then
-		setLogLevel(RTA_getStringAtKeyPath(args, "logLevel"))
-		response = {}
+	func = m.validRequestTypes[requestType]
+	if func <> invalid then
+		response = func(args)
 	else
 		response = RTA_buildErrorResponseObject("Request type '" + requestType + "' not handled in this version")
 	end if
@@ -116,7 +100,7 @@ function processCallFuncRequest(args as Object) as Object
 	}
 end function
 
-function processRTA_getFocusedNodeRequest(args as Object) as Object
+function processGetFocusedNodeRequest(args as Object) as Object
 	focusedNode = RTA_getFocusedNode()
 	result = {
 		"node": focusedNode
@@ -1249,6 +1233,74 @@ function processRemoveNodeChildrenRequest(args as Object) as Object
 
 	return {}
 end function
+
+function processIsShowingOnScreenRequest(args) as Object
+	isShowing = true
+	isFullyShowing = false
+
+	result = processGetValueRequest(args)
+	if RTA_isErrorObject(result) then
+		return result
+	end if
+
+	node = result.value
+	if NOT RTA_isNode(node) then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	end if
+
+	parentNode = Invalid
+	if node.visible = false OR node.opacity = 0 then
+		isShowing = false
+		isFullyShowing = false
+	else
+		rect = node.sceneBoundingRect()
+
+		' Boundingrect is based off design resolution so need to use that to get the onscreen size
+		if m.currentDesignResolution = invalid then
+			m.currentDesignResolution = m.top.getScene().currentDesignResolution
+		end if
+
+		if rect.width = 0 OR rect.height = 0 then
+			isShowing = false
+		else if rect.x + rect.width < 0 OR rect.y + rect.height < 0 then
+			isShowing = false
+		else if rect.x > m.currentDesignResolution.width OR rect.y > m.currentDesignResolution.height then
+			isShowing = false
+		else
+			parentNode = node
+
+			if rect.x > 0 AND rect.x + rect.width <= m.currentDesignResolution.width AND rect.y > 0 AND rect.y + rect.height <= m.currentDesignResolution.height then
+				isFullyShowing = true
+			end if
+		end if
+	end if
+
+	' Have to check parents for visibility and opacity
+	while parentNode <> Invalid
+		parentNode = node.getParent()
+		if parentNode <> Invalid then
+			node = parentNode
+			if node.visible = false OR node.opacity = 0 then
+				isShowing = false
+				exit while
+			end if
+		end if
+	end while
+
+	return {
+		"isShowing": isShowing
+		"isFullyShowing": isFullyShowing
+	}
+end function
+
+function processSetSettingsRequest(args) as Object
+	setLogLevel(RTA_getStringAtKeyPath(args, "logLevel"))
+
+	return {}
+end function
+
+
 
 function getBaseObject(args as Object) as Dynamic
 	baseType = RTA_getStringAtKeyPath(args, "base")

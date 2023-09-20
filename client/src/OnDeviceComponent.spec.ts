@@ -23,7 +23,7 @@ describe('OnDeviceComponent', function () {
 
 	describe('getAllCount', function () {
 		it('should have the correct fields and return a known node subtype', async () => {
-			const {totalNodes, nodeCountByType} = await odc.getAllCount();
+			const { totalNodes, nodeCountByType } = await odc.getAllCount();
 			expect(totalNodes).to.be.greaterThan(0);
 			expect(nodeCountByType['MainScene']).to.equal(1);
 			for (const nodeSubtype in nodeCountByType) {
@@ -34,7 +34,7 @@ describe('OnDeviceComponent', function () {
 
 	describe('getRootsCount', function () {
 		it('should have the correct fields and return a known node subtype', async () => {
-			const {totalNodes, nodeCountByType} = await odc.getRootsCount();
+			const { totalNodes, nodeCountByType } = await odc.getRootsCount();
 			expect(totalNodes).to.be.greaterThan(0);
 			expect(nodeCountByType['MainScene']).to.equal(1);
 			for (const nodeSubtype in nodeCountByType) {
@@ -192,7 +192,7 @@ describe('OnDeviceComponent', function () {
 				};
 			}
 
-			const {results} = await odc.getNodesInfo({
+			const { results } = await odc.getNodesInfo({
 				requests: requests
 			});
 			expect(Object.keys(results).length).to.equal(Object.keys(requests).length);
@@ -205,7 +205,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should include fields in the response', async () => {
-			const {results} = await odc.getNodesInfo({
+			const { results } = await odc.getNodesInfo({
 				requests: {
 					firstItem: {
 						base: 'nodeRef',
@@ -218,11 +218,11 @@ describe('OnDeviceComponent', function () {
 			expect(node.subtype).to.equal('MainScene');
 			expect(node.fields.visible.fieldType).to.equal('boolean');
 			expect(node.fields.visible.type).to.equal('roBoolean');
-			expect(node.fields.visible.value).to.equal(true);
+			expect(node.fields.visible.value).to.be.true;
 		});
 
 		it('should include children array with each child node subtype', async () => {
-			const {results} = await odc.getNodesInfo({
+			const { results } = await odc.getNodesInfo({
 				requests: {
 					firstItem: {
 						base: 'nodeRef',
@@ -286,7 +286,7 @@ describe('OnDeviceComponent', function () {
 
 	describe('getNodesWithProperties', function () {
 		before(async () => {
-			await odc.storeNodeReferences({includeArrayGridChildren: true});
+			await odc.storeNodeReferences({ includeArrayGridChildren: true });
 		});
 
 		it('should be able to work with a single field with no operator specified and return the correct response', async () => {
@@ -298,7 +298,7 @@ describe('OnDeviceComponent', function () {
 				value: fieldValue
 			});
 
-			const {nodes, nodeRefs} = await odc.getNodesWithProperties({
+			const { nodes, nodeRefs } = await odc.getNodesWithProperties({
 				properties: [{
 					field: fieldName,
 					value: fieldValue
@@ -320,7 +320,7 @@ describe('OnDeviceComponent', function () {
 				value: fieldValue + 'ExtraToTestInWorksCorrect'
 			});
 
-			const {nodes} = await odc.getNodesWithProperties({
+			const { nodes } = await odc.getNodesWithProperties({
 				properties: [{
 					fields: ['renderTracking', fieldName],
 					operator: 'in',
@@ -338,7 +338,7 @@ describe('OnDeviceComponent', function () {
 			const fieldValue = utils.addRandomPostfix('myCustomStringFieldValue');
 			const fieldName = 'myCustomStringField';
 
-			const {nodes} = await odc.getNodesWithProperties({
+			const { nodes } = await odc.getNodesWithProperties({
 				properties: [{
 					field: 'visible',
 					value: false
@@ -373,7 +373,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should be able to run all the same advanced functionality as we can on a keyPath in getValue if we set a keyPath', async () => {
 			// Only return nodes whose width is 42
-			const {nodes} = await odc.getNodesWithProperties({
+			const { nodes } = await odc.getNodesWithProperties({
 				properties: [{
 					keyPath: 'boundingRect().width',
 					operator: '=',
@@ -398,7 +398,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should sort the matching nodes with the center closest to specified location first', async () => {
-			const {matches} = await odc.findNodesAtLocation({
+			const { matches } = await odc.findNodesAtLocation({
 				x: 100,
 				y: 100,
 				nodeTreeResponse: nodeTreeResponse
@@ -407,7 +407,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should not match nodes that are not visible', async () => {
-			const {matches} = await odc.findNodesAtLocation({
+			const { matches } = await odc.findNodesAtLocation({
 				x: 100,
 				y: 100,
 				nodeTreeResponse: nodeTreeResponse
@@ -418,7 +418,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('Should return proper ArrayGrid child for a MarkupGrid', async () => {
-			const {matches} = await odc.findNodesAtLocation({
+			const { matches } = await odc.findNodesAtLocation({
 				x: 700,
 				y: 150,
 				nodeTreeResponse: nodeTreeResponse
@@ -427,7 +427,7 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('Should return proper ArrayGrid child for a RowList', async () => {
-			const {matches} = await odc.findNodesAtLocation({
+			const { matches } = await odc.findNodesAtLocation({
 				x: 500,
 				y: 600,
 				nodeTreeResponse: nodeTreeResponse
@@ -471,7 +471,7 @@ describe('OnDeviceComponent', function () {
 				tickDuration: tickDuration
 			});
 			await utils.sleep(50);
-			const {periods, testingTotals} = await odc.getResponsivenessTestingData();
+			const { periods, testingTotals } = await odc.getResponsivenessTestingData();
 			await odc.stopResponsivenessTesting();
 			expect(periods).to.be.an('array');
 			expect(periods.length).to.equal(0);
@@ -490,7 +490,7 @@ describe('OnDeviceComponent', function () {
 				periodsTrackCount: periodsTrackCount
 			});
 			await utils.sleep(50);
-			const {periods, testingTotals} = await odc.getResponsivenessTestingData();
+			const { periods, testingTotals } = await odc.getResponsivenessTestingData();
 			await odc.stopResponsivenessTesting();
 			expect(periods).to.be.an('array');
 			expect(periods.length).to.equal(periodsTrackCount);
@@ -503,98 +503,98 @@ describe('OnDeviceComponent', function () {
 
 	describe('disableScreenSaver', function () {
 		it('should work disabling', async () => {
-			await odc.disableScreenSaver({disableScreensaver: true});
+			await odc.disableScreenSaver({ disableScreensaver: true });
 		});
 
 		it('should work reenabling', async () => {
-			await odc.disableScreenSaver({disableScreensaver: false});
+			await odc.disableScreenSaver({ disableScreensaver: false });
 		});
 	});
 
 	describe('getValue', function () {
 		it('found should be true if key path was found and has timeTaken as a number', async () => {
-			const {found, timeTaken} = await odc.getValue({base: 'scene', keyPath: ''});
+			const { found, timeTaken } = await odc.getValue({ base: 'scene', keyPath: '' });
 			expect(found).to.be.true;
 			expect(timeTaken).to.be.a('number');
 		});
 
 		it('should still work if keyPath was not provided', async () => {
-			const {value} = await odc.getValue({base: 'scene'});
+			const { value } = await odc.getValue({ base: 'scene' });
 			expect(value.subtype).to.equal('MainScene');
 		});
 
 		it('should default to having scene as base', async () => {
-			const {value} = await odc.getValue({});
+			const { value } = await odc.getValue({});
 			expect(value.subtype).to.equal('MainScene');
 		});
 
 		it('found should be false if key path was not found', async () => {
-			const {found} = await odc.getValue({keyPath: 'invalid'});
+			const { found } = await odc.getValue({ keyPath: 'invalid' });
 			expect(found).to.be.false;
 		});
 
 		it('should work with getChild', async () => {
-			const {value} = await odc.getValue({keyPath: '1'});
+			const { value } = await odc.getValue({ keyPath: '1' });
 			expect(value.id).to.eq('poster');
 		});
 
 		it('should work with negative getChild', async () => {
-			const {value} = await odc.getValue({keyPath: '-1'});
+			const { value } = await odc.getValue({ keyPath: '-1' });
 			expect(value.id).to.eq('pagesContainerGroup');
 		});
 
 		it('should work with findnode', async () => {
-			const {value} = await odc.getValue({keyPath: '#subchild3'});
+			const { value } = await odc.getValue({ keyPath: '#subchild3' });
 			expect(value.id).to.eq('subchild3');
 		});
 
 		it('should not find a child if it is not beneath the parent node', async () => {
-			const {value} = await odc.getValue({keyPath: '#subchild3.#testTarget'});
+			const { value } = await odc.getValue({ keyPath: '#subchild3.#testTarget' });
 			expect(value?.id).to.be.undefined;
 		});
 
 		it('should work with findNode.getChild', async () => {
-			const {value} = await odc.getValue({keyPath: '#testTarget.0'});
+			const { value } = await odc.getValue({ keyPath: '#testTarget.0' });
 			expect(value.id).to.eq('child1');
 		});
 
 		it('should work with findNode.getChild.getChild', async () => {
-			const {value} = await odc.getValue({keyPath: '#testTarget.1.1'});
+			const { value } = await odc.getValue({ keyPath: '#testTarget.1.1' });
 			expect(value.id).to.eq('subchild2');
 		});
 
 		it('should work with findNode.getChild.findNode', async () => {
-			const {value} = await odc.getValue({keyPath: '#testTarget.1.#subchild1'});
+			const { value } = await odc.getValue({ keyPath: '#testTarget.1.#subchild1' });
 			expect(value.id).to.eq('subchild1');
 		});
 
 		it('should be able to get a value on a valid field', async () => {
-			const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.isLoggedIn'});
+			const { value } = await odc.getValue({ base: 'global', keyPath: 'AuthManager.isLoggedIn' });
 			expect(value).to.be.false;
 		});
 
 		it('should work with array values', async () => {
-			const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.name'});
+			const { value } = await odc.getValue({ base: 'global', keyPath: 'arrayValue.0.name' });
 			expect(value).to.equal('firstItem');
 		});
 
 		it('should work with negative array values', async () => {
-			const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.-1.name'});
+			const { value } = await odc.getValue({ base: 'global', keyPath: 'arrayValue.-1.name' });
 			expect(value).to.equal('lastItem');
 		});
 
 		it('should not include children by default', async () => {
-			const {value} = await odc.getValue({});
+			const { value } = await odc.getValue({});
 			expect(value.children).to.be.undefined;
 		});
 
 		it('should not include children if maxChildDepth set to zero', async () => {
-			const {value} = await odc.getValue({responseMaxChildDepth: 0});
+			const { value } = await odc.getValue({ responseMaxChildDepth: 0 });
 			expect(value.children).to.be.undefined;
 		});
 
 		it('should include children to specified depth', async () => {
-			const {value} = await odc.getValue({responseMaxChildDepth: 2});
+			const { value } = await odc.getValue({ responseMaxChildDepth: 2 });
 			expect(value.children).to.not.be.empty;
 			for (const child of value.children) {
 				for (const subchild of child.children) {
@@ -608,20 +608,20 @@ describe('OnDeviceComponent', function () {
 			const storeResult = await odc.storeNodeReferences();
 			const key = 10;
 			const storeNode = storeResult.flatTree[key];
-			const {value} = await odc.getValue({base: 'nodeRef', keyPath: `${key}`});
+			const { value } = await odc.getValue({ base: 'nodeRef', keyPath: `${key}` });
 			expect(value.id).to.equal(storeNode.id);
 			expect(value.subtype).to.equal(storeNode.subtype);
 		});
 
 		it('should be able to retrieve a RowList item component', async () => {
-			const {value} = await odc.getValue({
+			const { value } = await odc.getValue({
 				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.items.2'
 			});
 			expect(value.subtype).to.equal('RowListItemComponent');
 		});
 
 		it('should be able to retrieve a RowList item component\'s children', async () => {
-			const {value} = await odc.getValue({
+			const { value } = await odc.getValue({
 				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.items.2.#rect'
 			});
 
@@ -629,14 +629,14 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should be able to retrieve a RowList title component', async () => {
-			const {value} = await odc.getValue({
+			const { value } = await odc.getValue({
 				keyPath: '#pagesContainerGroup.0.#rowListWithCustomTitleComponent.1.title'
 			});
 			expect(value.subtype).to.equal('RowListRowTitleComponent');
 		});
 
 		it('should be able to retrieve a MarkupGrid item component', async () => {
-			const {value} = await odc.getValue({
+			const { value } = await odc.getValue({
 				keyPath: '#pagesContainerGroup.0.#markupGrid.1'
 			});
 			expect(value.itemContent.id).to.equal('item 1');
@@ -645,126 +645,126 @@ describe('OnDeviceComponent', function () {
 		describe('Brightscript interface function calls', function () {
 			describe('getParent()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: '#poster.getParent()'});
+					const { value } = await odc.getValue({ keyPath: '#poster.getParent()' });
 					expect(value.subtype).to.equal('MainScene');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({keyPath: 'intValue.getParent()'});
+					const { found } = await odc.getValue({ keyPath: 'intValue.getParent()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('count()', () => {
 				it('should work on array item', async () => {
-					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.count()'});
+					const { value } = await odc.getValue({ base: 'global', keyPath: 'arrayValue.count()' });
 					expect(value).to.equal(3);
 				});
 
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.count()'});
+					const { value } = await odc.getValue({ base: 'global', keyPath: 'arrayValue.0.count()' });
 					expect(value).to.equal(1);
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.count()'});
+					const { value } = await odc.getValue({ base: 'global', keyPath: 'AuthManager.count()' });
 					expect(value).to.equal(6);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.count()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.count()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('keys()', () => {
 				it('should work on AA item', async () => {
-					const {value} = await odc.getValue({base: 'global', keyPath: 'arrayValue.0.keys()'});
+					const { value } = await odc.getValue({ base: 'global', keyPath: 'arrayValue.0.keys()' });
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('name');
 				});
 
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({base: 'global', keyPath: 'AuthManager.keys()'});
+					const { value } = await odc.getValue({ base: 'global', keyPath: 'AuthManager.keys()' });
 					expect(value).to.be.instanceof(Array);
 					expect(value[0]).to.equal('change');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.keys()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.keys()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('len()', () => {
 				it('should work on string item', async () => {
-					const {value} = await odc.getValue({base: 'global', keyPath: 'stringValue.len()'});
+					const { value } = await odc.getValue({ base: 'global', keyPath: 'stringValue.len()' });
 					expect(value).to.equal(11);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.len()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.len()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('getChildCount()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: '#pagesContainerGroup.getChildCount()'});
+					const { value } = await odc.getValue({ keyPath: '#pagesContainerGroup.getChildCount()' });
 					expect(value).to.equal(1);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.getChildCount()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.getChildCount()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('threadinfo()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: 'threadinfo()'});
+					const { value } = await odc.getValue({ keyPath: 'threadinfo()' });
 					const currentThread = value.currentThread;
 					expect(currentThread.name).to.equal('MainScene');
 					expect(currentThread.type).to.equal('Render');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.threadinfo()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.threadinfo()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('getFieldTypes()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: 'getFieldTypes()'});
+					const { value } = await odc.getValue({ keyPath: 'getFieldTypes()' });
 					const expectedValues = {
-						allowBackgroundTask:'boolean',
-						backExitsScene:'boolean',
-						backgroundColor:'color',
-						backgroundUri:'uri',
-						change:'string',
-						childRenderOrder:'string',
-						clippingRect:'rect2d',
-						currentDesignResolution:'std::shared_ptr<std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::any, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::any> > > >',
-						dialog:'std::shared_ptr<Roku::SceneGraph::DialogBase>',
-						enableRenderTracking:'boolean',
-						focusable:'boolean',
-						focusedChild:'node',
-						id:'string',
-						inheritParentOpacity:'boolean',
-						inheritParentTransform:'boolean',
-						limitBackgroundToUIResolution:'boolean',
-						muteAudioGuide:'boolean',
-						opacity:'float',
-						pagesContainer:'node',
-						palette:'std::shared_ptr<Roku::SceneGraph::RSGPalette>',
-						renderPass:'integer',
-						renderTracking:'string',
-						rotation:'float',
-						scale:'vector2d',
-						scaleRotateCenter:'vector2d',
-						translation:'vector2d',
-						visible:'boolean'
+						allowBackgroundTask: 'boolean',
+						backExitsScene: 'boolean',
+						backgroundColor: 'color',
+						backgroundUri: 'uri',
+						change: 'string',
+						childRenderOrder: 'string',
+						clippingRect: 'rect2d',
+						currentDesignResolution: 'std::shared_ptr<std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::any, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::any> > > >',
+						dialog: 'std::shared_ptr<Roku::SceneGraph::DialogBase>',
+						enableRenderTracking: 'boolean',
+						focusable: 'boolean',
+						focusedChild: 'node',
+						id: 'string',
+						inheritParentOpacity: 'boolean',
+						inheritParentTransform: 'boolean',
+						limitBackgroundToUIResolution: 'boolean',
+						muteAudioGuide: 'boolean',
+						opacity: 'float',
+						pagesContainer: 'node',
+						palette: 'std::shared_ptr<Roku::SceneGraph::RSGPalette>',
+						renderPass: 'integer',
+						renderTracking: 'string',
+						rotation: 'float',
+						scale: 'vector2d',
+						scaleRotateCenter: 'vector2d',
+						translation: 'vector2d',
+						visible: 'boolean'
 					};
 					expect(Object.keys(value).length).to.equal(Object.keys(expectedValues).length);
 					for (const key in expectedValues) {
@@ -773,26 +773,26 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.getFieldTypes()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.getFieldTypes()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('subtype()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.subtype()'});
+					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.subtype()' });
 					expect(value).to.equal('RowList');
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.subtype()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.subtype()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('boundingRect()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.boundingRect()'});
+					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.boundingRect()' });
 					expect(value.height).to.equal(444);
 					expect(value.width).to.equal(1964);
 					expect(value.x).to.equal(128);
@@ -800,14 +800,14 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.boundingRect()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.boundingRect()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('localBoundingRect()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()'});
+					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()' });
 					expect(value.height).to.equal(444);
 					expect(value.width).to.equal(1964);
 					expect(value.x).to.equal(-22);
@@ -815,14 +815,14 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.localBoundingRect()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.localBoundingRect()' });
 					expect(found).to.false;
 				});
 			});
 
 			describe('sceneBoundingRect()', () => {
 				it('should work on node item', async () => {
-					const {value} = await odc.getValue({keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()'});
+					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()' });
 					expect(value.height).to.equal(444);
 					expect(value.width).to.equal(1964);
 					expect(value.x).to.equal(128);
@@ -830,7 +830,7 @@ describe('OnDeviceComponent', function () {
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
-					const {found} = await odc.getValue({base: 'global', keyPath: 'intValue.sceneBoundingRect()'});
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.sceneBoundingRect()' });
 					expect(found).to.false;
 				});
 			});
@@ -839,9 +839,10 @@ describe('OnDeviceComponent', function () {
 
 	describe('getValues', function () {
 		it('should work with multiple values and should return the timeTaken value', async () => {
-			const {results, timeTaken} = await odc.getValues({requests: {
-					subchild1: {keyPath: '#testTarget.1.#subchild1'},
-					subchild2: {keyPath: '#testTarget.1.1'}
+			const { results, timeTaken } = await odc.getValues({
+				requests: {
+					subchild1: { keyPath: '#testTarget.1.#subchild1' },
+					subchild2: { keyPath: '#testTarget.1.1' }
 				}
 			});
 			expect(results.subchild1.value.id).to.eq('subchild1');
@@ -855,7 +856,7 @@ describe('OnDeviceComponent', function () {
 			await odc.focusNode({
 				keyPath: '#pagesContainerGroup.#loginButton'
 			});
-			const {node} = await odc.getFocusedNode();
+			const { node } = await odc.getFocusedNode();
 			expect(node).to.be.ok;
 			expect(node!.id).to.equal('loginButton');
 		});
@@ -864,24 +865,24 @@ describe('OnDeviceComponent', function () {
 			await odc.focusNode({
 				keyPath: '#pagesContainerGroup.#loginButton',
 			});
-			const {node} = await odc.getFocusedNode({includeNode: false});
+			const { node } = await odc.getFocusedNode({ includeNode: false });
 			expect(node).to.be.not.be.ok;
 		});
 
 		it('should not include children by default', async () => {
-			const {node} = await odc.getFocusedNode();
+			const { node } = await odc.getFocusedNode();
 			expect(node).to.be.ok;
 			expect(node!.children).to.be.undefined;
 		});
 
 		it('should not include children if maxChildDepth is set to zero', async () => {
-			const {node} = await odc.getFocusedNode({responseMaxChildDepth: 0});
+			const { node } = await odc.getFocusedNode({ responseMaxChildDepth: 0 });
 			expect(node).to.be.ok;
 			expect(node!.children).to.be.undefined;
 		});
 
 		it('should include children to specified depth', async () => {
-			const {node} = await odc.getFocusedNode({responseMaxChildDepth: 1});
+			const { node } = await odc.getFocusedNode({ responseMaxChildDepth: 1 });
 			expect(node).to.be.ok;
 			expect(node!.children).to.not.be.empty;
 			for (const child of node!.children) {
@@ -891,13 +892,13 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should not include ref field by default', async () => {
-			const {ref} = await odc.getFocusedNode();
+			const { ref } = await odc.getFocusedNode();
 			expect(ref).to.not.be.ok;
 		});
 
 		it('should fail if invalid key supplied or we did not store first', async () => {
 			try {
-				await odc.getFocusedNode({nodeRefKey: 'na', includeRef: true});
+				await odc.getFocusedNode({ nodeRefKey: 'na', includeRef: true });
 			} catch (e) {
 				// failed as expected
 				return;
@@ -907,7 +908,7 @@ describe('OnDeviceComponent', function () {
 
 		it('should return correct ref if requested', async () => {
 			const storeResult = await odc.storeNodeReferences();
-			const {node, ref} = await odc.getFocusedNode({includeRef: true});
+			const { node, ref } = await odc.getFocusedNode({ includeRef: true });
 			expect(ref).to.be.ok;
 			expect(node).to.be.ok;
 			expect(storeResult.flatTree[ref!].subtype).to.equal(node!.subtype);
@@ -915,11 +916,11 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should return focused arrayGrid child if requested', async () => {
-			const storeResult = await odc.storeNodeReferences({includeArrayGridChildren: true});
+			const storeResult = await odc.storeNodeReferences({ includeArrayGridChildren: true });
 			await odc.focusNode({
 				keyPath: '#rowListWithCustomTitleComponent'
 			});
-			const {node, ref} = await odc.getFocusedNode({
+			const { node, ref } = await odc.getFocusedNode({
 				includeRef: true,
 				returnFocusedArrayGridChild: true
 			});
@@ -936,41 +937,41 @@ describe('OnDeviceComponent', function () {
 
 		it('should include correct keyPath field', async () => {
 			const expectedKeyPath = '#pagesContainerGroup.0.#loginButton';
-			await odc.focusNode({keyPath: expectedKeyPath});
-			const {keyPath} = await odc.getFocusedNode();
+			await odc.focusNode({ keyPath: expectedKeyPath });
+			const { keyPath } = await odc.getFocusedNode();
 			expect(keyPath).to.equal(expectedKeyPath);
 		});
 	});
 
 	describe('hasFocus', function () {
 		it('should return true when current node has focus', async () => {
-			const args: ODC.FocusNodeArgs = {keyPath: '#pagesContainerGroup.#loginButton'};
+			const args: ODC.FocusNodeArgs = { keyPath: '#pagesContainerGroup.#loginButton' };
 			await odc.focusNode(args);
 			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
 		});
 
 		it('should return false when current node does not have focus', async () => {
-			expect(await odc.hasFocus({keyPath: '#child1'})).to.be.false;
+			expect(await odc.hasFocus({ keyPath: '#child1' })).to.be.false;
 		});
 	});
 
 	describe('isInFocusChain', function () {
 		it('should return true when current node is in focus chain', async () => {
-			const args: ODC.FocusNodeArgs = {keyPath: '#pagesContainerGroup.#loginButton'};
+			const args: ODC.FocusNodeArgs = { keyPath: '#pagesContainerGroup.#loginButton' };
 			await odc.focusNode(args);
 			const isInFocusChain = await odc.isInFocusChain(args);
 			expect(isInFocusChain).to.be.true;
 		});
 
 		it('should return false when current node is not in focus chain', async () => {
-			expect(await odc.isInFocusChain({keyPath: '#child1'})).to.be.false;
+			expect(await odc.isInFocusChain({ keyPath: '#child1' })).to.be.false;
 		});
 	});
 
 	describe('focusNode', function () {
 		it('should successfully set focus on the requested node', async () => {
-			const args: ODC.FocusNodeArgs = {keyPath: '#pagesContainerGroup'};
+			const args: ODC.FocusNodeArgs = { keyPath: '#pagesContainerGroup' };
 			await odc.focusNode(args);
 			const hasFocus = await odc.hasFocus(args);
 			expect(hasFocus).to.be.true;
@@ -978,8 +979,8 @@ describe('OnDeviceComponent', function () {
 
 		it('should return an error when keypath does not point to a node', async () => {
 			try {
-				await odc.focusNode({keyPath: 'stringValue'});
-			} catch(e) {
+				await odc.focusNode({ keyPath: 'stringValue' });
+			} catch (e) {
 				// failed as expected
 				return;
 			}
@@ -1004,12 +1005,12 @@ describe('OnDeviceComponent', function () {
 			});
 
 			// Verify it got added correctly
-			const {value: childCount} = await odc.getValue({
+			const { value: childCount } = await odc.getValue({
 				keyPath: `${baseKeyPath}.getChildCount()`
 			});
 			expect(childCount).to.equal(1);
 
-			const {value: child} = await odc.getValue({
+			const { value: child } = await odc.getValue({
 				keyPath: `${baseKeyPath}.0`
 			});
 			expect(child.id).to.equal(nodeId);
@@ -1019,7 +1020,7 @@ describe('OnDeviceComponent', function () {
 				index: 0
 			});
 
-			const {value: newChildCount} = await odc.getValue({
+			const { value: newChildCount } = await odc.getValue({
 				keyPath: `${baseKeyPath}.getChildCount()`
 			});
 			expect(newChildCount).to.equal(0);
@@ -1049,12 +1050,12 @@ describe('OnDeviceComponent', function () {
 			});
 
 			// Verify it got added correctly
-			const {value: childCount} = await odc.getValue({
+			const { value: childCount } = await odc.getValue({
 				keyPath: `${baseKeyPath}.getChildCount()`
 			});
 			expect(childCount).to.equal(nodeIds.length);
 
-			const {value: firstChildBefore} = await odc.getValue({
+			const { value: firstChildBefore } = await odc.getValue({
 				keyPath: `${baseKeyPath}.0`
 			});
 			expect(firstChildBefore.id).to.equal(nodeIds[0]);
@@ -1065,12 +1066,12 @@ describe('OnDeviceComponent', function () {
 				count: 3
 			});
 
-			const {value: newChildCount} = await odc.getValue({
+			const { value: newChildCount } = await odc.getValue({
 				keyPath: `${baseKeyPath}.getChildCount()`
 			});
 			expect(newChildCount).to.equal(1);
 
-			const {value: firstChildAfter} = await odc.getValue({
+			const { value: firstChildAfter } = await odc.getValue({
 				keyPath: `${baseKeyPath}.0`
 			});
 			expect(firstChildAfter.id).to.equal(nodeIds[0]);
@@ -1107,7 +1108,7 @@ describe('OnDeviceComponent', function () {
 			});
 
 			// Verify it got added correctly
-			const {value: childCount} = await odc.getValue({
+			const { value: childCount } = await odc.getValue({
 				keyPath: `${baseKeyPath}.getChildCount()`
 			});
 			expect(childCount).to.equal(nodeIds.length);
@@ -1118,7 +1119,7 @@ describe('OnDeviceComponent', function () {
 				count: -1
 			});
 
-			const {value: newChildCount} = await odc.getValue({
+			const { value: newChildCount } = await odc.getValue({
 				keyPath: `${baseKeyPath}.getChildCount()`
 			});
 			expect(newChildCount).to.equal(0);
@@ -1130,11 +1131,548 @@ describe('OnDeviceComponent', function () {
 					keyPath: 'stringValue',
 					index: 0
 				});
-			} catch(e) {
+			} catch (e) {
 				// failed as expected
 				return;
 			}
 			assert.fail('Should have thrown an exception');
+		});
+	});
+
+	describe.only('isShowingOnScreen', function () {
+		const baseKeyPath = '#temporaryNodesGroup';
+
+		afterEach(async function () {
+			await odc.removeNodeChildren({
+				keyPath: baseKeyPath,
+				index: 0
+			});
+
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(0);
+		});
+
+		it('should return isShowing=false if parent node visible=false', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						subtype: 'Group',
+						visible: 'false',
+						children: [{
+							subtype: 'Group',
+							id: nodeId
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if parent node opacity=0', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						subtype: 'Group',
+						opacity: 0,
+						children: [{
+							subtype: 'Group',
+							children: [{
+								subtype: 'Group',
+								id: nodeId
+							}]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node visible=false', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							visible: false
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node opacity=0', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							opacity: 0
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node width=0', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 0,
+							height: 100,
+							translation: [100, 100]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node height=0', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 100,
+							height: 0,
+							translation: [100, 100]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node is located off screen (negative x)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000,
+							translation: [-3000, 0]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node is located off screen (negative y)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000,
+							translation: [0, -3000]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node is located off screen (positive x)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000,
+							translation: [3000, 0]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if node is located off screen (positive y)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000,
+							translation: [0, 3000]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if parent node is located off screen (negative x)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						translation: [-3000, 0],
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if parent node is located off screen (negative y)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						translation: [0, -3000],
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if parent node is located off screen (positive x)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						translation: [3000, 0],
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=false if parent node is located off screen (positive y)', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						translation: [0, 3000],
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.false;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=true and isFullyShowing=false if node is partially offscreen', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 1000,
+							height: 1000,
+							translation: [-500, -500]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.true;
+			expect(isFullyShowing).to.be.false;
+		});
+
+		it('should return isShowing=true and isFullyShowing=true if node is fully offscreen', async () => {
+			// Add a testing node structure
+			const nodeId = utils.addRandomPostfix('node');
+
+			await odc.setValue({
+				field: '',
+				keyPath: baseKeyPath,
+				value: {
+					children: [{
+						children: [{
+							subtype: 'Rectangle',
+							id: nodeId,
+							width: 500,
+							height: 500,
+							translation: [500, 500]
+						}]
+					}]
+				}
+			});
+
+			// Verify it got added correctly
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			const { isShowing, isFullyShowing } = await odc.isShowingOnScreen({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+			expect(isShowing).to.be.true;
+			expect(isFullyShowing).to.be.true;
 		});
 	});
 
@@ -1189,7 +1727,7 @@ describe('OnDeviceComponent', function () {
 				value: updateValue
 			});
 
-			const {found, value} = await odc.getValue({keyPath: nodeKey, responseMaxChildDepth: 1});
+			const { found, value } = await odc.getValue({ keyPath: nodeKey, responseMaxChildDepth: 1 });
 			expect(found).to.be.true;
 			const childrenResult = value.children;
 			expect(childrenResult.length).to.equal(children.length);
@@ -1215,7 +1753,7 @@ describe('OnDeviceComponent', function () {
 				value: updateValue
 			});
 
-			const {value} = await odc.getValue({responseMaxChildDepth: 1});
+			const { value } = await odc.getValue({ responseMaxChildDepth: 1 });
 
 			const lastNode = value.children.pop();
 			expect(lastNode.id).to.equal(nodeKey);
@@ -1237,7 +1775,7 @@ describe('OnDeviceComponent', function () {
 				value: updateValue
 			});
 
-			const {value} = await odc.getValue({keyPath: '#pagesContainerGroup', responseMaxChildDepth: 1});
+			const { value } = await odc.getValue({ keyPath: '#pagesContainerGroup', responseMaxChildDepth: 1 });
 
 			const lastNode = value.children.pop();
 			expect(lastNode.id).to.equal(nodeKey);
@@ -1250,7 +1788,7 @@ describe('OnDeviceComponent', function () {
 				keyPath: 'stringValue',
 				value: expectedValue + '🔍'
 			});
-			const {value} = await odc.getValue({
+			const { value } = await odc.getValue({
 				base: 'global',
 				keyPath: 'stringValue'
 			});
@@ -1274,7 +1812,7 @@ describe('OnDeviceComponent', function () {
 	describe('onFieldChangeOnce', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
-				await odc.onFieldChangeOnce({keyPath: 'does.not.exist', retryTimeout: 200});
+				await odc.onFieldChangeOnce({ keyPath: 'does.not.exist', retryTimeout: 200 });
 			} catch (e) {
 				// failed as expected
 				return;
@@ -1283,31 +1821,31 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it('should succeed if given a valid node for its parent keyPath and should return timeTaken value', async () => {
-			const args = {base: 'global', keyPath: 'AuthManager.isLoggedIn'} as ODC.BaseKeyPath;
-			await setAndVerifyValue({...args, value: false});
-			const observePromise = odc.onFieldChangeOnce({...args});
-			await setAndVerifyValue({...args, value: true});
-			const {value, observerFired, timeTaken} = await observePromise;
+			const args = { base: 'global', keyPath: 'AuthManager.isLoggedIn' } as ODC.BaseKeyPath;
+			await setAndVerifyValue({ ...args, value: false });
+			const observePromise = odc.onFieldChangeOnce({ ...args });
+			await setAndVerifyValue({ ...args, value: true });
+			const { value, observerFired, timeTaken } = await observePromise;
 			expect(value).to.be.true;
 			expect(observerFired).to.be.true;
 			expect(timeTaken).to.be.a('number');
 		});
 
 		it('should wait for value to match if requested and should work with simple match property', async () => {
-			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
+			const args = { base: 'global', keyPath: 'stringValue' } as ODC.BaseKeyPath;
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			const observePromise = odc.onFieldChangeOnce({...args, match: expectedValue});
-			await setAndVerifyValue({...args, value: utils.addRandomPostfix('firstValue')});
-			await setAndVerifyValue({...args, value: expectedValue});
-			const {value, observerFired} = await observePromise;
+			const observePromise = odc.onFieldChangeOnce({ ...args, match: expectedValue });
+			await setAndVerifyValue({ ...args, value: utils.addRandomPostfix('firstValue') });
+			await setAndVerifyValue({ ...args, value: expectedValue });
+			const { value, observerFired } = await observePromise;
 			expect(value).to.equal(expectedValue);
 			expect(observerFired).to.be.true;
 		});
 
 		it('if the match key path does not exist it should throw an error', async () => {
-			const args = {base: 'global', keyPath: 'stringValue'} as ODC.BaseKeyPath;
-			const observePromise = odc.onFieldChangeOnce({...args, match: {keyPath: 'invalid.key.path', value: 'willNeverMatch'}}, {timeout: 400});
-			const setValuePromise = setAndVerifyValue({...args, value: utils.addRandomPostfix('trigger')});
+			const args = { base: 'global', keyPath: 'stringValue' } as ODC.BaseKeyPath;
+			const observePromise = odc.onFieldChangeOnce({ ...args, match: { keyPath: 'invalid.key.path', value: 'willNeverMatch' } }, { timeout: 400 });
+			const setValuePromise = setAndVerifyValue({ ...args, value: utils.addRandomPostfix('trigger') });
 			try {
 				await Promise.all([observePromise, setValuePromise]);
 			} catch (e) {
@@ -1327,13 +1865,13 @@ describe('OnDeviceComponent', function () {
 				keyPath: 'intValue',
 				value: utils.randomInteger()
 			};
-			await setAndVerifyValue({...match, value: utils.randomInteger()});
-			const observePromise = odc.onFieldChangeOnce({...stringKeyPath, match: match});
-			await setAndVerifyValue({...stringKeyPath, value: utils.addRandomPostfix('firstValue')});
+			await setAndVerifyValue({ ...match, value: utils.randomInteger() });
+			const observePromise = odc.onFieldChangeOnce({ ...stringKeyPath, match: match });
+			await setAndVerifyValue({ ...stringKeyPath, value: utils.addRandomPostfix('firstValue') });
 			await setAndVerifyValue(match);
 			const expectedValue = utils.addRandomPostfix('secondValue');
-			await setAndVerifyValue({...stringKeyPath, value: expectedValue} as any);
-			const {value, observerFired} = await observePromise;
+			await setAndVerifyValue({ ...stringKeyPath, value: expectedValue } as any);
+			const { value, observerFired } = await observePromise;
 			expect(value).to.equal(expectedValue);
 			expect(observerFired).to.be.true;
 		});
@@ -1349,16 +1887,16 @@ describe('OnDeviceComponent', function () {
 				}
 			};
 			await setAndVerifyValue(args.match);
-			const {observerFired} = await odc.onFieldChangeOnce(args);
+			const { observerFired } = await odc.onFieldChangeOnce(args);
 			expect(observerFired).to.be.false;
 		});
 
 		it('should still work after a restart of the application', async () => {
 			await ecp.sendLaunchChannel({
-				params: {contentId: 'deeplink'},
+				params: { contentId: 'deeplink' },
 				verifyLaunch: false
 			});
-			const {observerFired} = await odc.onFieldChangeOnce({
+			const { observerFired } = await odc.onFieldChangeOnce({
 				base: 'global',
 				keyPath: 'launchComplete'
 			});
@@ -1369,7 +1907,7 @@ describe('OnDeviceComponent', function () {
 	describe('callFunc', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
-				await odc.callFunc({keyPath: 'does.not.exist',  funcName: 'trigger'});
+				await odc.callFunc({ keyPath: 'does.not.exist', funcName: 'trigger' });
 			} catch (e) {
 				// failed as expected
 				return;
@@ -1378,15 +1916,15 @@ describe('OnDeviceComponent', function () {
 		});
 
 		it(`should work with funcs that don't take any arguments`, async () => {
-			const args = {base: 'global', keyPath: 'AuthManager.isLoggedIn'} as ODC.BaseKeyPath;
-			await setAndVerifyValue({...args, value: false});
-			await odc.callFunc({base: 'global', keyPath: 'AuthManager', funcName: 'loginUserNoArgs'});
-			const {value} = await odc.getValue(args);
+			const args = { base: 'global', keyPath: 'AuthManager.isLoggedIn' } as ODC.BaseKeyPath;
+			await setAndVerifyValue({ ...args, value: false });
+			await odc.callFunc({ base: 'global', keyPath: 'AuthManager', funcName: 'loginUserNoArgs' });
+			const { value } = await odc.getValue(args);
 			expect(value).to.be.true;
 		});
 
 		it('should work with funcs taking params and has timeTaken as a number', async () => {
-			const {value, timeTaken} = await odc.callFunc({funcName: 'multiplyNumbers', funcParams: [3, 5]});
+			const { value, timeTaken } = await odc.callFunc({ funcName: 'multiplyNumbers', funcParams: [3, 5] });
 			expect(value).to.be.equal(15);
 			expect(timeTaken).to.be.a('number');
 		});
@@ -1394,21 +1932,21 @@ describe('OnDeviceComponent', function () {
 
 	describe('getComponentGlobalAAKeyPath', function () {
 		it(`should return the specified key path`, async () => {
-			const {value} = await odc.getComponentGlobalAAKeyPath({
+			const { value } = await odc.getComponentGlobalAAKeyPath({
 				componentGlobalAAKeyPath: 'testingGetGlobalAA'
 			});
 			expect(value).to.equal('yup it works');
 		});
 
 		it(`should work with the full key path logic`, async () => {
-			const {value} = await odc.getComponentGlobalAAKeyPath({
+			const { value } = await odc.getComponentGlobalAAKeyPath({
 				componentGlobalAAKeyPath: 'top.subtype()'
 			});
 			expect(value).to.equal('MainScene');
 		});
 
 		it(`should return null if value does not exist`, async () => {
-			const {value} = await odc.getComponentGlobalAAKeyPath({
+			const { value } = await odc.getComponentGlobalAAKeyPath({
 				componentGlobalAAKeyPath: 'does.not.exist'
 			});
 			expect(value).to.be.null;
@@ -1425,7 +1963,7 @@ describe('OnDeviceComponent', function () {
 			});
 			expect(result.value).to.be.true;
 
-			const {value} = await odc.getComponentGlobalAAKeyPath({
+			const { value } = await odc.getComponentGlobalAAKeyPath({
 				componentGlobalAAKeyPath: keyPath
 			});
 
@@ -1454,25 +1992,27 @@ describe('OnDeviceComponent', function () {
 			thirdKeyValue = utils.addRandomPostfix('thirdKeyValue');
 			fourthKeyValue = utils.addRandomPostfix('fourthKeyValue');
 
-			await odc.writeRegistry({values: {
-				[firstSectionName]: {
-					[firstKey]: firstKeyValue,
-					[secondKey]: secondKeyValue
-				},
-				[secondSectionName]: {
-					[thirdKey]: thirdKeyValue,
-					[fourthKey]: fourthKeyValue
+			await odc.writeRegistry({
+				values: {
+					[firstSectionName]: {
+						[firstKey]: firstKeyValue,
+						[secondKey]: secondKeyValue
+					},
+					[secondSectionName]: {
+						[thirdKey]: thirdKeyValue,
+						[fourthKey]: fourthKeyValue
+					}
 				}
-			}});
+			});
 		});
 
 		afterEach(async function () {
-			await odc.deleteRegistrySections({sections: [firstSectionName, secondSectionName]});
+			await odc.deleteRegistrySections({ sections: [firstSectionName, secondSectionName] });
 		});
 
 		describe('registryRead', function () {
 			it('should return all registry values if no params passed in', async () => {
-				const {values} = await odc.readRegistry();
+				const { values } = await odc.readRegistry();
 
 				const firstSection = values[firstSectionName];
 				expect(firstSection[firstKey]).to.equal(firstKeyValue);
@@ -1484,10 +2024,12 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('should return the requested registry values if arrays provided', async () => {
-				const {values} = await odc.readRegistry({values: {
-					[firstSectionName]: [secondKey],
-					[secondSectionName]: [thirdKey, fourthKey]
-				}});
+				const { values } = await odc.readRegistry({
+					values: {
+						[firstSectionName]: [secondKey],
+						[secondSectionName]: [thirdKey, fourthKey]
+					}
+				});
 
 				const firstSection = values[firstSectionName];
 				expect(firstSection[firstKey]).to.be.undefined;
@@ -1499,9 +2041,11 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('should return the requested registry value if string passed in', async () => {
-				const {values} = await odc.readRegistry({values: {
-					[firstSectionName]: firstKey
-				}});
+				const { values } = await odc.readRegistry({
+					values: {
+						[firstSectionName]: firstKey
+					}
+				});
 
 				const firstSection = values[firstSectionName];
 				expect(firstSection[firstKey]).to.equal(firstKeyValue);
@@ -1513,37 +2057,47 @@ describe('OnDeviceComponent', function () {
 
 		describe('registryWrite', function () {
 			it('should successfully be able to write and delete a section field', async () => {
-				await odc.writeRegistry({values: {
-					[firstSectionName]: {
-						[firstKey]: firstKeyValue
+				await odc.writeRegistry({
+					values: {
+						[firstSectionName]: {
+							[firstKey]: firstKeyValue
+						}
 					}
-				}});
+				});
 
-				const {values} = await odc.readRegistry({values: {
-					[firstSectionName]: firstKey
-				}});
+				const { values } = await odc.readRegistry({
+					values: {
+						[firstSectionName]: firstKey
+					}
+				});
 				expect(values[firstSectionName][firstKey]).to.be.equal(firstKeyValue);
 
-				await odc.writeRegistry({values: {
-					[firstSectionName]: {
-						[firstKey]: null
+				await odc.writeRegistry({
+					values: {
+						[firstSectionName]: {
+							[firstKey]: null
+						}
 					}
-				}});
+				});
 
-				const {values: valuesAfterDelete} = await odc.readRegistry({values: {
-					[firstSectionName]: firstKey
-				}});
+				const { values: valuesAfterDelete } = await odc.readRegistry({
+					values: {
+						[firstSectionName]: firstKey
+					}
+				});
 				expect(valuesAfterDelete[firstSectionName][firstKey]).to.be.undefined;
 			});
 		});
 
 		describe('deleteRegistrySections', function () {
 			it('should delete all values in the specified registry section if string provided', async () => {
-				await odc.deleteRegistrySections({sections: firstSectionName});
-				const {values} = await odc.readRegistry({values: {
-					[firstSectionName]: [],
-					[secondSectionName]: []
-				}});
+				await odc.deleteRegistrySections({ sections: firstSectionName });
+				const { values } = await odc.readRegistry({
+					values: {
+						[firstSectionName]: [],
+						[secondSectionName]: []
+					}
+				});
 
 				const firstSection = values[firstSectionName];
 				expect(firstSection[firstKey]).to.be.undefined;
@@ -1555,12 +2109,14 @@ describe('OnDeviceComponent', function () {
 			});
 
 			it('should delete all values in the specified registry sections if arrays provided', async () => {
-				await odc.deleteRegistrySections({sections: [firstSectionName, secondSectionName]});
+				await odc.deleteRegistrySections({ sections: [firstSectionName, secondSectionName] });
 
-				const {values} = await odc.readRegistry({values: {
-					[firstSectionName]: [],
-					[secondSectionName]: []
-				}});
+				const { values } = await odc.readRegistry({
+					values: {
+						[firstSectionName]: [],
+						[secondSectionName]: []
+					}
+				});
 
 				const firstSection = values[firstSectionName];
 				expect(firstSection[firstKey]).to.be.undefined;
@@ -1575,10 +2131,12 @@ describe('OnDeviceComponent', function () {
 		describe('deleteEntireRegistry', function () {
 			it('should delete all values in the specified registry section if string provided', async () => {
 				await odc.deleteEntireRegistry();
-				const {values} = await odc.readRegistry({values: {
-					[firstSectionName]: [],
-					[secondSectionName]: []
-				}});
+				const { values } = await odc.readRegistry({
+					values: {
+						[firstSectionName]: [],
+						[secondSectionName]: []
+					}
+				});
 
 				const firstSection = values[firstSectionName];
 				expect(firstSection[firstKey]).to.be.undefined;
@@ -1603,7 +2161,7 @@ describe('OnDeviceComponent', function () {
 				if (odcConfig?.OnDeviceComponent) {
 					odcConfig.OnDeviceComponent.restoreRegistry = false;
 				}
-				const {values} = await odc.readRegistry();
+				const { values } = await odc.readRegistry();
 				expect(values.rtaFirstSectionName.firstItem).to.equal(firstKeyValue);
 				expect(values.rtaFirstSectionName.secondItem).to.equal(secondKeyValue);
 				expect(values.rtaSecondSectionName.thirdItem).to.equal(thirdKeyValue);
@@ -1617,7 +2175,7 @@ describe('OnDeviceComponent', function () {
 
 		describe('getVolumeList', function () {
 			it('should contain the standard list of volumes expected', async () => {
-				const {list} = await odc.getVolumeList();
+				const { list } = await odc.getVolumeList();
 
 				for (const volume of standardVolumes) {
 					expect(list.includes(volume), `list did not contain '${volume}'`).to.be.true;
@@ -1629,7 +2187,7 @@ describe('OnDeviceComponent', function () {
 			it('should return a list of files for the selected directories', async () => {
 				let pathsReturned = 0;
 				for (const volume of standardVolumes) {
-					const {list} = await odc.getDirectoryListing({
+					const { list } = await odc.getDirectoryListing({
 						path: volume + '/'
 					});
 					pathsReturned += list.length;
@@ -1678,7 +2236,7 @@ describe('OnDeviceComponent', function () {
 				await odc.createDirectory({
 					path: path
 				});
-				const {type} = await odc.statPath({
+				const { type } = await odc.statPath({
 					path: path
 				});
 				expect(type).to.equal('directory');
@@ -1714,7 +2272,7 @@ describe('OnDeviceComponent', function () {
 
 	describe('readFile', function () {
 		it('successfully reads a known file', async () => {
-			const {binaryPayload} = await odc.readFile({
+			const { binaryPayload } = await odc.readFile({
 				path: 'common:/certs/ca-bundle.crt'
 			});
 			expect(binaryPayload.length).to.be.greaterThan(0);
@@ -1742,7 +2300,7 @@ describe('OnDeviceComponent', function () {
 				binaryPayload: expectedBinaryPayload
 			});
 
-			const {binaryPayload: actualBinaryPayload} = await odc.readFile({
+			const { binaryPayload: actualBinaryPayload } = await odc.readFile({
 				path: writeFilePath
 			});
 
@@ -1768,7 +2326,7 @@ describe('OnDeviceComponent', function () {
 
 	describe('getApplicationStartTime', function () {
 		it('should return an application start time close to current time', async () => {
-			const {startTime} = await odc.getApplicationStartTime();
+			const { startTime } = await odc.getApplicationStartTime();
 
 			const currentTime = Date.now();
 
@@ -1778,13 +2336,13 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	async function setAndVerifyValue(args: {expectedStartingValue?: any} & ODC.SetValueArgs) {
+	async function setAndVerifyValue(args: { expectedStartingValue?: any } & ODC.SetValueArgs) {
 		if (args.expectedStartingValue !== undefined) {
-			const {value: actualStartingValue} = await odc.getValue(args);
+			const { value: actualStartingValue } = await odc.getValue(args);
 			expect(actualStartingValue).to.equal(args.expectedStartingValue, `${args.base}.${args.keyPath} did not match expected value before set`);
 		}
 		const { timeTaken } = await odc.setValue(args);
-		const {value: actualValue} = await odc.getValue(args);
+		const { value: actualValue } = await odc.getValue(args);
 		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
 		expect(timeTaken).to.be.a('number', 'timeTaken was not a number when returned from setValue');
 	}
