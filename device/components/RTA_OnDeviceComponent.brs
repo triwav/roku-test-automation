@@ -39,12 +39,11 @@ sub onRenderThreadRequestChange(event as Object)
 	RTA_logDebug("Received request: ", formatJson(request))
 
 	requestType = request.type
-	args = request.args
 	request.timespan = createObject("roTimespan")
 
 	func = m.validRequestTypes[requestType]
 	if func <> invalid then
-		response = func(args)
+		response = func(request)
 	else
 		response = RTA_buildErrorResponseObject("Request type '" + requestType + "' not handled in this version")
 	end if
@@ -54,7 +53,8 @@ sub onRenderThreadRequestChange(event as Object)
 	end if
 end sub
 
-function processCallFuncRequest(args as Object) as Object
+function processCallFuncRequest(request as Object) as Object
+	args = request.args
 	result = processGetValueRequest(args)
 	if RTA_isErrorObject(result) then
 		return result
@@ -100,7 +100,8 @@ function processCallFuncRequest(args as Object) as Object
 	}
 end function
 
-function processGetFocusedNodeRequest(args as Object) as Object
+function processGetFocusedNodeRequest(request as Object) as Object
+	args = request.args
 	focusedNode = RTA_getFocusedNode()
 	result = {
 		"node": focusedNode
@@ -172,7 +173,14 @@ function processGetFocusedNodeRequest(args as Object) as Object
 	return result
 end function
 
-function processGetValueRequest(args as Object) as Object
+function processGetValueRequest(request as Object) as Object
+	if request.args = Invalid then
+		' Allows us to use this same functionality in other requests
+		args = request
+	else
+		args = request.args
+	end if
+
 	base = getBaseObject(args)
 	if RTA_isErrorObject(base) then
 		return base
@@ -199,7 +207,8 @@ function processGetValueRequest(args as Object) as Object
 	return result
 end function
 
-function processGetValuesRequest(args as Object) as Object
+function processGetValuesRequest(request as Object) as Object
+	args = request.args
 	requests = args.requests
 	if NOT RTA_isNonEmptyAA(requests) then
 		return RTA_buildErrorResponseObject("getValues did not have have any requests")
@@ -218,7 +227,8 @@ function processGetValuesRequest(args as Object) as Object
 	}
 end function
 
-function processGetNodesInfoRequest(args as Object) as Object
+function processGetNodesInfoRequest(request as Object) as Object
+	args = request.args
 	requests = args.requests
 	if NOT RTA_isNonEmptyAA(requests) then
 		return RTA_buildErrorResponseObject("getNodesInfo did not have have any requests")
@@ -267,7 +277,8 @@ function processGetNodesInfoRequest(args as Object) as Object
 	}
 end function
 
-function processHasFocusRequest(args as Object) as Object
+function processHasFocusRequest(request as Object) as Object
+	args = request.args
 	result = processGetValueRequest(args)
 	if RTA_isErrorObject(result) then
 		return result
@@ -287,7 +298,8 @@ function processHasFocusRequest(args as Object) as Object
 	}
 end function
 
-function processIsInFocusChainRequest(args as Object) as Object
+function processIsInFocusChainRequest(request as Object) as Object
+	args = request.args
 	result = processGetValueRequest(args)
 	if RTA_isErrorObject(result) then
 		return result
@@ -430,20 +442,20 @@ sub observeFieldCallback(event as Object)
 	field = event.getField()
 	data = event.getData()
 	RTA_logDebug("Received callback for node field '" + field + "' with value ", data)
-	nodeFound = false
+	remainingObservers = 0
 	for each requestId in m.activeObserveFieldRequests
 		request = m.activeObserveFieldRequests[requestId]
 		args = request.args
 		if node.isSameNode(request.node) AND args.field = field then
+			success = true
 			RTA_logVerbose("Found matching requestId: " + requestId)
-			nodeFound = true
 			match = args.match
 			if RTA_isAA(match) then
 				result = processGetValueRequest(match)
 				if RTA_isErrorObject(result) then
 					RTA_logVerbose("observeFieldCallback: Encountered error", result)
 					sendResponseToTask(request, result)
-					return
+					success = false
 				end if
 
 				if result.found = false OR result.value <> match.value then
@@ -451,20 +463,23 @@ sub observeFieldCallback(event as Object)
 						"result": result.value
 						"match": match.value
 					})
-					return
+					success = false
 				end if
 			end if
 
-			m.activeObserveFieldRequests.delete(requestId)
-			sendResponseToTask(request, {
-				"value": data
-				"observerFired": true
-			})
+			if success then
+				m.activeObserveFieldRequests.delete(requestId)
+				sendResponseToTask(request, {
+					"value": data
+					"observerFired": true
+				})
+			else
+				remainingObservers++
+			end if
 		end if
 	end for
 
-	' We should only get to here if all the requests succeeded with their matches
-	if nodeFound then
+	if remainingObservers = 0 then
 		' If we got to here then we sent back all responses for this field so we can remove our observer now
 		RTA_logDebug("Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
 		node.unobserveFieldScoped(field)
@@ -474,48 +489,46 @@ sub observeFieldCallback(event as Object)
 	RTA_logError("Received callback for unknown node or field ", node)
 end sub
 
-function processSetValueRequest(args as Object) as Object
+function processSetValueRequest(request as Object) as Object
+	args = request.args
 	keyPath = RTA_getStringAtKeyPath(args, "keyPath")
-	result = processGetValueRequest(args)
-	if RTA_isErrorObject(result) then
-		return result
-	end if
-
-	if result.found <> true then
-		return RTA_buildErrorResponseObject("No value found at key path '" + keyPath + "'")
-	end if
-
-	resultValue = result.value
-	if NOT RTA_isKeyedValueType(resultValue) AND NOT RTA_isArray(resultValue) then
-		return RTA_buildErrorResponseObject("keyPath '" + keyPath + "' can not have a value assigned to it")
-	end if
-
 	field = args.field
 	if NOT RTA_isString(field) then
 		return RTA_buildErrorResponseObject("Missing valid 'field' param")
 	end if
 
-	nodeParent = resultValue
-
 	base = getBaseObject(args)
+	nodeParent = Invalid
+
 	if field = "" then
+		result = processGetValueRequest(args)
+		if RTA_isErrorObject(result) then
+			return result
+		end if
+		nodeParent = result.value
+
 		updateAA = args.value
 		if NOT RTA_isAA(updateAA) then
 			return RTA_buildErrorResponseObject("If field is empty, then value must be an AA")
 		end if
 	else
 		' Have to walk up the tree until we get to a node as anything that is a field on a node must be replaced
-		parentKeyPath = keyPath
-		parentKeyPathParts = parentKeyPath.tokenize(".").toArray()
+		nodeParentKeyPathParts = keyPath.tokenize(".").toArray()
 		setKeyPathParts = []
-		while NOT parentKeyPathParts.isEmpty()
-			nodeParent = RTA_getValueAtKeyPath(base, parentKeyPathParts.join("."))
+
+		while NOT nodeParentKeyPathParts.isEmpty()
+			nodeParent = RTA_getValueAtKeyPath(base, nodeParentKeyPathParts.join("."))
 			if RTA_isNode(nodeParent) then
 				exit while
 			else
-				setKeyPathParts.unshift(parentKeyPathParts.pop())
+				setKeyPathParts.unshift(nodeParentKeyPathParts.pop())
 			end if
 		end while
+
+		' If we got all the way to the top and still didn't have a node parent then we use the base as the node parent
+		if NOT RTA_isNode(nodeParent) then
+			nodeParent = base
+		end if
 
 		if setKeyPathParts.isEmpty() then
 			updateAA = RTA_createCaseSensitiveAA(field, args.value)
@@ -562,7 +575,8 @@ function calculateNodeCount(nodes) as Object
 	return result
 end function
 
-function processStoreNodeReferencesRequest(args as Object) as Object
+function processStoreNodeReferencesRequest(request as Object) as Object
+	args = request.args
 	nodeRefKey = args.nodeRefKey
 
 	includeArrayGridChildren = RTA_getBooleanAtKeyPath(args, "includeArrayGridChildren")
@@ -929,7 +943,8 @@ function buildTree(storedNodes as Object, flatTree as Object, node as Object, se
 	return nodeBranch
 end function
 
-function processDeleteNodeReferencesRequest(args as Object) as Object
+function processDeleteNodeReferencesRequest(request as Object) as Object
+	args = request.args
 	nodeRefKey = args.nodeRefKey
 	if NOT RTA_isString(nodeRefKey) then
 		return RTA_buildErrorResponseObject("Invalid value supplied for 'key' param")
@@ -939,7 +954,8 @@ function processDeleteNodeReferencesRequest(args as Object) as Object
 	return {}
 end function
 
-function processGetNodesWithPropertiesRequest(args as Object) as Object
+function processGetNodesWithPropertiesRequest(request as Object) as Object
+	args = request.args
 	nodeRefKey = args.nodeRefKey
 	if NOT RTA_isString(nodeRefKey) then
 		return RTA_buildErrorResponseObject("Invalid value supplied for 'nodeRefKey' param")
@@ -1062,7 +1078,8 @@ function compareValues(operator as String, a as Dynamic, b as Dynamic) as Intege
 	return result
 end function
 
-function processDisableScreenSaverRequest(args as Object) as Object
+function processDisableScreenSaverRequest(request as Object) as Object
+	args = request.args
 	if RTA_getBooleanAtKeyPath(args, "disableScreenSaver") then
 		if m.videoNode = Invalid then
 			m.videoNode = m.top.createChild("Video")
@@ -1077,7 +1094,8 @@ function processDisableScreenSaverRequest(args as Object) as Object
 	return {}
 end function
 
-function processStartResponsivenessTestingRequest(args as Object) as Object
+function processStartResponsivenessTestingRequest(request as Object) as Object
+	args = request.args
 	' Using 60 FPS as our baseline but timers work on a millisecond level so everything is a little bit off
 	defaultTickDuration = 16
 	m.responsivenessTestingTickDuration = RTA_getNumberAtKeyPath(args, "tickDuration", defaultTickDuration)
@@ -1117,7 +1135,7 @@ function processStartResponsivenessTestingRequest(args as Object) as Object
 	return {}
 end function
 
-function processStopResponsivenessTestingRequest(args as Object) as Object
+function processStopResponsivenessTestingRequest(request as Object) as Object
 	if m.responsivenessTestingTickTimer <> invalid then
 		m.responsivenessTestingTickTimer.control = "stop"
 		m.responsivenessTestingCurrentPeriodTimer.control = "stop"
@@ -1159,7 +1177,7 @@ sub onResponsivenessTestingCurrentPeriodTimerFire()
 	end while
 end sub
 
-function processGetResponsivenessTestingDataRequest(args as Object) as Object
+function processGetResponsivenessTestingDataRequest(request as Object) as Object
 	if m.responsivenessTestingData = invalid then
 		return RTA_buildErrorResponseObject("Responsiveness testing is not started. Be sure to call 'startResponsivenessTesting()' first")
 	end if
@@ -1183,7 +1201,8 @@ function processGetResponsivenessTestingDataRequest(args as Object) as Object
 	}
 end function
 
-function processFocusNodeRequest(args as Object) as Object
+function processFocusNodeRequest(request as Object) as Object
+	args = request.args
 	result = processGetValueRequest(args)
 	if RTA_isErrorObject(result) then
 		return result
@@ -1205,7 +1224,8 @@ function processFocusNodeRequest(args as Object) as Object
 	return {}
 end function
 
-function processRemoveNodeChildrenRequest(args as Object) as Object
+function processRemoveNodeChildrenRequest(request as Object) as Object
+	args = request.args
 	result = processGetValueRequest(args)
 	if RTA_isErrorObject(result) then
 		return result
@@ -1234,7 +1254,8 @@ function processRemoveNodeChildrenRequest(args as Object) as Object
 	return {}
 end function
 
-function processIsShowingOnScreenRequest(args) as Object
+function processIsShowingOnScreenRequest(request as Object) as Object
+	args = request.args
 	isShowing = true
 	isFullyShowing = false
 
@@ -1294,7 +1315,8 @@ function processIsShowingOnScreenRequest(args) as Object
 	}
 end function
 
-function processSetSettingsRequest(args) as Object
+function processSetSettingsRequest(request as Object) as Object
+	args = request.args
 	setLogLevel(RTA_getStringAtKeyPath(args, "logLevel"))
 
 	return {}

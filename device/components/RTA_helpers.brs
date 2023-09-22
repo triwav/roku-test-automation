@@ -531,27 +531,67 @@ end function
 ' * @return {Boolean} True if set successfully.
 ' */
 function RTA_setValueAtKeyPath(base as Object, keyPath as String, value as Dynamic) as Boolean
+	' We only allow setting on an AA or array as those are the only ones that should need this functionality
 	if NOT RTA_isAA(base) AND NOT RTA_isArray(base) then return false
 
-	level = base
 	keys = keyPath.tokenize(".")
-	while keys.count() > 1
+	level = base
+	nextLevelNeedsToBeCreated = false
+	previousKeyOrIndex = ""
+
+	while NOT keys.isEmpty()
+		' We use the key type to know what we're trying to do
 		key = keys.shift()
-		if RTA_isAA(level[key]) then
-			level = level[key]
-		else if RTA_isNonEmptyArray(level) then
-			key = key.toInt()
-			if key < 0 then
-				key = level.count() - key
+		index = key.toInt()
+		useIndex = (index <> 0 OR key = "0")
+
+		if nextLevelNeedsToBeCreated then
+			nextLevelNeedsToBeCreated = false
+			if useIndex then
+				level[previousKeyOrIndex] = []
+				level = level[previousKeyOrIndex]
+			else
+				level[previousKeyOrIndex] = {}
+				level = level[previousKeyOrIndex]
 			end if
-			level = level[key]
+		end if
+
+		previousKeyOrIndex = key
+
+		if useIndex then
+			' It's an array that we're trying to setup so use index
+			if index < 0 then
+				index = level.count() + index ' It's a negative number so we add it to subtract
+			end if
+			previousKeyOrIndex = index
+
+			if keys.isEmpty() then
+				' Go ahead and assign instead
+				level[index] = value
+			else
+				nextLevel = level[index]
+				if nextLevel <> Invalid then
+					level = nextLevel
+				else
+					nextLevelNeedsToBeCreated = true
+				end if
+			end if
 		else
-			level[key] = {}
+			' It's an AA that we're trying to setup so handle so use key
+			if keys.isEmpty() then
+				' Go ahead and assign instead
+				level[key] = value
+			else
+				nextLevel = level[key]
+				if nextLevel <> Invalid then
+					level = nextLevel
+				else
+					nextLevelNeedsToBeCreated = true
+				end if
+			end if
 		end if
 	end while
 
-	finalKey = keys.shift()
-	level[finalKey] = value
 	return true
 end function
 

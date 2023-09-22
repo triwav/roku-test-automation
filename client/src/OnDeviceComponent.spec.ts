@@ -793,10 +793,10 @@ describe('OnDeviceComponent', function () {
 			describe('boundingRect()', () => {
 				it('should work on node item', async () => {
 					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.boundingRect()' });
-					expect(value.height).to.equal(444);
-					expect(value.width).to.equal(1964);
-					expect(value.x).to.equal(128);
-					expect(value.y).to.equal(678);
+					expect(value.height).to.equal(430);
+					expect(value.width).to.equal(1950);
+					expect(value.x).to.equal(135);
+					expect(value.y).to.equal(685);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -808,10 +808,10 @@ describe('OnDeviceComponent', function () {
 			describe('localBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()' });
-					expect(value.height).to.equal(444);
-					expect(value.width).to.equal(1964);
-					expect(value.x).to.equal(-22);
-					expect(value.y).to.equal(-22);
+					expect(value.height).to.equal(430);
+					expect(value.width).to.equal(1950);
+					expect(value.x).to.equal(-15);
+					expect(value.y).to.equal(-15);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -823,10 +823,10 @@ describe('OnDeviceComponent', function () {
 			describe('sceneBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()' });
-					expect(value.height).to.equal(444);
-					expect(value.width).to.equal(1964);
-					expect(value.x).to.equal(128);
-					expect(value.y).to.equal(678);
+					expect(value.height).to.equal(430);
+					expect(value.width).to.equal(1950);
+					expect(value.x).to.equal(135);
+					expect(value.y).to.equal(685);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -1139,7 +1139,7 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
-	describe.only('isShowingOnScreen', function () {
+	describe('isShowingOnScreen', function () {
 		const baseKeyPath = '#temporaryNodesGroup';
 
 		afterEach(async function () {
@@ -1781,6 +1781,149 @@ describe('OnDeviceComponent', function () {
 			expect(lastNode.id).to.equal(nodeKey);
 		});
 
+		it('should work updating an array value', async () => {
+			const nodeKey = utils.addRandomPostfix('node');
+
+			const updateValue = utils.addRandomPostfix('first');
+
+			const sharedArgs = {
+				base: 'global' as const,
+				keyPath: 'arrayValue.0.name',
+			};
+			await odc.setValue({
+				...sharedArgs,
+				value: updateValue
+			});
+
+			const { value } = await odc.getValue(sharedArgs);
+			expect(value).to.equal(updateValue);
+		});
+
+		it('should still work if we are updating an array item as the last key', async () => {
+			const updateValue = { name: 'newLastItem' };
+			const sharedArgs = {
+				base: 'global' as const,
+				keyPath: 'arrayValue.-1',
+			};
+			await odc.setValue({
+				...sharedArgs,
+				value: updateValue
+			});
+
+			const { value } = await odc.getValue(sharedArgs);
+			expect(value.name).to.equal(updateValue.name);
+		});
+
+		it('should work if we are making a new aa value', async () => {
+			const updateValue = { name: 'newAAValue' };
+			const baseKeyPath = 'emptyAAValue';
+			const sharedArgs = {
+				base: 'global' as const,
+				keyPath: `${baseKeyPath}.test`,
+			};
+			await odc.setValue({
+				...sharedArgs,
+				value: updateValue
+			});
+
+			const { value } = await odc.getValue(sharedArgs);
+			expect(value.name).to.equal(updateValue.name);
+
+			await setAndVerifyValue({
+				base: 'global' as const,
+				keyPath: baseKeyPath,
+				value: {}
+			});
+		});
+
+
+		it('should work if we are adding multiple levels of a new aa value', async () => {
+			const updateValue = 'newAAValue';
+			const baseKeyPath = 'emptyAAValue';
+			const sharedArgs = {
+				base: 'global' as const,
+				keyPath: `${baseKeyPath}.test.name`,
+			};
+			await odc.setValue({
+				...sharedArgs,
+				value: updateValue
+			});
+
+			const { value } = await odc.getValue(sharedArgs);
+			expect(value).to.equal(updateValue);
+
+			await setAndVerifyValue({
+				base: 'global' as const,
+				keyPath: baseKeyPath,
+				value: {}
+			});
+		});
+
+		it('should work if we are adding multiple levels of a new aa value', async () => {
+			const updateValue = 'newAAValue';
+			const sharedArgs = {
+				base: 'global' as const,
+				keyPath: 'emptyAAValue.emptyAAValueemptyAAValuetest.name',
+			};
+			await odc.setValue({
+				...sharedArgs,
+				value: updateValue
+			});
+
+			const { value } = await odc.getValue(sharedArgs);
+			expect(value).to.equal(updateValue);
+
+			await setAndVerifyValue({
+				base: 'global' as const,
+				keyPath: 'emptyAAValue',
+				value: {}
+			});
+		});
+
+		it('should work if we are adding multiple levels of a new array value', async () => {
+			const updateValue = 'newArrayValue';
+			const baseKeyPath = 'emptyAAValue';
+			const sharedArgs = {
+				base: 'global' as const,
+				keyPath: `${baseKeyPath}.arrayTest.0.1`,
+			};
+			await odc.setValue({
+				...sharedArgs,
+				value: updateValue
+			});
+
+			const { value } = await odc.getValue(sharedArgs);
+			expect(value).to.equal(updateValue);
+
+			await setAndVerifyValue({
+				base: 'global' as const,
+				keyPath: baseKeyPath,
+				value: {}
+			});
+		});
+
+		it('should work if we are adding a new array value', async () => {
+			const updateValue = 'newArrayValue';
+			const baseKeyPath = 'emptyAAValue';
+			const sharedArgs = {
+				base: 'global' as const,
+				keyPath: `${baseKeyPath}.arrayTest.0`,
+			};
+			await odc.setValue({
+				...sharedArgs,
+				value: updateValue
+			});
+
+			const { value } = await odc.getValue(sharedArgs);
+			expect(value).to.equal(updateValue);
+
+			await setAndVerifyValue({
+				base: 'global' as const,
+				keyPath: baseKeyPath,
+				value: {}
+			});
+		});
+
 		it('properly strips non ascii input', async () => {
 			const expectedValue = 'I do not explode on unicode characters';
 			await odc.setValue({
@@ -2343,7 +2486,7 @@ describe('OnDeviceComponent', function () {
 		}
 		const { timeTaken } = await odc.setValue(args);
 		const { value: actualValue } = await odc.getValue(args);
-		expect(actualValue).to.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
+		expect(actualValue).to.deep.equal(args.value, `${args.base}.${args.keyPath} did not match expected value after set`);
 		expect(timeTaken).to.be.a('number', 'timeTaken was not a number when returned from setValue');
 	}
 });
