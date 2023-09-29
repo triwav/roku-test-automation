@@ -15,6 +15,7 @@ sub init()
 		"booleanValue": true
 		"stringValue": "stringValue"
 		"intValue": 1
+		"emptyAAValue": {}
 		"arrayValue": [{ "name": "firstItem" }, { "name": "secondItem" }, { "name": "lastItem" }]
 		"launchComplete": false
 	})
