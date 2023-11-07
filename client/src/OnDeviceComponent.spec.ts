@@ -884,8 +884,8 @@ describe('OnDeviceComponent', function () {
 		it('should include children to specified depth', async () => {
 			const { node } = await odc.getFocusedNode({ responseMaxChildDepth: 1 });
 			expect(node).to.be.ok;
-			expect(node!.children).to.not.be.empty;
-			for (const child of node!.children) {
+			expect(node?.children).to.not.be.empty;
+			for (const child of node?.children ?? []) {
 				// We only requested 1 so make sure it only returned a single level
 				expect(child.children).to.be.undefined;
 			}
@@ -1937,19 +1937,6 @@ describe('OnDeviceComponent', function () {
 			});
 			expect(value).to.equal(expectedValue);
 		});
-
-		it('Does not stack overflow if we receive a large number of requests at the same time', async () => {
-			const promises = [] as Promise<any>[];
-			for (let i = 0; i < 200; i++) {
-				const promise = odc.setValue({
-					base: 'global',
-					keyPath: 'intValue',
-					value: i
-				});
-				promises.push(promise);
-			}
-			await Promise.all(promises);
-		});
 	});
 
 	describe('onFieldChangeOnce', function () {
@@ -2476,6 +2463,21 @@ describe('OnDeviceComponent', function () {
 			expect(startTime).to.be.lessThan(currentTime);
 			expect(startTime).to.be.greaterThan(currentTime - 10 * 60 * 1000);
 			await odc.getApplicationStartTime();
+		});
+	});
+
+	describe('edgeCases', function () {
+		it('Does not stack overflow if we receive a large number of requests at the same time', async () => {
+			const promises = [] as Promise<any>[];
+			for (let i = 0; i < 200; i++) {
+				const promise = odc.setValue({
+					base: 'global',
+					keyPath: 'intValue',
+					value: i
+				});
+				promises.push(promise);
+			}
+			await Promise.all(promises);
 		});
 	});
 

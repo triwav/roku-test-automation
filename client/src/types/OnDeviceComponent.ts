@@ -107,7 +107,7 @@ export interface NodeRepresentation {
 		Operation: string;
 	};
 	childRenderOrder?: 'renderFirst' | 'renderLast';
-	children: NodeRepresentation[];
+	children?: NodeRepresentation[];
 	clippingRect?: [number, number, number, number];
 	enableRenderTracking?: boolean;
 	focusedChild: NodeRepresentation;
