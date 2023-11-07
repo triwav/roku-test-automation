@@ -1,5 +1,5 @@
 import type * as fsExtra from 'fs-extra';
-import * as path from 'path';
+import type * as path from 'path';
 import type * as Mocha from 'mocha';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
@@ -68,7 +68,7 @@ class Utils {
 	}
 
 	private getConfigFromConfigFileCore(configFilePath = 'rta-config.json', parentConfigPaths: string[] = []) {
-		configFilePath = path.resolve(configFilePath);
+		configFilePath = this.getPath().resolve(configFilePath);
 		let config: ConfigOptions;
 		try {
 			config = this.parseJsonFile(configFilePath);
@@ -78,7 +78,7 @@ class Utils {
 		parentConfigPaths.push(configFilePath);
 
 		if (config.extends) {
-			const baseConfigFilePath = path.resolve(config.extends);
+			const baseConfigFilePath = this.getPath().resolve(config.extends);
 			if (parentConfigPaths.includes(baseConfigFilePath)) {
 				throw new Error(`Circular dependency detected. '${baseConfigFilePath}' has already been included`);
 			}
