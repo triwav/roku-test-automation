@@ -1,0 +1,9 @@
+{
+	"rootDir": "../device",
+	"plugins": [ "@rokucommunity/bslint" ],
+	"files": [
+		"components/**/*.+(xml|brs)",
+		"source/**/*.+(brs)",
+		"manifest"
+	]
+}

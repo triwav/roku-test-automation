@@ -1,0 +1,216 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false,
+    "properties": {
+        "$schema": {
+            "description": "strictly for schema validation not used internally",
+            "type": "string"
+        },
+        "ECP": {
+            "additionalProperties": false,
+            "properties": {
+                "default": {
+                    "additionalProperties": false,
+                    "properties": {
+                        "keypressDelay": {
+                            "description": "The default keypressDelay to use if not provided at the call site",
+                            "type": "number"
+                        },
+                        "launchChannelId": {
+                            "description": "The default channel id to launch if one isn't passed in",
+                            "type": "string"
+                        }
+                    },
+                    "type": "object"
+                }
+            },
+            "type": "object"
+        },
+        "NetworkProxy": {
+            "additionalProperties": false,
+            "properties": {
+                "clientDebugLogging": {
+                    "description": "Enable debug logging on the client side",
+                    "type": "boolean"
+                },
+                "forwardProxy": {
+                    "description": "Useful for visually debugging issues. Use in the format like (http://127.0.0.1:8888). DOES NOT WORK WITH RELATIVE REDIRECTS IN CHARLES!!!",
+                    "type": "string"
+                },
+                "port": {
+                    "description": "What port the proxy will run on. If not provided will find one itself",
+                    "type": "number"
+                }
+            },
+            "type": "object"
+        },
+        "OnDeviceComponent": {
+            "additionalProperties": false,
+            "properties": {
+                "clientDebugLogging": {
+                    "description": "Enable debug logging on the client side",
+                    "type": "boolean"
+                },
+                "defaultBase": {
+                    "description": "Allows specifying the default base that will be used if one was not provided in the args for a request",
+                    "enum": [
+                        "focusedNode",
+                        "global",
+                        "nodeRef",
+                        "scene"
+                    ],
+                    "type": "string"
+                },
+                "disableCallOriginationLine": {
+                    "description": "We normally try to include the line that the actual ODC call originated from. When not used specifically for testing this isn't needed as much and has a small over head as we have to throw and exception to get the line",
+                    "type": "boolean"
+                },
+                "disableTelnet": {
+                    "description": "We normally pull the telnet logs if the request timed out. If the telnet connection is already in use then this just adds additional noise in the output",
+                    "type": "boolean"
+                },
+                "helperInjection": {
+                    "additionalProperties": false,
+                    "description": "Used to inject additional helpers to allow additional functionality",
+                    "properties": {
+                        "componentPaths": {
+                            "description": "List of paths to xml components to inject additional helpers into",
+                            "items": {
+                                "type": "string"
+                            },
+                            "type": "array"
+                        },
+                        "enabled": {
+                            "description": "Gives a simple way to enable to disable helper injection. Defaults to true",
+                            "type": "boolean"
+                        }
+                    },
+                    "required": [
+                        "componentPaths"
+                    ],
+                    "type": "object"
+                },
+                "logLevel": {
+                    "description": "Device side log output level",
+                    "enum": [
+                        "debug",
+                        "error",
+                        "info",
+                        "off",
+                        "verbose",
+                        "warn"
+                    ],
+                    "type": "string"
+                },
+                "restoreRegistry": {
+                    "description": "Before running any requests will pull the contents of the registry on the device and store it until ODC is shutdown.\nAt which point it will clear the registry completely and write back the stored registry values that were previously stored.",
+                    "type": "boolean"
+                },
+                "uiResolution": {
+                    "description": "The resolution we will use when specifying pixel values. If not specified defaults to `fhd`",
+                    "enum": [
+                        "fhd",
+                        "hd"
+                    ],
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "RokuDevice": {
+            "additionalProperties": false,
+            "properties": {
+                "deviceIndex": {
+                    "description": "zero based index of which `devices` index to use. If not provided defaults to 0",
+                    "type": "number"
+                },
+                "devices": {
+                    "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                            "defaultTimeout": {
+                                "description": "If not overridden at the call site how long to wait before assuming a request failed",
+                                "type": "number"
+                            },
+                            "host": {
+                                "description": "The IP address or hostname of the target Roku device.",
+                                "type": "string"
+                            },
+                            "password": {
+                                "description": "The password for logging in to the developer portal on the target Roku device",
+                                "type": "string"
+                            },
+                            "properties": {
+                                "description": "User defined list of properties for this device (name, isLowEnd, etc)",
+                                "properties": {
+                                },
+                                "type": "object"
+                            },
+                            "screenshotFormat": {
+                                "description": "Devices default to jpg but if you've changed to png you'll need so supply this",
+                                "enum": [
+                                    "jpg",
+                                    "png"
+                                ],
+                                "type": "string"
+                            },
+                            "timeoutMultiplier": {
+                                "description": "Multiplier applied to request timeouts for all requests including those with an explicit value. Can be used in combination with defaultTimeout",
+                                "type": "number"
+                            }
+                        },
+                        "required": [
+                            "host",
+                            "password"
+                        ],
+                        "type": "object"
+                    },
+                    "type": "array"
+                },
+                "proxy": {
+                    "description": "Useful for debugging port 80 and ECP communication between Roku and client. Use in the format like (127.0.0.1:8888).",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "devices"
+            ],
+            "type": "object"
+        },
+        "Suitest": {
+            "additionalProperties": false,
+            "properties": {
+                "appId": {
+                    "description": "AppId of the application we're retrieving tests from from Suitest",
+                    "type": "string"
+                },
+                "applicationPath": {
+                    "description": "Path to your application",
+                    "type": "string"
+                },
+                "tokenId": {
+                    "description": "TokenId for API access as supplied by Suitest",
+                    "type": "string"
+                },
+                "tokenPassword": {
+                    "description": "Token password for API access as supplied by Suitest",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "The version of the application we're retrieving for",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
+        "extends": {
+            "description": "Allows this config to extend another rta-config.json file",
+            "type": "string"
+        }
+    },
+    "required": [
+        "RokuDevice"
+    ],
+    "type": "object"
+}
+

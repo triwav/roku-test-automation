@@ -1,0 +1,30 @@
+{
+	"folders": [
+		{
+			"name": "device",
+			"path": "device"
+		},
+		{
+			"name": "testProject",
+			"path": "testProject"
+		},
+		{
+			"name": "client",
+			"path": "client"
+		},
+		{
+			"name": ".github",
+			"path": ".github"
+		}
+	],
+	"settings": {
+		"search.exclude": {
+			"**/dist": true,
+			"**/node_modules": true,
+			"**/coverage": true,
+			"**/release": true
+		},
+		"typescript.preferences.quoteStyle": "single",
+		"task.allowAutomaticTasks": "on"
+	}
+}

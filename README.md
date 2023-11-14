@@ -1,34 +1,62 @@
 # Roku Test Automation
 
-- [Roku Test Automation](#roku-test-automation)
-	- [Intro](#intro)
-	- [Integration](#integration)
-	- [Components](#components)
-		- [`ECP`](#ecp)
-		- [`OnDeviceComponent`](#ondevicecomponent)
-			- [`getValueAtKeyPath`](#getvalueatkeypath)
-			- [`getValuesAtKeyPaths`](#getvaluesatkeypaths)
-			- [`setValueAtKeyPath`](#setvalueatkeypath)
-			- [`callFunc`](#callfunc)
-			- [`getFocusedNode`](#getfocusednode)
-			- [`hasFocus`](#hasfocus)
-			- [`isInFocusChain`](#isinfocuschain)
-			- [`observeField`](#observefield)
-			- [`readRegistry`](#readregistry)
-			- [`writeRegistry`](#writeregistry)
-			- [`deleteRegistrySections`](#deleteregistrysections)
-			- [`deleteEntireRegistry`](#deleteentireregistry)
-		- [`RokuDevice`](#rokudevice)
-		- [`NetworkProxy`](#networkproxy)
-		- [`utils`](#utils)
-			- [`setupEnvironmentFromConfigFile`](#setupenvironmentfromconfigfile)
-			- [`getMatchingDevices`](#getmatchingdevices)
-			- [`addRandomPostfix`](#addrandompostfix)
-			- [`sleep`](#sleep)
+- [Intro](#intro)
+- [v2.0 Changes](#v20-changes)
+- [Integration](#integration)
+- [Components](#components)
+  - [`ECP`](#ecp)
+  - [`OnDeviceComponent`](#ondevicecomponent)
+    - [`getValue`](#getvalue)
+    - [`getValues`](#getvalues)
+    - [`getNodesInfo`](#getnodesinfo)
+    - [`setValue`](#setvalue)
+    - [`callFunc`](#callfunc)
+    - [`getFocusedNode`](#getfocusednode)
+    - [`hasFocus`](#hasfocus)
+    - [`isInFocusChain`](#isinfocuschain)
+    - [`onFieldChangeOnce`](#onfieldchangeonce)
+    - [`getNodesWithProperties`](#getnodeswithproperties)
+    - [`getAllCount`](#getallcount)
+    - [`getRootsCount`](#getrootscount)
+    - [`storeNodeReferences`](#storenodereferences)
+    - [`deleteNodeReferences`](#deletenodereferences)
+    - [`disableScreenSaver`](#disablescreensaver)
+    - [`readRegistry`](#readregistry)
+    - [`writeRegistry`](#writeregistry)
+    - [`deleteRegistrySections`](#deleteregistrysections)
+    - [`deleteEntireRegistry`](#deleteentireregistry)
+  - [`RokuDevice`](#rokudevice)
+  - [`NetworkProxy`](#networkproxy)
+  - [`utils`](#utils)
+    - [`setupEnvironmentFromConfigFile`](#setupenvironmentfromconfigfile)
+    - [`getMatchingDevices`](#getmatchingdevices)
+    - [`addRandomPostfix`](#addrandompostfix)
+    - [`sleep`](#sleep)
 
 ## Intro
 
 Roku Test Automation (RTA from here on out) helps with automating functional tests for Roku devices. It has quite a bit more capabilities than [Roku's first party option](https://developer.roku.com/docs/developer-program/dev-tools/automated-channel-testing/automated-testing-overview.md) and does not require a Go server in the middle to convert ECP commands.
+
+## v2.0 Changes
+
+Some incompatibility changes were made in v2.0. These include:
+
+- Use of `AtKeyPath` was removed from all functions to shorten function call length
+- `observeField()` has been renamed to `onFieldChangeOnce()`
+- The default base has been changed from `global` to `scene`. A config value `defaultBase` has been added to the `OnDeviceComponent` config to allow switching this
+- `getFocusedNode()` now returns an object like all the ODC commands other than `hasFocus()` and `isInFocusChain()`
+- While never documented or designed to be used externally, the `getNodeReferences()` function was removed and replaced with `getNodesInfo`
+- `callFunc()` will no longer automatically inject an `invalid` param if a `params` array was not provided.
+- `getValues()` now returns each result inside a `results` object to avoid potential variable collision
+- In v1.0 server was used to refer to the computer connecting to the Roku device. This is now the client and config settings related to this has been changed to reflect this
+- `ECPKeys` was renamed to `Key` and its cases were switched from upper case to pascal case and `OPTIONS` is now `Option`
+- `keyPress` was renamed to `keypress`
+- `key` param for key path requests has been renamed to `nodeRefKey` for easier autocomplete and more clarity
+- `RequestTypes` and `BaseTypes` have been renamed to `RequestType` and `BaseType`
+- `NodeTree` has been renamed to `TreeNode`
+- In an effort to provide clarity and to avoid shadowing cases, keys in key paths using a findNode selector will need to include a `#` leading character. As an example if you were trying to descend into the first child and then find a child node with an id of `poster` you will now need to have a keyPath of `0.#poster`. If you wanted to access the `uri` field though, that would not include the `#` character since you are accessing a field and the key path would be `0.#poster.uri`
+
+v2.0 also includes changing to using TCP sockets for all communication which should simplify setup communicating with Roku devices not on the same local network.
 
 ## Integration
 
@@ -50,27 +78,27 @@ Currently the only necessary part of the config is at least one device host and 
 
 ```json
 {
-	"$schema": "https://raw.githubusercontent.com/triwav/roku-test-automation/master/server/rta-config.schema.json",
-	"RokuDevice": {
-		"devices": [
-			{
-				"host": "",
-				"password": ""
-			}
-		]
-	},
-	"ECP": {
-		"default": {
-			"launchChannelId": "dev"
-		}
-	},
-	"OnDeviceComponent": {
-		"logLevel": "info"
-	}
+  "$schema": "https://raw.githubusercontent.com/triwav/roku-test-automation/master/client/rta-config.schema.json",
+  "RokuDevice": {
+    "devices": [
+      {
+        "host": "",
+        "password": ""
+      }
+    ]
+  },
+  "ECP": {
+    "default": {
+      "launchChannelId": "dev"
+    }
+  },
+  "OnDeviceComponent": {
+    "logLevel": "info"
+  }
 }
 ```
 
-save that wherever you store config files for your project. Since device host and passwords are specific to you, you should likely also add it to your `.gitignore` file.
+RTA by default looks for `./rta-config.json` so saving it there is the easiest way to use it. Since device host and passwords are specific to you, you should likely also add it to your `.gitignore` file. If you have settings you want stored in the repo then you can make a base config like and use the `extends` key in main config to pull in the keys from the other file.
 
 To keep a single config file and aid in running multiple tests at once, RTA reads its config from the environment variable `process.env.rtaConfig`. For a basic setup you can use the helper
 
@@ -84,8 +112,8 @@ If you're going to use the `OnDeviceComponent` then there are a number of files 
 
 ```json
 {
-	"src": ["${workspaceFolder}/node_modules/roku-test-automation/dist/device/**/*"],
-	"dest": "/"
+  "src": ["${workspaceFolder}/node_modules/roku-test-automation/dist/device/**/*"],
+  "dest": "/"
 }
 ```
 
@@ -107,6 +135,11 @@ RTA contains most of the standard ECP commands including:
 - Getting the current active app
 - Getting the media player
 
+In addition, with the recent requirement for login and logout scripts, the following methods have been added:  
+`startRaspFileCreation`  
+`finishRaspFileCreation`  
+and a copy of [`utils.sleep`](#sleep) that also includes a pause in your rasp file.
+
 ---
 
 ### `OnDeviceComponent`
@@ -117,76 +150,153 @@ The core piece of RTA is the OnDeviceComponent. It functions similarly to [Roku'
 m.odc = createObject("RTA_OnDeviceComponent")
 ```
 
-Once setup you can send requests to the device to either kick off an event or check whether the expected outcome occurred or both. The following is list of all current request types:
+Once setup you can send requests to the device to either kick off an event or check whether the expected outcome occurred or both. The following is a list of all current request types:
 
-#### `getValueAtKeyPath`
+#### `getValue`
 
-> getValueAtKeyPath(args: [ODCGetValueAtKeyPathArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L35), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {found: boolean, value}
+> getValue(args: [ODC.GetValueArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {found: boolean, value}
 
-At the heart of almost all requests internally is `getValueAtKeyPath`. It serves as your entry point from which you execute other requests but can also be used by itself to return a requested value. `args` takes two properties:
+At the heart of almost all requests internally is `getValue`. It serves as your entry point from which you execute other requests but can also be used by itself to return a requested value. `args` takes two properties:
 
--   `base?: string` can be either `global` or `scene`. If not supplied it defaults to `global`
--   `keyPath: string` builds off of the base and supplies the path to what you are interested in getting the value for. A simple example might be something like `AuthManager.isLoggedIn` which would let you check if a user is logged in or not. It can operate on much more than just keyed type fields though.
+- `base?: string` can be either `global`, `scene`, `nodeRef` or `focusedNode`. If not supplied it defaults to `global`
+- `keyPath?: string` builds off of the base and supplies the path to what you are interested in getting the value for. A simple example might be something like `AuthManager.isLoggedIn` which would let you check if a user is logged in or not. It can operate on much more than just keyed type fields though.
 
-Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.idOfChildNodeToInspect`. The [`getValueAtKeyPath` unit tests](https://github.com/triwav/roku-test-automation/blob/master/server/src/OnDeviceComponent.spec.ts#L14) provide a full list of what is possible for a key path.
+Array's can access index positions `array.0.id`. Nodes can access their children `node.0.id` as well as find nodes with a given id `node.#idOfChildNodeToInspect`. The [`getValue` unit tests](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provide a full list of what is possible for a key path.
 
 ```ts
-odc.getValueAtKeyPath({
-	base: 'scene',
-	keyPath: 'AuthManager.isLoggedIn',
+await odc.getValue({
+  base: 'global',
+  keyPath: 'AuthManager.isLoggedIn',
 });
 ```
 
-#### `getValuesAtKeyPaths`
+**NOTE** as of v2.0 `keyPath` can also call a number of the Roku Brightscript interface functions on the appropriately typed objects. Currently these include:
 
-> getValuesAtKeyPaths(args: [ODCGetValuesAtKeyPathsArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L40), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {[key: string], found: boolean}
+- getParent()
+- count()
+- keys()
+- len()
+- getChildCount()
+- threadinfo()
+- getFieldTypes()
+- subtype()
+- boundingRect()
+- localBoundingRect()
+- sceneBoundingRect()
 
-`getValuesAtKeyPaths` allows you to retrieve multiple values with a single request. It takes one property for `args`:
+as an example:
 
--   `requests`: `object` A list of the individual `getValueAtKeyPath` args with a user supplied key that will be returned as the same key for the output object.
+```ts
+await odc.getValue({
+  keyPath: '#rowList.boundingRect()',
+});
+```
 
-The [`getValuesAtKeyPaths` unit test](https://github.com/triwav/roku-test-automation/blob/master/server/src/OnDeviceComponent.spec.ts#L70) provides an example of its usage
+As of v2.0 you can now access ArrayGrid children. To do this, we have added two special keywords in the keyPath: `items` and `title`. These don't actually exist at runtime, but RTA understands how to translate them into the proper lookup mechanisms on-device.
 
-#### `setValueAtKeyPath`
+Here's an example showing how to access the 3rd item component in the second row:
 
-> setValueAtKeyPath(args: [ODCSetValueAtKeyPathArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L76), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {}
+```ts
+await odc.getValue({
+  keyPath: '#rowList.1.items.2',
+});
+```
+
+Notice the special keyword `items` to identify we are accessing an item.
+
+If you wanted to access the `title` component for the second row, you would do:
+
+```ts
+await odc.getValue({
+  keyPath: '#rowList.1.title',
+});
+```
+
+Again notice the special keyword `title` to identify we are accessing a title component.
+
+For other single level ArrayGrid types like MarkupGrid you can simply do:
+
+```ts
+await odc.getValue({
+  keyPath: '#markupGrid.1',
+});
+```
+
+This would retrieve the second item component in the grid.
+
+In addition as of v2.0 `keyPath` is no longer required if just accessing the base node
+
+#### `getValues`
+
+> getValues(args: [ODC.GetValuesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetValuesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {results: {[key: string]: {found: boolean; value?: any; }}, timeTaken: number}
+
+`getValues` allows you to retrieve multiple values with a single request. It takes one property for `args`:
+
+- `requests`: `object` A list of the individual `getValue` args with a user supplied key that will be returned as the same key for the output results object.
+
+The [`getValues` unit test](./client/src/OnDeviceComponent.spec.ts#:~:text=%27getValue%27%2C%20function) provides an example of its usage
+
+#### `getNodesInfo`
+
+> getNodesInfo(args: [ODC.GetNodesInfoArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetNodesInfoArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): results: {[key: string]: {
+					subtype: string;
+					fields: {
+						[key: string]: {
+							fieldType: string;
+							type: string;
+							value: any;
+						}
+					};
+					children: {
+						subtype: string;
+					}[]
+				}
+			}
+
+Sometimes it may be necessary to know the type of a field on a node. This is primarily used by the vscode extension for the SceneGraph Inspector but may be useful for external use as well.
+
+#### `setValue`
+
+> setValue(args: [ODC.SetValueArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20SetValueArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
 
 Allows you to set a value at a key path. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
--   `value: any` The value you want to set at the supplied `keyPath`. Setting is always done through [`update(value, true)`](https://developer.roku.com/docs/references/brightscript/interfaces/ifsgnodechildren.md#updatefields-as-roassociativearray-as-void) so anything you can do there should be possible here as well.
+- `value: any` The value you want to set at the supplied `keyPath`. Setting is always done through [`update(value, true)`](https://developer.roku.com/en-ca/docs/references/brightscript/interfaces/ifsgnodechildren.md#updatefields-as-roassociativearray-addfields-as-boolean-as-void) so anything you can do there should be possible here as well.
 
 ```ts
-odc.setValueAtKeyPath({
-	base: 'scene',
-	keyPath: 'AuthManager.isLoggedIn',
-	value: false,
+await odc.setValue({
+  base: 'global',
+  keyPath: 'AuthManager.isLoggedIn',
+  value: false,
 });
 ```
 
 #### `callFunc`
 
-> callFunc(args: [ODCCallFuncArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L25), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {value}
+> callFunc(args: [ODC.CallFuncArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20CallFuncArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {value: any, timeTaken: number}
 
 Allows you to run [`callFunc`](https://developer.roku.com/en-gb/docs/developer-program/core-concepts/handling-application-events.md#functional-fields) on a node. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
--   `funcName: string` the name of the interface function that you want to run
--   `funcParams?: any[]` an array of params to pass to the function.
--   `allowWithoutArgs?: boolean` if `true` and no `funcParams` are passed, the function will be called without injecting the placeholder `Invalid` argument.
+- `funcName: string` the name of the interface function that you want to run
+- `funcParams?: any[]` an array of params to pass to the function.
 
 ```ts
-odc.callFunc({
-	base: 'scene',
-	keyPath: 'AuthManager',
-	funcName: 'login',
-	funcParams: [{ username: 'AzureDiamond', password: 'hunter2' }],
+await odc.callFunc({
+  base: 'global',
+  keyPath: 'AuthManager',
+  funcName: 'login',
+  funcParams: [{ username: 'AzureDiamond', password: 'hunter2' }],
 });
 ```
 
 #### `getFocusedNode`
 
-> getFocusedNode(args: [ODCGetFocusedNodeArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L33), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): ODCNodeRepresentation
+> getFocusedNode(args: [ODC.GetFocusedNodeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetFocusedNodeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {node?: NodeRepresentation, ref?: number, keyPath?: string, timeTaken: number}
 
-Gets the currently focused node. `args` is currently empty but is still included for standardization and future expansion options.
+Gets the currently focused node. `args` includes the following:
+
+- `includeRef?: boolean` returns `ref` field in response that can be matched up with `storeNodeReferences` response for determining where we are in the node tree. Be sure to call storeNodeReferences first.
+- `key: string` Key that the references were stored on. If one isn't provided we use the automatically generated one
 
 ```ts
 let focusedNode = await odc.getFocusedNode();
@@ -194,35 +304,34 @@ let focusedNode = await odc.getFocusedNode();
 
 #### `hasFocus`
 
-> hasFocus(args: [ODCHasFocusArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L51), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): boolean
+> hasFocus(args: [ODC.HasFocusArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20HasFocusArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): boolean
 
 Check if the node at the supplied key path has focus or not. It takes the standard `base` and `keyPath` properties.
 
 #### `isInFocusChain`
 
-> isInFocusChain(args: [ODCIsInFocusChainArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L56), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): boolean
+> isInFocusChain(args: [ODC.IsInFocusChainArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20IsInFocusChainArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): boolean
 
 Check if the node at the supplied key path is in the focus chain. It takes the standard `base` and `keyPath` properties.
 
 ```ts
 const isBtnInFocusChain = await odc.isInFocusChain({
-	base: 'scene',
-	keyPath: 'Home.mainButton',
+  keyPath: '#homePage.#mainButton',
 });
 ```
 
-#### `observeField`
+#### `onFieldChangeOnce`
 
-> observeField(args: [ODCObserveFieldArgs](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L63), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {observerFired: boolean, value}
+> onFieldChangeOnce(args: [ODC.OnFieldChangeOnceArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20OnFieldChangeOnceArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {observerFired: boolean, value}
 
-Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use observeField to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
+Instead of having to do an arbitrary delay or polling repeatedly for a field to match an expected value, you can use `onFieldChangeOnce` to setup an observer and be notified when the value changes. It takes the standard `base` and `keyPath` properties along with the following for `args`:
 
--   `match?: any | {base, keyPath, value}`
+- `match?: any | {base, keyPath, value}`
 
-Sometimes when you are observing a field you don't just want the first change. You're looking for a specific value. In this case you can pass the value you're looking for the match like:
+Sometimes when you are observing a field you don't just want the first change. If you're looking for a specific value you can pass it for the match like:
 
 ```ts
-await odc.observeField({ keyPath: 'AuthManager.isLoggedIn', match: true });
+await odc.onFieldChangeOnce({ keyPath: 'AuthManager.isLoggedIn', match: true });
 ```
 
 In this case, `base` and `keyPath` for match are the same as those for the base level args. It's even more powerful than that though. You can also supply an object where the value your matching against actually comes from a totally different node than the one being observed.
@@ -230,43 +339,119 @@ In this case, `base` and `keyPath` for match are the same as those for the base 
 One note, to simplify writing tests, if `match` is supplied and the value already matches it will not setup an observer but will just return right away. Without this you'd have to write something like:
 
 ```ts
-const observePromise = odc.observeField(...);
-await odc.setValueAtKeyPath(...);
-const result = await observePromise;
+const onFieldChangeOncePromise = odc.onFieldChangeOnce(...);
+await odc.setValue(...);
+const result = await onFieldChangeOncePromise;
 ```
 
 to avoid a race condition that the value already changed by the time you setup your observer. Instead you can write your test like:
 
 ```ts
-await odc.setValueAtKeyPath(...);
-const result = await odc.observeField(...);
+await odc.setValue(...);
+const result = await odc.onFieldChangeOnce(...);
 ```
 
-to help distinguish if the observer actually fired the property `observerFired` is returned in the response object.
+to help distinguish if the observer actually fired the property `observerFired` is returned in the response object
+
+#### `getNodesWithProperties`
+
+> getNodesWithProperties(args: [ODC.GetNodesWithPropertiesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20OnGetNodesWithPropertiesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {nodes: ODC.NodeRepresentation[], nodeRefs, number[]}
+
+If you are trying to find a node but are unsure of where it is in the tree you can use `getNodesWithProperties`. As an example, let's say you wanted to find all nodes with the a text field with the value of `Play Movie` you could do:
+
+```ts
+const result = await odc.getNodesWithProperties({
+  properties: [{
+    value: 'Play Movie',
+    field: 'text'
+  }]
+});
+```
+
+You'll notice that `properties` is an array. If more than object is provided then each check will be done one after the other. Only nodes that match all properties will be returned.
+
+By default an equal to check is performed. Let's take the previous case and say we wanted to match anything that contains `Play` in its text field we could do:
+
+```ts
+const result = await odc.getNodesWithProperties({
+  properties: [{
+    value: 'Play',
+    operator: 'in',
+    field: 'text'
+  }]
+});
+```
+
+There are number of comparison operators that can be used:
+'=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo'
+
+**NOTE** Not all comparison types can be used on all types. For example `>=` can only be used on number types.
+
+#### `getAllCount`
+
+> getAllCount(args: [ODC.GetAllCountArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetAllCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {totalNodes: number, nodeCountByType: {[key: string]: number}, timeTaken: number}
+
+Returns both the total number of nodes as returned by `getAll()` on the field `totalNodes` as well as the total count of each node subtype on the field `nodeCountByType`.
+
+#### `getRootsCount`
+
+> getRootsCount(args: [ODC.GetRootsCountArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetRootsCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {totalNodes: number, nodeCountByType: {[key: string]: number}, timeTaken: number}
+
+Returns both the total number of nodes as returned by `getRoots()` on the field `totalNodes` as well as the total count of each node subtype on the field `nodeCountByType`.
+
+#### `storeNodeReferences`
+
+> storeNodeReferences(args: [ODC.StoreNodeReferencesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20StoreNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): [StoreNodeReferencesResponse](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20StoreNodeReferencesResponse)
+
+Creates a list of nodes in the currently running application by traversing the node tree. The returned node indexes can then be used as the base for other functions such as [getValue](#getvalue)
+
+#### `deleteNodeReferences`
+
+> deleteNodeReferences(args: [ODC.DeleteNodeReferencesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DeleteNodeReferencesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Deletes the list of nodes previously stored by [storeNodeReferences](#storenodereferences) on the specified key
 
 #### `readRegistry`
 
-> readRegistry(args: [ODCReadRegistryArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L90), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84)): {values: { [section: string]: {[sectionItemKey: string]: string}}}
+> readRegistry(args: [ODC.ReadRegistryArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20ReadRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {values: { [section: string]: {[sectionItemKey: string]: string}}}
 
 Allows for reading from the registry. If no specific sections are requested then it will return the entire contents of the registry.
 
 #### `writeRegistry`
 
-> writeRegistry(args: [ODCWriteRegistryArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L96), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84))
+> writeRegistry(args: [ODC.WriteRegistryArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20WriteRegistryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions))
 
 Allows for writing to the registry. If `null` is passed for a sectionItemKey that key will be deleted. If `null` is passed for a section that entire section will be deleted.
 
 #### `deleteRegistrySections`
 
-> deleteRegistrySections(args: [ODCDeleteRegistrySectionsArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L102), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84))
+> deleteRegistrySections(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions))
 
 Allows for deleting sections from the registry. Similar functionality can be achieved with `writeRegistry` passing null sections but helps to make it clearer if a mixed model isn't needed.
 
 #### `deleteEntireRegistry`
 
-> deleteEntireRegistry(args: [ODCDeleteRegistrySectionsArgs](https://github.com/triwav/roku-test-automation/blob/3dad049dac6e17b278a873341757dd296011d213/server/src/types/OnDeviceComponentRequest.ts#L108), options: [ODCRequestOptions](https://github.com/triwav/roku-test-automation/blob/master/server/src/types/OnDeviceComponentRequest.ts#L84))
+> deleteEntireRegistry(args: [ODC.DeleteRegistrySectionsArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DeleteRegistrySectionsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions))
 
 Provides a way to clear out all sections in registry. Uses `deleteRegistrySections` under the hood but makes it clearer what is being done.
+
+#### `removeNodeChildren`
+
+> removeNodeChildren(args: [ODC.RemoveNodeChildrenArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%RemoveNodeChildrenArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Allows removing children of the node at the specified key path
+
+#### `getApplicationStartTime`
+
+> getApplicationStartTime(args: [ODC.GetApplicationStartTimeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%GetApplicationStartTimeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {startTime: number, timeTaken: number}
+
+Gives access to Roku's [roAppManager.getUptime()](https://developer.roku.com/en-gb/docs/references/brightscript/interfaces/ifappmanager.md#getuptime-as-object) to allow a highly accurate time since application load that can be useful in performance tests.
+
+#### `disableScreenSaver`
+
+> disableScreenSaver(args: [ODC.DisableScreensaverArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DisableScreensaverArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Allows for disabling the screen saver in the application. While the screen saver is running communication between the on device component and server is not possible. This can help avoid these issues.
 
 ---
 
@@ -280,17 +465,17 @@ Serves as the middle man for ECP requests and provides access to some of the cap
 
 This class serves as a wrapper around the [http-network-proxy](https://www.npmjs.com/package/http-network-proxy) npm module. It is still in active development and will change some as testing shows necessary changes. At it's core the idea is to be able to take a [Charles](https://www.charlesproxy.com/) config file and use those same rules in your tests. The following methods are exposed:
 
--   `start(configFilePath: string = 'charlesRewrite.xml')` - sets up the proxy, loads the provided config in and writes to the device's registry to get it ready to proxy requests.
--   `stop()` - Used to shutdown the proxy port when you no longer want to proxy. Also sends an ODC request to the device
--   `reloadConfig(configFilePath: string = 'charlesRewrite.xml')` - Gives the ability to reload the config without having to stop and restart the entire proxy
--   `addBreakPointListener(onProxyRequestCallback: OnProxyRequestCallback)` - Allows you add a callback that will be called for every breakpoint Charles would have run into
--   `observeRequest(url: string, onProxyResponseCallback: OnProxyResponseCallback)` - Provides a simplified way of receiving a callback when a url is accessed without needing to create a Charles config file for that case.
+- `start(configFilePath: string = 'charlesRewrite.xml')` - sets up the proxy, loads the provided config in and writes to the device's registry to get it ready to proxy requests.
+- `stop()` - Used to shutdown the proxy port when you no longer want to proxy. Also sends an ODC request to the device
+- `reloadConfig(configFilePath: string = 'charlesRewrite.xml')` - Gives the ability to reload the config without having to stop and restart the entire proxy
+- `addBreakPointListener(onProxyRequestCallback: OnProxyRequestCallback)` - Allows you add a callback that will be called for every breakpoint Charles would have run into
+- `observeRequest(url: string, onProxyResponseCallback: OnProxyResponseCallback)` - Provides a simplified way of receiving a callback when a url is accessed without needing to create a Charles config file for that case.
 
 ---
 
 ### `utils`
 
-Contains a number of helpers that are mostly used internally but may also be of externally. [Be sure to checkout the file for a full list](https://github.com/triwav/roku-test-automation/blob/master/server/src/utils.ts). Below are few of the most useful ones for external use:
+Contains a number of helpers that are mostly used internally but may also be of externally. [Be sure to checkout the file for a full list](./client/src/utils.ts). Below are few of the most useful ones for external use:
 
 #### `setupEnvironmentFromConfigFile`
 
@@ -316,13 +501,13 @@ If you're wanting to run multiple tests at the same time then this helper is use
 
 > addRandomPostfix(message: string, length: number = 2)): string
 
-A lot of times with that tests it's useful to to append something to it to make sure a string is unique.
+A lot of times with tests it's useful to to append something to it to make sure a string is unique for each run/test.
 
 #### `sleep`
 
 > sleep(milliseconds: number)
 
-While doing arbitrary waiting is almost never needed thanks to `observeField`, there might be some use cases for this.
+While doing arbitrary waiting is almost never needed thanks to [`onFieldChangeOnce`](#onFieldChangeOnce), there might be some use cases for this.
 
 ```ts
 import { utils } from 'roku-test-automation';

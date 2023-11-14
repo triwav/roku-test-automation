@@ -1,9 +1,12 @@
 sub init()
+	m.testingGetGlobalAA = "yup it works"
 	#if ENABLE_RTA
 		m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
+	#else
+		' vscode_rdb_on_device_component_entry
 	#end if
 
-	m.top.pagesContainer = m.top.findNode("pagesContainer")
+	m.top.pagesContainer = m.top.findNode("pagesContainerGroup")
 
 	m.poster = m.top.findNode("poster")
 
@@ -12,6 +15,7 @@ sub init()
 		"booleanValue": true
 		"stringValue": "stringValue"
 		"intValue": 1
+		"emptyAAValue": {}
 		"arrayValue": [{ "name": "firstItem" }, { "name": "secondItem" }, { "name": "lastItem" }]
 		"launchComplete": false
 	})
@@ -34,5 +38,5 @@ function multiplyNumbers(a as Dynamic, b as Dynamic) as Dynamic
 end function
 
 function setPosterUrl(url as String) as Dynamic
-	m.poster.uri = RTA_injectProxy(url)
+	m.poster.uri = injectProxy(url)
 end function

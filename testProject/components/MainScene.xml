@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <component name="MainScene" extends="Scene">
 	<script type="text/brightscript" uri="MainScene.brs" />
-	<script type="text/brightscript" uri="RTA_common.brs" />
 	<script type="text/brightscript" uri="pkg:/source/common.brs" />
-	<script type="text/brightscript" uri="pkg:/source/RTA_helpers.brs" />
 	<interface>
 		<field id="pagesContainer" type="node" />
 		<function name="multiplyNumbers" />
@@ -11,6 +9,9 @@
 	</interface>
 	<children>
 		<Poster id="poster" />
-		<Group id="pagesContainer" />
+		<Rectangle id="invisibleRect" width="1920" height="1080" color="#FF0000" visible="false" />
+		<Animation id="animation" />
+		<Group id="temporaryNodesGroup" />
+		<Group id="pagesContainerGroup" />
 	</children>
 </component>

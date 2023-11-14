@@ -8,3 +8,4 @@ out
 tsconfig.tsbuildinfo
 release
 requestArgs.schema.json
+requestTypes.schema.json

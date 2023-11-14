@@ -1,0 +1,100 @@
+{
+    "name": "roku-test-automation",
+    "version": "2.0.0-beta.22",
+    "description": "Helps with automating functional tests",
+    "main": "client/dist/index.js",
+    "typings": "client/dist/index.d.ts",
+    "scripts": {
+        "build": "rm -f tsconfig.tsbuildinfo && rimraf dist && tsc",
+        "test": "npm run build && nyc mocha ./dist/ECP.spec.js ./dist/utils.spec.js",
+        "lint": "eslint \"./src/**/*.ts\"",
+        "test:device": "npm run build && mocha dist/RokuDevice.spec.js dist/OnDeviceComponent.spec.js",
+        "test:all": "npm run build && mocha dist/**/*.spec.js",
+        "buildConfigSchema": "typescript-json-schema src/types/ConfigOptions.ts ConfigOptions --out rta-config.schema.json --noExtraProps --refs false --required --ignoreErrors",
+        "buildRequestTypesSchema": "typescript-json-schema src/types/OnDeviceComponent.ts RequestType --out requestTypes.schema.json --ignoreErrors",
+        "buildRequestArgsSchema": "typescript-json-schema src/types/OnDeviceComponent.ts RequestArgs --propOrder --out requestArgs.schema.json --ignoreErrors",
+        "buildRelease": "npx ts-node scripts/buildRelease.ts",
+        "buildRelease:beta": "npx ts-node scripts/buildRelease.ts --beta",
+        "buildRelease:dev": "npx ts-node scripts/buildRelease.ts --dev",
+        "increment:beta": "npm version prerelease"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/triwav/roku-test-automation.git"
+    },
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/triwav/roku-test-automation/issues"
+    },
+    "homepage": "https://github.com/triwav/roku-test-automation#readme",
+    "dependencies": {
+        "@suitest/types": "^4.6.0",
+        "ajv": "^6.12.6",
+        "fs-extra": "^7.0.1",
+        "http-network-proxy": "^1.0.11",
+        "needle": "^2.9.1",
+        "path": "^0.12.7",
+        "roku-deploy": "^3.10.2"
+    },
+    "devDependencies": {
+        "@rokucommunity/bslint": "^0.7.3",
+        "@types/chai": "^4.3.0",
+        "@types/chai-arrays": "^2.0.0",
+        "@types/fs-extra": "^5.0.1",
+        "@types/mocha": "^8.2.3",
+        "@types/needle": "^2.5.2",
+        "@types/node": "^13.13.52",
+        "@types/sinon": "^7.5.2",
+        "@types/xmljs": "^0.3.2",
+        "@typescript-eslint/eslint-plugin": "^5.22.0",
+        "@typescript-eslint/parser": "^5.22.0",
+        "brighterscript": "^0.46.0",
+        "chai": "^4.3.4",
+        "chai-arrays": "^2.2.0",
+        "eslint": "^8.14.0",
+        "mocha": "^10.2.0",
+        "nyc": "^14.1.1",
+        "rimraf": "^2.7.1",
+        "sinon": "^7.2.3",
+        "source-map-support": "^0.5.21",
+        "ts-node": "^8.8.2",
+        "typescript": "^4.5.5",
+        "typescript-json-schema": "^0.42.0",
+        "wtfnode": "^0.8.4"
+    },
+    "nyc": {
+        "include": [
+            "dist/**/!(*.spec).js"
+        ],
+        "exclude": [
+            "dist/test/**/*"
+        ],
+        "extension": [
+            ".js"
+        ],
+        "require": [
+            "source-map-support/register"
+        ],
+        "reporter": [
+            "text-summary",
+            "html"
+        ],
+        "sourceMap": true,
+        "instrument": true,
+        "check-coverage": true,
+        "lines": 100,
+        "statements": 100,
+        "functions": 100,
+        "branches": 100
+    },
+    "mocha": {
+        "timeout": 72000,
+        "require": [
+            "source-map-support/register"
+        ],
+        "file": [
+            "./dist/test/include.js"
+        ]
+    }
+}

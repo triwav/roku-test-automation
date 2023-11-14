@@ -1,0 +1,25 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [{
+			"name": "Debug Non-Device Tests",
+			"type": "node",
+			"request": "launch",
+			"cwd": "${workspaceFolder}",
+			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"args": ["--bail", "./dist/ECP.spec.js", "./dist/utils.spec.js"],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		}, {
+			"name": "Debug Device Tests",
+			"type": "node",
+			"request": "launch",
+			"cwd": "${workspaceFolder}",
+			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"args": ["--grep", "\\[SLOW\\]", "--invert", "./dist/OnDeviceComponent.spec.js", "./dist/RokuDevice.spec.js", "./dist/NetworkProxy.spec.js"], // "--bail"
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+		}]
+}

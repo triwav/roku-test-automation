@@ -1,0 +1,34 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "brightscript",
+			"request": "launch",
+			"name": "Deploy",
+			"retainStagingFolder": true,
+			"envFile": "${workspaceFolder}/.env",
+			"host": "${env:LAUNCH_HOST_OVERRIDE}",
+			"password": "${env:ROKU_PASSWORD}",
+			"internalConsoleOptions": "neverOpen",
+			"logLevel": "error",
+			"stopDebuggerOnAppExit": true,
+			"injectRaleTrackerTask": false,
+			"injectRdbOnDeviceComponent": true,
+			"bsConst": {
+				"ENABLE_RTA": true
+			}
+		}, {
+			"type": "node",
+			"request": "launch",
+			"name": "Run Tests",
+			"cwd": "${workspaceFolder}",
+			"preLaunchTask": "compile-automated-tests",
+			"program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+			"args": ["./dist/automatedTests/**/*.spec.js"],
+			"console": "integratedTerminal",
+			"internalConsoleOptions": "neverOpen"
+	}]
+}

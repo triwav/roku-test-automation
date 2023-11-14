@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "compile-automated-tests",
+			"type": "npm",
+			"script": "automatedTests:compile",
+			"problemMatcher": []
+		}
+	]
+}

@@ -13,7 +13,7 @@ describe('Login', async function () {
 		// Select email button
 		await ecp.sendKeyPress(ecp.Key.OK);
 
-		await ecp.sendText('bfleighty@gmail.com')
+		await ecp.sendText('bob@hotmail.com')
 
 		// Navigate down to OK button and click it
 		await ecp.sendKeyPressSequence([
