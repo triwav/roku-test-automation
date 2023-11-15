@@ -1,0 +1,15 @@
+{
+    "$schema": "https://raw.githubusercontent.com/triwav/roku-test-automation/master/client/rta-config.schema.json",
+    "RokuDevice": {
+        "devices": [
+            {
+                "host": "192.168.10.193",
+                "password": "aaaa",
+                "properties": {
+                    "name": "RTA 1"
+                }
+            }
+        ],
+        "deviceIndex": 0
+    }
+}
