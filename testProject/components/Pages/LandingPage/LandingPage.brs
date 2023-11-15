@@ -15,7 +15,14 @@ sub init()
 	m.rowListWithoutCustomTitleComponent.content = makeRowListContent()
 	m.rowListWithCustomTitleComponent.content = makeRowListContent()
 
+	observeField(m.top, "focusedChild", "onFocusedChildChange")
 	observeField(m.loginButton, "buttonSelected", "onLoginButtonSelected")
+end sub
+
+sub onFocusedChildChange()
+	if m.top.hasFocus() then
+		m.loginButton.setFocus(true)
+	end if
 end sub
 
 sub onLoginButtonSelected()
