@@ -1,4 +1,4 @@
-import { ecp, odc, utils } from 'roku-test-automation';
+import { ecp, odc, utils } from 'rOku-test-automation';
 import { waitForApplicationLoad } from './common';
 import * as chai from 'chai';
 const expect = chai.expect;
@@ -8,48 +8,52 @@ describe('Login', async function () {
 		await waitForApplicationLoad()
 
 		// Select login button
-		await ecp.sendKeyPress(ecp.Key.OK);
+		await ecp.sendKeypress(ecp.Key.Ok);
 
 		// Select email button
-		await ecp.sendKeyPress(ecp.Key.OK);
+		await ecp.sendKeypress(ecp.Key.Ok);
 
 		await ecp.sendText('bob@hotmail.com')
 
-		// Navigate down to OK button and click it
-		await ecp.sendKeyPressSequence([
-			ecp.Key.DOWN,
-			ecp.Key.DOWN,
-			ecp.Key.DOWN,
-			ecp.Key.DOWN,
-			ecp.Key.OK
+		// Navigate Down to Ok button and click it
+		await ecp.sendKeypressSequence([
+			ecp.Key.Down,
+			ecp.Key.Down,
+			ecp.Key.Down,
+			ecp.Key.Down,
+			ecp.Key.Ok
 		])
 
-		// Navigate down to password button and click it
-		await ecp.sendKeyPressSequence([
-			ecp.Key.DOWN,
-			ecp.Key.OK
+		// Navigate Down to password button and click it
+		await ecp.sendKeypressSequence([
+			ecp.Key.Down,
+			ecp.Key.Ok
 		])
 
 		await ecp.sendText('12345678')
 
-		// Navigate down to OK button and click it
-		await ecp.sendKeyPressSequence([
-			ecp.Key.DOWN,
-			ecp.Key.DOWN,
-			ecp.Key.DOWN,
-			ecp.Key.DOWN,
-			ecp.Key.OK
+		// Navigate Down to Ok button and click it
+		await ecp.sendKeypressSequence([
+			ecp.Key.Down,
+			ecp.Key.Down,
+			ecp.Key.Down,
+			ecp.Key.Down,
+			ecp.Key.Ok
 		])
 
-		// Navigate down to submit button and click it
-		await ecp.sendKeyPressSequence([
-			ecp.Key.DOWN,
-			ecp.Key.OK
+		// Navigate Down to submit button and click it
+		await ecp.sendKeypressSequence([
+			ecp.Key.Down,
+			ecp.Key.Ok
 		])
 
-		await odc.observeField({keyPath: 'AuthManager.isLoggedIn', match: true});
-		const node = await odc.getFocusedNode()
-		expect(node.id).to.equal('rowList');
-		expect(node.subtype).to.equal('RowList');
+		await odc.onFieldChangeOnce({
+			base: 'global',
+			keyPath: 'AuthManager.isLoggedIn',
+			match: true
+		});
+		const {node} = await odc.getFocusedNode()
+		expect(node?.id).to.equal('rowList');
+		expect(node?.subtype).to.equal('RowList');
 	});
 });
