@@ -331,7 +331,7 @@ function RTA_callBrightscriptInterfaceFunction(keyPathPart as string, callOn as 
 	end if
 	numCharacters = closingParenthesisPosition - (openingParenthesisPosition + 2)
 	functionParams = mid(keyPathPart, openingParenthesisPosition + 2, numCharacters).tokenize(",")
-	print "functionParams" functionParams
+
 	if functionName = "getParent" then
 		if RTA_isNode(callOn) then
 			return callOn.getParent()
