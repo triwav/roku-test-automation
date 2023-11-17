@@ -322,20 +322,29 @@ end function
 ' * @param {Object} key - Key of the function the user is asking us to call
 ' * @param {Dynamic} level - The variable we are calling the function call on
 ' */
-function RTA_callBrightscriptInterfaceFunction(functionName as string, callOn as Dynamic) as Dynamic
-	if functionName = "getParent()" then
+function RTA_callBrightscriptInterfaceFunction(keyPathPart as string, callOn as Dynamic, openingParenthesisPosition) as Dynamic
+	functionName = left(keyPathPart, openingParenthesisPosition)
+	closingParenthesisPosition = keyPathPart.len()
+	if mid(keyPathPart, closingParenthesisPosition) <> ")" then
+		RTA_logWarn("Could not find closing parenthesis" + keyPathPart)
+		return Invalid
+	end if
+	numCharacters = closingParenthesisPosition - (openingParenthesisPosition + 2)
+	functionParams = mid(keyPathPart, openingParenthesisPosition + 2, numCharacters).tokenize(",")
+	print "functionParams" functionParams
+	if functionName = "getParent" then
 		if RTA_isNode(callOn) then
 			return callOn.getParent()
 		else
 			RTA_logWarn("tried to call getParent() on non node of type " + type(callOn))
 		end if
-	else if functionName = "count()" then
+	else if functionName = "count" then
 		if RTA_isArray(callOn) OR RTA_isKeyedValueType(callOn) then
 			return callOn.count()
 		else
 			RTA_logWarn("tried to call count() on non AA or array of type " + type(callOn))
 		end if
-	else if functionName = "keys()" then
+	else if functionName = "keys" then
 		if RTA_isNode(callOn) then
 			return callOn.keys().toArray() ' keys() returns an roList when called on a node. We have to convert to array as all of our array checks are specifically looking for an array
 		else if RTA_isAA(callOn) then
@@ -343,53 +352,59 @@ function RTA_callBrightscriptInterfaceFunction(functionName as string, callOn as
 		else
 			RTA_logWarn("tried to call keys() on non keyed value of type " + type(callOn))
 		end if
-	else if functionName = "len()" then
+	else if functionName = "len" then
 		if RTA_isString(callOn) then
 			return callOn.len()
 		else
 			RTA_logWarn("tried to call len() on non string of type " + type(callOn))
 		end if
-	else if functionName = "getChildCount()" then
+	else if functionName = "getChildCount" then
 		if RTA_isNode(callOn) then
 			return callOn.getChildCount()
 		else
 			RTA_logWarn("tried to call getChildCount() on non node of type " + type(callOn))
 		end if
-	else if functionName = "threadinfo()" then
+	else if functionName = "threadinfo" then
 		if RTA_isNode(callOn) then
 			return callOn.threadinfo()
 		else
 			RTA_logWarn("tried to call threadinfo() on non node of type " + type(callOn))
 		end if
-	else if functionName = "getFieldTypes()" then
+	else if functionName = "getFieldTypes" then
 		if RTA_isNode(callOn) then
 			return callOn.getFieldTypes()
 		else
 			RTA_logWarn("tried to call getFieldTypes() on non node of type " + type(callOn))
 		end if
-	else if functionName = "subtype()" then
+	else if functionName = "subtype" then
 		if RTA_isNode(callOn) then
 			return callOn.subtype()
 		else
 			RTA_logWarn("tried to call subtype() on non node of type " + type(callOn))
 		end if
-	else if functionName = "boundingRect()" then
+	else if functionName = "boundingRect" then
 		if RTA_isNode(callOn) then
 			return callOn.boundingRect()
 		else
 			RTA_logWarn("tried to call boundingRect() on non node of type " + type(callOn))
 		end if
-	else if functionName = "localBoundingRect()" then
+	else if functionName = "localBoundingRect" then
 		if RTA_isNode(callOn) then
 			return callOn.localBoundingRect()
 		else
 			RTA_logWarn("tried to call localBoundingRect() on non node of type " + type(callOn))
 		end if
-	else if functionName = "sceneBoundingRect()" then
+	else if functionName = "sceneBoundingRect" then
 		if RTA_isNode(callOn) then
 			return callOn.sceneBoundingRect()
 		else
-			RTA_logWarn("tried to call sceneBoundingRect() on non node of type " + type(callOn))
+			RTA_logWarn("tried to call sceneBoundingRect on non node of type " + type(callOn))
+		end if
+	else if functionName = "sceneSubBoundingRect" then
+		if RTA_isNode(callOn) then
+			return callOn.sceneSubBoundingRect(functionParams[0])
+		else
+			RTA_logWarn("tried to call sceneBoundingRect on non node of type " + type(callOn))
 		end if
 	else
 		RTA_logWarn("tried to call unknown function" + functionName)
@@ -416,8 +431,9 @@ function RTA_getValueAtKeyPath(base as Object, keyPath as String, fallback = Inv
 	while NOT keys.isEmpty()
 		key = keys.shift()
 		' Check for any Brightscript interface function calls
-		if key.Instr("()") > 0 then
-			level = RTA_callBrightscriptInterfaceFunction(key, level)
+		openingParenthesisPosition = key.Instr("(")
+		if openingParenthesisPosition > 0 then
+			level = RTA_callBrightscriptInterfaceFunction(key, level, openingParenthesisPosition)
 		else if RTA_isKeyedValueType(level) then
 			nextLevel = level[key]
 			if nextLevel = Invalid AND RTA_isNode(level) then

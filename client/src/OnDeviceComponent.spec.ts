@@ -742,14 +742,14 @@ describe('OnDeviceComponent', function () {
 						backExitsScene: 'boolean',
 						backgroundColor: 'color',
 						backgroundUri: 'uri',
-						change: 'string',
-						childRenderOrder: 'string',
+						change: 'std::type_index',
+						childRenderOrder: 'std::type_index',
 						clippingRect: 'rect2d',
-						currentDesignResolution: 'std::shared_ptr<std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::any, std::less<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::any> > > >',
-						dialog: 'std::shared_ptr<Roku::SceneGraph::DialogBase>',
+						currentDesignResolution: 'std::type_index',
+						dialog: 'std::type_index',
 						enableRenderTracking: 'boolean',
 						focusable: 'boolean',
-						focusedChild: 'node',
+						focusedChild: 'std::type_index',
 						id: 'string',
 						inheritParentOpacity: 'boolean',
 						inheritParentTransform: 'boolean',
@@ -757,9 +757,9 @@ describe('OnDeviceComponent', function () {
 						muteAudioGuide: 'boolean',
 						opacity: 'float',
 						pagesContainer: 'node',
-						palette: 'std::shared_ptr<Roku::SceneGraph::RSGPalette>',
+						palette: 'std::type_index',
 						renderPass: 'integer',
-						renderTracking: 'string',
+						renderTracking: 'std::type_index',
 						rotation: 'float',
 						scale: 'vector2d',
 						scaleRotateCenter: 'vector2d',
@@ -831,6 +831,21 @@ describe('OnDeviceComponent', function () {
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
 					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.sceneBoundingRect()' });
+					expect(found).to.false;
+				});
+			});
+
+			describe('sceneSubBoundingRect()', () => {
+				it('should work on node item', async () => {
+					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.sceneSubBoundingRect(item1_1)' });
+					expect(value.height).to.equal(150);
+					expect(value.width).to.equal(300);
+					expect(value.x).to.equal(480);
+					expect(value.y).to.equal(936);
+				});
+
+				it('should gracefully fallback if called on nonsupported type', async () => {
+					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.sceneSubBoundingRect(item0_1)()' });
 					expect(found).to.false;
 				});
 			});
