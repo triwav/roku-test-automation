@@ -321,8 +321,9 @@ end function
 ' * @description Helper for RTA_getValueAtKeyPath to break out
 ' * @param {Object} key - Key of the function the user is asking us to call
 ' * @param {Dynamic} level - The variable we are calling the function call on
+' * @param {Integer} openingParenthesisPosition - Where the opening paranthesis are located in keyPathPart
 ' */
-function RTA_callBrightscriptInterfaceFunction(keyPathPart as string, callOn as Dynamic, openingParenthesisPosition) as Dynamic
+function RTA_callBrightscriptInterfaceFunction(keyPathPart as string, callOn as Dynamic, openingParenthesisPosition as Integer) as Dynamic
 	functionName = left(keyPathPart, openingParenthesisPosition)
 	closingParenthesisPosition = keyPathPart.len()
 	if mid(keyPathPart, closingParenthesisPosition) <> ")" then
