@@ -1,4 +1,4 @@
-import { ecp, odc, utils } from 'rOku-test-automation';
+import { ecp, odc, utils } from 'roku-test-automation';
 import { waitForApplicationLoad } from './common';
 import * as chai from 'chai';
 const expect = chai.expect;
