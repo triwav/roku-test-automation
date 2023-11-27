@@ -147,7 +147,7 @@ and a copy of [`utils.sleep`](#sleep) that also includes a pause in your rasp fi
 The core piece of RTA is the OnDeviceComponent. It functions similarly to [Roku's RALE](https://devtools.web.roku.com/roku-advanced-layout-editor/) in that you have a component that is initialized on the device as used in the testProject [here](https://github.com/triwav/roku-test-automation/blob/master/testProject/components/MainScene.brs#L4).
 
 ```vb
-m.odc = createObject("RTA_OnDeviceComponent")
+m.odc = createObject("roSGNode", "RTA_OnDeviceComponent")
 ```
 
 Once setup you can send requests to the device to either kick off an event or check whether the expected outcome occurred or both. The following is a list of all current request types:
