@@ -1,3 +1,4 @@
+import type { HttpRequestOptions} from './RokuDevice';
 import { RokuDevice } from './RokuDevice';
 import type { ActiveAppResponse } from './types/ActiveAppResponse';
 import type { ConfigOptions } from './types/ConfigOptions';
@@ -157,14 +158,15 @@ export class ECP {
 		channelId = '',
 		params = {},
 		verifyLaunch = true,
-		verifyLaunchTimeOut = 3000
+		verifyLaunchTimeOut = 3000,
+		options = {} as HttpRequestOptions
 	} = {}) {
 		channelId = this.getChannelId(channelId);
 
 		// We always append a param as if none is passed and the application is already running it will not restart the application
 		params['RTA_LAUNCH'] = 1;
 
-		await this.device.sendEcpPost(`launch/${channelId}`, params);
+		await this.device.sendEcpPost(`launch/${channelId}`, params, undefined, options);
 		if (verifyLaunch) {
 			const startTime = new Date();
 			while (new Date().valueOf() - startTime.valueOf() < verifyLaunchTimeOut) {
@@ -181,13 +183,14 @@ export class ECP {
 
 	// Helper for sending a /input request to the device that can be handled via roInput
 	public async sendInput({
-		params = {}
+		params = {},
+		options = {} as HttpRequestOptions
 	} = {}) {
-		await this.device.sendEcpPost(`input`, params);
+		await this.device.sendEcpPost(`input`, params, undefined, options);
 	}
 
-	public async getActiveApp() {
-		const result = await this.device.sendEcpGet(`query/active-app`);
+	public async getActiveApp(options: HttpRequestOptions = {}) {
+		const result = await this.device.sendEcpGet(`query/active-app`, undefined, options);
 		const children = result.body?.children;
 		if (!children) throw this.utils.makeError('getActiveAppInvalidResponse', 'Received invalid active-app response from device');
 
@@ -212,13 +215,13 @@ export class ECP {
 		return channelId;
 	}
 
-	public async isActiveApp(channelId?: string) {
-		const result = await this.getActiveApp();
+	public async isActiveApp(channelId?: string, options: HttpRequestOptions = {}) {
+		const result = await this.getActiveApp(options);
 		return result.app?.id === this.getChannelId(channelId);
 	}
 
-	public async getMediaPlayer() {
-		const result = await this.device.sendEcpGet(`query/media-player`);
+	public async getMediaPlayer(options: HttpRequestOptions = {}) {
+		const result = await this.device.sendEcpGet(`query/media-player`, undefined, options);
 		const player = result.body;
 		if (!player) throw this.utils.makeError('getMediaPlayerInvalidResponse', 'Received invalid media-player response from device');
 
@@ -244,8 +247,8 @@ export class ECP {
 		return response;
 	}
 
-	public async getChanperf() {
-		const {body} = await this.device.sendEcpGet(`query/chanperf`);
+	public async getChanperf(options: HttpRequestOptions = {}) {
+		const {body} = await this.device.sendEcpGet(`query/chanperf`, undefined, options);
 
 		const response = this.simplifyEcpResponse(body);
 		const plugin = response.plugin;

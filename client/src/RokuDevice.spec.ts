@@ -25,11 +25,35 @@ describe('RokuDevice', function () {
 			sinon.stub((device as any), 'needle').callsFake((method, url, data, options?) => {
 				expect(url).to.contain(querystring.build(params));
 			});
+
 			const params = {
 				contentId: 'contentIdValue',
 				mediaType: 'special'
 			};
 			await device.sendEcpPost('launch/dev', params);
+		});
+
+		it('should retry the specified number of times requested', async () => {
+			const stub = sinon.stub((device as any), 'needle').callsFake((method, url, data, options?) => {
+				throw new Error('Socket hang up');
+			});
+
+			const params = {
+				contentId: 'contentIdValue',
+				mediaType: 'special'
+			};
+
+			const retryCount = 5;
+			try {
+				await device.sendEcpPost('launch/dev', params, undefined, {
+					retryCount: retryCount
+				});
+			} catch(e) {
+				expect(stub.callCount).to.equal(retryCount);
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
 		});
 	});
 

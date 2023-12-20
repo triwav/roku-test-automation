@@ -1,5 +1,4 @@
 import type { Socket } from 'net';
-import type * as ODC from './OnDeviceComponent';
 
 export enum RequestType {
 	callFunc = 'callFunc',
@@ -398,5 +397,5 @@ export interface GetApplicationStartTimeArgs {}
 export interface GetServerHostArgs {}
 
 export interface SetSettingsArgs {
-	logLevel: ODC.LogLevels;
+	logLevel: LogLevels;
 }

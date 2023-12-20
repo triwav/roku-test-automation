@@ -8,6 +8,11 @@ import * as net from 'net';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 
+export interface HttpRequestOptions {
+	/** How many times to retry the request before throwing an error. Defaults to 3 if not specified */
+	retryCount?: number;
+}
+
 export class RokuDevice {
 	public deployed = false;
 	private config?: ConfigOptions;
@@ -102,26 +107,40 @@ export class RokuDevice {
 		return updatedContents;
 	}
 
-	public sendEcpPost(path: string, params = {}, body: needle.BodyData = ''): Promise<needle.NeedleResponse> {
-		return this.sendEcp(path, params, body);
+	public sendEcpPost(path: string, params = {}, body: needle.BodyData = '', options: HttpRequestOptions = {}): Promise<needle.NeedleResponse> {
+		return this.sendEcp(path, params, body, options);
 	}
 
-	public sendEcpGet(path: string, params = {}): Promise<needle.NeedleResponse> {
-		return this.sendEcp(path, params);
+	public sendEcpGet(path: string, params = {}, options: HttpRequestOptions = {}): Promise<needle.NeedleResponse> {
+		return this.sendEcp(path, params, undefined, options);
 	}
 
-	private sendEcp(path: string, params = {}, body?: needle.BodyData): Promise<needle.NeedleResponse> {
+	private async sendEcp(path: string, params = {}, body?: needle.BodyData, options: HttpRequestOptions = {}): Promise<needle.NeedleResponse> {
 		let url = `http://${this.getCurrentDeviceConfig().host}:8060/${path}`;
+		let retryCount = options.retryCount;
+		if (retryCount === undefined) {
+			retryCount = 3;
+		}
 
 		if (params && Object.keys(params).length) {
 			url = url.replace(/\?.*|$/, '?' + querystring.build(params));
 		}
 
-		if (body !== undefined) {
-			return this.needle('post', url, body, this.getOptions());
-		} else {
-			return this.needle('get', url, this.getOptions());
+		try {
+			if (body !== undefined) {
+				return await this.needle('post', url, body, this.getNeedleOptions());
+			} else {
+				return await this.needle('get', url, this.getNeedleOptions());
+			}
+		} catch (e) {
+			if ((retryCount - 1) > 0) {
+				this.debugLog(`ECP request to ${url} failed. Retrying.`);
+				// Want to delay retry slightly
+				await utils.sleep(50);
+				return this.sendEcp(path, params, body, {...options, retryCount: retryCount - 1});
+			}
 		}
+		throw utils.makeError('sendEcpError', `ECP request to ${url} failed and no retries left`);
 	}
 
 	/**
@@ -187,14 +206,14 @@ export class RokuDevice {
 			archive: '',
 			mysubmit: 'Screenshot'
 		};
-		const options = this.getOptions(true);
+		const options = this.getNeedleOptions(true);
 		options.multipart = true;
 		return await this.needle('post', url, data, options);
 	}
 
 	private async saveScreenshot(outputFilePath?: string) {
 		const deviceConfig = this.getCurrentDeviceConfig();
-		const options = this.getOptions(true);
+		const options = this.getNeedleOptions(true);
 
 		let ext = deviceConfig.screenshotFormat ?? 'jpg';
 		if (outputFilePath) {
@@ -231,7 +250,7 @@ export class RokuDevice {
 		};
 	}
 
-	private getOptions(requiresAuth = false) {
+	private getNeedleOptions(requiresAuth = false) {
 		const options: needle.NeedleOptions = {};
 		if (requiresAuth) {
 			options.username = 'rokudev';
@@ -241,5 +260,11 @@ export class RokuDevice {
 
 		options.proxy = this.getConfig().proxy;
 		return options;
+	}
+
+	private debugLog(message: string, ...args) {
+		if (this.getConfig()?.clientDebugLogging) {
+			console.log(`[NetworkProxy] ${message}`, ...args);
+		}
 	}
 }
