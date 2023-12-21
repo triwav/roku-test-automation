@@ -1,6 +1,7 @@
 {
     "$schema": "./rta-config.schema.json",
     "RokuDevice": {
+        "clientDebugLogging": false,
         "devices": []
     },
     "OnDeviceComponent": {

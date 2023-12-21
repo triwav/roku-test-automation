@@ -120,6 +120,10 @@
         "RokuDevice": {
             "additionalProperties": false,
             "properties": {
+                "clientDebugLogging": {
+                    "description": "Enable debug logging on the client side",
+                    "type": "boolean"
+                },
                 "deviceIndex": {
                     "description": "zero based index of which `devices` index to use. If not provided defaults to 0",
                     "type": "number"

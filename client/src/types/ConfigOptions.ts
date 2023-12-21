@@ -19,6 +19,9 @@ export interface ConfigOptions {
 }
 
 export interface RokuDeviceConfigOptions {
+	/** Enable debug logging on the client side */
+	clientDebugLogging?: boolean;
+
 	devices: DeviceConfigOptions[];
 
 	/** zero based index of which `devices` index to use. If not provided defaults to 0 */
