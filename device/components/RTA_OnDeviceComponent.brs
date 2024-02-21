@@ -549,11 +549,11 @@ function processSetValueRequest(request as Object) as Object
 	return {}
 end function
 
-function processGetAllCountRequest(args as Object) as Object
+function processGetAllCountRequest(_args as Object) as Object
 	return calculateNodeCount(m.top.getAll())
 end function
 
-function processGetRootsCountRequest(args as Object) as Object
+function processGetRootsCountRequest(_args as Object) as Object
 	return calculateNodeCount(m.top.getRoots())
 end function
 
@@ -1135,7 +1135,7 @@ function processStartResponsivenessTestingRequest(request as Object) as Object
 	return {}
 end function
 
-function processStopResponsivenessTestingRequest(request as Object) as Object
+function processStopResponsivenessTestingRequest(_request as Object) as Object
 	if m.responsivenessTestingTickTimer <> invalid then
 		m.responsivenessTestingTickTimer.control = "stop"
 		m.responsivenessTestingCurrentPeriodTimer.control = "stop"
@@ -1177,7 +1177,7 @@ sub onResponsivenessTestingCurrentPeriodTimerFire()
 	end while
 end sub
 
-function processGetResponsivenessTestingDataRequest(request as Object) as Object
+function processGetResponsivenessTestingDataRequest(_request as Object) as Object
 	if m.responsivenessTestingData = invalid then
 		return RTA_buildErrorResponseObject("Responsiveness testing is not started. Be sure to call 'startResponsivenessTesting()' first")
 	end if
