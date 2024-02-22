@@ -306,6 +306,7 @@ export interface WriteFileArgs extends Path {
 // rename to ComparableValueType in v3
 export type ComparableValueTypes = string | number | boolean;
 
+// rename to ComparisonOperator in v3
 export type ComparisonOperators = '=' | '!=' | '>' | '>=' | '<' | '<=' | 'in' | '!in' | 'equal' | 'notEqual' | 'greaterThan' | 'greaterThanEqualTo' | 'lessThan' | 'lessThanEqualTo';
 
 interface NodeComparison {
