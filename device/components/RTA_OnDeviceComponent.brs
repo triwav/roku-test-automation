@@ -553,7 +553,7 @@ function processGetAllCountRequest(_args as Object) as Object
 	return calculateNodeCount(m.top.getAll())
 end function
 
-function processGetRootsCountRequest(_args as Object) as Object
+function processGetRootsCountRequest(_request as Object) as Object
 	return calculateNodeCount(m.top.getRoots())
 end function
 
