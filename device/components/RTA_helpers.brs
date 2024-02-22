@@ -424,7 +424,7 @@ end function
 ' */
 function RTA_getValueAtKeyPath(base as Object, keyPath as String, fallback = Invalid as Dynamic, validator = RTA_isNotInvalid as Function) as Dynamic
 	if NOT RTA_isKeyedValueType(base) AND NOT RTA_isNonEmptyArray(base) then return fallback
-	if keyPath = "" then return fallback
+	if keyPath = "" then return base
 
 	keys = keyPath.tokenize(".")
 	level = base
