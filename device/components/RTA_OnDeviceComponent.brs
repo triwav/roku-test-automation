@@ -549,7 +549,7 @@ function processSetValueRequest(request as Object) as Object
 	return {}
 end function
 
-function processGetAllCountRequest(_args as Object) as Object
+function processGetAllCountRequest(_request as Object) as Object
 	return calculateNodeCount(m.top.getAll())
 end function
 
