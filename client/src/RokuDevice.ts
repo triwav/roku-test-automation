@@ -41,25 +41,30 @@ export class RokuDevice {
 		return configSection.devices[configSection.deviceIndex ?? 0];
 	}
 
-	public async deploy(options?: rokuDeploy.RokuDeployOptions & {
+    public async deploy(options?: rokuDeploy.RokuDeployOptions & {
 		injectTestingFiles?: boolean;
 		preventMultipleDeployments?: boolean;
-		deleteBeforeInstall?: boolean;
+		deleteBeforeInstall?: boolean; // Remove in v3
+	}, beforeZipCallback?: (info: rokuDeploy.BeforeZipCallbackInfo) => void) {
+		options = rokuDeploy.getOptions(options);
+		if (options.deleteInstalledChannel || options.deleteBeforeInstall) {
+            try {
+                await rokuDeploy.deleteInstalledChannel(options);
+            } catch (e) {
+                // note we don't report the error; as we don't actually care that we could not deploy - it's just useless noise to log it.
+            }
+        }
+        await this.createPackage(options, beforeZipCallback);
+        const result = await this.publish(options);
+		this.deployed = true;
+        return result;
+    }
+
+	public async createPackage(options?: rokuDeploy.RokuDeployOptions & {
+		injectTestingFiles?: boolean;
 	}, beforeZipCallback?: (info: rokuDeploy.BeforeZipCallbackInfo) => void) {
 		const injectTestingFiles = options?.injectTestingFiles !== false;
-
-		const deviceConfig = this.getCurrentDeviceConfig();
 		options = rokuDeploy.getOptions(options);
-		options.host = deviceConfig.host;
-		options.password = deviceConfig.password;
-
-		if (options.deleteBeforeInstall) {
-			try {
-				await rokuDeploy.deleteInstalledChannel(options);
-			} catch (e) {}
-		} else if (options?.preventMultipleDeployments !== false) {
-			if (this.deployed) return;
-		}
 
 		if (injectTestingFiles) {
 			const files = options.files ?? [];
@@ -70,7 +75,7 @@ export class RokuDevice {
 			options.files = files;
 		}
 
-		await rokuDeploy.deploy(options, (info) => {
+		await rokuDeploy.createPackage(options, (info) => {
 			// Manifest modification
 			const manifestPath = `${info.stagingDir}/manifest`;
 			const manifestContents = fsExtra.readFileSync(manifestPath, 'utf-8').replace('ENABLE_RTA=false', 'ENABLE_RTA=true');
@@ -90,8 +95,20 @@ export class RokuDevice {
 				beforeZipCallback(info);
 			}
 		});
-		this.deployed = true;
 	}
+
+	public async publish(options?: rokuDeploy.RokuDeployOptions) {
+		const deviceConfig = this.getCurrentDeviceConfig();
+		options = rokuDeploy.getOptions(options);
+		options.host = deviceConfig.host;
+		options.password = deviceConfig.password;
+
+		return await rokuDeploy.publish(options);
+	}
+
+	public getOutputZipFilePath(options: rokuDeploy.RokuDeployOptions) {
+		return rokuDeploy.getOutputZipFilePath(options);
+    }
 
 	private injectRtaHelpersIntoComponentContents(contents: string) {
 		// Find the position where we close the interface

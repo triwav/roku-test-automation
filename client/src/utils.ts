@@ -122,7 +122,7 @@ class Utils {
 	/** Helper for setting up process.env from a config file */
 	public setupEnvironmentFromConfigFile(configFilePath = 'rta-config.json', deviceSelector: Record<string, any> | number | undefined = undefined) {
 		const config = this.getConfigFromConfigFile(configFilePath);
-		this.setupEnvironmentFromConfig(config);
+		this.setupEnvironmentFromConfig(config, deviceSelector);
 	}
 
 	/** Validates the ConfigOptions schema the current class is using
