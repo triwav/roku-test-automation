@@ -41,7 +41,7 @@ export class RokuDevice {
 		return configSection.devices[configSection.deviceIndex ?? 0];
 	}
 
-    public async deploy(options?: rokuDeploy.RokuDeployOptions & {
+	public async deploy(options?: rokuDeploy.RokuDeployOptions & {
 		injectTestingFiles?: boolean;
 		preventMultipleDeployments?: boolean;
 		deleteBeforeInstall?: boolean; // Remove in v3
@@ -54,10 +54,10 @@ export class RokuDevice {
 				// note we don't report the error; as we don't actually care that we could not deploy - it's just useless noise to log it.
 			}
 		}
-        await this.createPackage(options, beforeZipCallback);
-        const result = await this.publish(options);
-		this.deployed = true;
-        return result;
+			await this.createPackage(options, beforeZipCallback);
+			const result = await this.publish(options);
+			this.deployed = true;
+			return result;
     }
 
 	public async createPackage(options?: rokuDeploy.RokuDeployOptions & {
@@ -108,7 +108,7 @@ export class RokuDevice {
 
 	public getOutputZipFilePath(options: rokuDeploy.RokuDeployOptions) {
 		return rokuDeploy.getOutputZipFilePath(options);
-    }
+	}
 
 	private injectRtaHelpersIntoComponentContents(contents: string) {
 		// Find the position where we close the interface
