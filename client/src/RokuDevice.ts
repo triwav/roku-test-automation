@@ -48,12 +48,12 @@ export class RokuDevice {
 	}, beforeZipCallback?: (info: rokuDeploy.BeforeZipCallbackInfo) => void) {
 		options = rokuDeploy.getOptions(options);
 		if (options.deleteInstalledChannel || options.deleteBeforeInstall) {
-            try {
-                await rokuDeploy.deleteInstalledChannel(options);
-            } catch (e) {
-                // note we don't report the error; as we don't actually care that we could not deploy - it's just useless noise to log it.
-            }
-        }
+			try {
+				await rokuDeploy.deleteInstalledChannel(options);
+			} catch (e) {
+				// note we don't report the error; as we don't actually care that we could not deploy - it's just useless noise to log it.
+			}
+		}
         await this.createPackage(options, beforeZipCallback);
         const result = await this.publish(options);
 		this.deployed = true;
