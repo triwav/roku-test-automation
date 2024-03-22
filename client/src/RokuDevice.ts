@@ -4,6 +4,7 @@ import * as fsExtra from 'fs-extra';
 import * as querystring from 'needle/lib/querystring';
 import type * as mocha from 'mocha';
 import * as net from 'net';
+import * as path from 'path';
 
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
@@ -29,11 +30,21 @@ export class RokuDevice {
 		this.config = config;
 	}
 
-	public getConfig() {
+	/**
+	 * Get the full RTA config
+	 */
+	public getRtaConfig() {
 		if (!this.config) {
 			this.config = utils.getConfigFromEnvironmentOrConfigFile();
 		}
-		return this.config?.RokuDevice;
+		return this.config;
+	}
+
+	/**
+	 * Get the RokuDevice config from the full RTA config.
+	 */
+	public getConfig() {
+		return this.getRtaConfig()?.RokuDevice;
 	}
 
 	public getCurrentDeviceConfig() {
@@ -82,7 +93,7 @@ export class RokuDevice {
 			fsExtra.writeFileSync(manifestPath, manifestContents);
 
 			// update the xml components that we are injecting into
-			const helperInjection = this.config?.OnDeviceComponent?.helperInjection;
+			const helperInjection = this.getRtaConfig()?.OnDeviceComponent?.helperInjection;
 			if (helperInjection && helperInjection.enabled !== false) {
 				for (const path of helperInjection.componentPaths) {
 					const xmlComponentContents = fsExtra.readFileSync(`${info.stagingDir}/${path}`, 'utf-8');
@@ -168,12 +179,13 @@ export class RokuDevice {
 		return await this.saveScreenshot(outputFilePath);
 	}
 
-	public async getTestScreenshot(contextOrSuite: mocha.Context | mocha.Suite) {
-		await this.getScreenshot(utils.getTestTitlePath(contextOrSuite).join('/'));
+	public async getTestScreenshot(contextOrSuite: mocha.Context | mocha.Suite, basePath = '', postFix = '', separator = '_') {
+		const screenshotPath = path.join(basePath, utils.getTestTitlePath(contextOrSuite).join(separator)) + postFix;
+		return await this.getScreenshot(screenshotPath);
 	}
 
 	public async getTelnetLog() {
-		return new Promise((resolve, reject) => {
+		return new Promise<string>((resolve, reject) => {
 			const socket = net.createConnection(8085, this.getCurrentDeviceConfig().host);
 
 			let content = '';
@@ -214,7 +226,7 @@ export class RokuDevice {
 				break;
 			}
 		}
-		return splitContents.join('\n');
+		return `Telnet output from ${this.getCurrentDeviceConfig().host}\n` + splitContents.join('\n');
 	}
 
 	private async generateScreenshot() {

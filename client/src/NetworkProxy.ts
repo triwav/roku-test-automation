@@ -20,11 +20,21 @@ export class NetworkProxy {
 		this.config = config;
 	}
 
-	public getConfig() {
+	/**
+	 * Get the full RTA config
+	 */
+	public getRtaConfig() {
 		if (!this.config) {
 			this.config = utils.getConfigFromEnvironmentOrConfigFile();
 		}
-		return this.config?.NetworkProxy;
+		return this.config;
+	}
+
+	/**
+	 * Get the NetworkProxy config from the full RTA config.
+	 */
+	public getConfig() {
+		return this.getRtaConfig()?.NetworkProxy;
 	}
 
 	/** Starts the proxy server and reads in the Charles config file and tells the Roku to start sending requests to the proxy server */

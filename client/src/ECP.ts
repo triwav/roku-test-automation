@@ -51,11 +51,21 @@ export class ECP {
 		this.device.setConfig(config);
 	}
 
-	public getConfig() {
+	/**
+	 * Get the full RTA config
+	 */
+	public getRtaConfig() {
 		if (!this.config) {
 			this.config = utils.getConfigFromEnvironmentOrConfigFile();
 		}
-		return this.config?.ECP;
+		return this.config;
+	}
+
+	/**
+	 * Get the ECP config from the full RTA config.
+	 */
+	public getConfig() {
+		return this.getRtaConfig()?.ECP;
 	}
 
 	public async sendText(text: string, options?: SendKeypressOptions & {raspTemplateVariable?: 'script-login' | 'script-password'}) {

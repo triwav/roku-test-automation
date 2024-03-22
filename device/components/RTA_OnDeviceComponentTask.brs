@@ -63,22 +63,13 @@ sub runTaskThread()
 	m.listenSocket.notifyReadable(true)
 	m.listenSocket.listen(4)
 	m.clientSockets = {}
-	m.socketsWithQueuedData = []
 
 	m.receivingRequests = {}
 	m.activeRequests = {}
 
 	while true
-		if m.socketsWithQueuedData.count() > 0 then
-			waitDelay = 1
-			socketWithQueuedData = m.socketsWithQueuedData.shift()
-			handleClientSocketEvent(socketWithQueuedData.messageSocketId, socketWithQueuedData.clientSocket, socketWithQueuedData.bufferLength)
-		else
-			waitDelay = 1000
-		end if
-
 		' If you want to waste three days debugging set this back to 0 :|
-		message = wait(waitDelay, m.port)
+		message = wait(1000, m.port)
 		if message <> Invalid then
 			messageType = type(message)
 			if messageType = "roSocketEvent" then
@@ -98,62 +89,63 @@ sub handleSocketEvent(message as Object)
 	' If the socketId matches our listen socketId this is a new connection being established
 	if messageSocketId = m.listenSocketId then
 		if m.listenSocket.isReadable() then
-			clientSocket = m.listenSocket.accept()
-			if clientSocket = Invalid then
+			socket = m.listenSocket.accept()
+			if socket = Invalid then
 				RTA_logError("Connection accept failed")
 			else
 				' We setup notification for when the new connection is readable
-				clientSocket.notifyReadable(true)
-				m.clientSockets[clientSocket.getID().toStr()] = clientSocket
+				socket.notifyReadable(true)
+				m.clientSockets[socket.getId().toStr()] = socket
 			end if
 		end if
 	else
-		clientSocket = m.clientSockets[messageSocketId]
-		bufferLength = clientSocket.getCountRcvBuf()
-		if bufferLength > 0 then
-			handleClientSocketEvent(messageSocketId, clientSocket, bufferLength)
-		else
-			RTA_logInfo("Client closed connection")
-			clientSocket.close()
-			m.clientSockets.delete(messageSocketId)
-		end if
+		' We are relying on the fact that we will continue to get a roSocketEvent until the buffer is empty instead of recursive code to handle receiving the data
+		handleClientSocketEvent(messageSocketId)
 	end if
 end sub
 
-sub handleClientSocketEvent(messageSocketId as String, clientSocket as Object, bufferLength as Integer)
+sub closeSocket(messageSocketId)
+	socket = m.clientSockets[messageSocketId]
+	socket.close()
+	m.clientSockets.delete(messageSocketId)
+end sub
+
+sub handleClientSocketEvent(messageSocketId as String)
+	socket = m.clientSockets[messageSocketId]
 	receivingRequest = m.receivingRequests[messageSocketId]
+
 	if receivingRequest = invalid then
 		ba = createObject("roByteArray")
 		ba[m.requestHeaderSize - 1] = 0
 
 		' Read our request header to know how big our request is
-		clientSocket.receive(ba, 0, m.requestHeaderSize)
-		bufferLength -= m.requestHeaderSize
-		receivingRequest = {
-			"stringLength": unpackInt32LE(ba, 0)
-			"binaryLength": unpackInt32LE(ba, 4)
-			"stringPayload": ""
-			"binaryPayload": createObject("roByteArray")
-			"socket": clientSocket
-		}
-		m.receivingRequests[messageSocketId] = receivingRequest
-	end if
+		received = socket.receive(ba, 0, m.requestHeaderSize)
+		if received = 0 then
+			closeSocket(messageSocketId)
+		else if received = m.requestHeaderSize then
+			binaryLength = unpackInt32LE(ba, 4)
+			receivingRequest = {
+				"stringLength": unpackInt32LE(ba, 0)
+				"binaryLength": binaryLength
+				"stringPayload": ""
+				"binaryPayload": createObject("roByteArray")
+				"binaryBytesReceived": 0 ' We use an extra field here as you can't pull part of a roByteArray to another
+				"socketId": messageSocketId
+			}
+			if binaryLength > 0 then
+				receivingRequest.binaryPayload[binaryLength - 1] = 0
+			end if
 
-	if bufferLength > 0 then
-		remainingBufferLength = receiveDataForRequest(receivingRequest, bufferLength)
-		if remainingBufferLength >= 0 then
+			m.receivingRequests[messageSocketId] = receivingRequest
+		else
+			RTA_logInfo("Received invalid roSocketEvent due to Roku OS 13.0 bug ignoring event")
+		end if
+	else
+		' We don't want to try and do multiple receives during one roSocketEvent as there is always a possibility we only got 8 bytes of data for the header so don't try to load more than the header the first event
+		if receiveDataForRequest(receivingRequest, socket) then
 			' We've received the whole request so handle it now
 			m.receivingRequests.delete(messageSocketId)
 			verifyAndHandleRequest(receivingRequest)
-
-			' If we still have more data queued then store it so we can pick it up after we handle sending back any requests that are ready to be sent back
-			if remainingBufferLength > 0 then
-				m.socketsWithQueuedData.push({
-					"messageSocketId": messageSocketId
-					"clientSocket": clientSocket
-					"bufferLength": remainingBufferLength
-				})
-			end if
 		end if
 	end if
 end sub
@@ -171,47 +163,38 @@ sub handleNodeEvent(message)
 end sub
 
 ' Returns number of bytes remaining in buffer if request was fully received or -1 if more data still needs to be received
-function receiveDataForRequest(request as Object, bufferLength as Integer) as Integer
-	socket = request.socket
-	' Check if we are going to receive binary or string data
-	if request.stringPayload.len() = request.stringLength then
-		' We've already received entire string payload so the rest is either the binary payload or the next request
-		binaryLength = request.binaryLength
-		if bufferLength > 0 then
-			if binaryLength > 0 then
-				if bufferLength > binaryLength then
-					receiveLength = binaryLength
-				else
-					receiveLength = bufferLength
-				end if
+function receiveDataForRequest(request as Object, socket as Object) as Boolean
+	receivedStringLength = request.stringPayload.len()
 
-				ba = createObject("roByteArray")
-				ba[bufferLength - 1] = 0
-				socket.receive(ba, 0, bufferLength)
-				request.binaryPayload.append(ba)
-				bufferLength -= receiveLength
-			end if
+	' Check if we are going to receive binary or string data
+	if receivedStringLength = request.stringLength then
+		' We've already received entire string payload so the rest is the binary payload
+		binaryLength = request.binaryLength
+
+		bytesReceived = socket.receive(request.binaryPayload, request.binaryBytesReceived, binaryLength - request.binaryBytesReceived)
+		if bytesReceived = 0 then
+			closeSocket(request.socketId)
+		else if bytesReceived > 0 then
+			request.binaryBytesReceived += bytesReceived
 		end if
 
-		if binaryLength = request.binaryPayload.count() then
-			return bufferLength
+		if binaryLength = request.binaryBytesReceived then
+			return true
 		end if
 	else
-		if bufferLength > 0 then
-			' Figure out amount to pull from the buffer for string
-			if bufferLength > request.stringLength then
-				receiveLength = request.stringLength
-			else
-				receiveLength = bufferLength
-			end if
-
-			request.stringPayload += socket.receiveStr(receiveLength)
-			bufferLength -= receiveLength
-			return receiveDataForRequest(request, bufferLength)
+		receivedString = socket.receiveStr(request.stringLength - receivedStringLength)
+		if receivedString.len() = 0 then
+			closeSocket(request.socketId)
 		end if
+		request.stringPayload += receivedString
 	end if
 
-	return -1
+	if request.binaryLength = request.binaryBytesReceived then
+		' Doing extra check here to avoid an extra socket event if empty binary request (most are)
+		return true
+	end if
+
+	return false
 end function
 
 
@@ -461,9 +444,12 @@ sub processGetApplicationStartTimeRequest(request as Object)
 end sub
 
 sub processGetServerHostRequest(request as Object)
-	sendResponseToClient(request, {
-		"host": request.socket.getReceivedFromAddress().getHostName()
-	})
+	socket = m.clientSockets[request.socketId]
+	if socket <> invalid then
+		sendResponseToClient(request, {
+			"host": socket.getReceivedFromAddress().getHostName()
+		})
+	end if
 end sub
 
 sub sendBackError(request as Object, message as String)
@@ -487,11 +473,6 @@ sub sendResponseToClient(request as Object, response as Object, binaryPayloadByt
 	end if
 
 	stringPayload = formatJson(response)
-	if stringPayload.len() < 1024 then
-		RTA_logDebug("Sending back response for requestType: " + json.type, stringPayload)
-	else
-		RTA_logDebug("Sending back large response (id: " + json.id + ", requestType: " + json.type + ", success: " + response.success.toStr() + ", timeTaken: " + response.timeTaken.toStr() + ")")
-	end if
 
 	ba = createObject("roByteArray")
 	ba[m.requestHeaderSize - 1] = 0
@@ -508,10 +489,21 @@ sub sendResponseToClient(request as Object, response as Object, binaryPayloadByt
 		ba.append(binaryPayloadByteArray)
 	end if
 
-	socket = request.socket
+	socket = m.clientSockets[request.socketId]
 	bytesRemaining = ba.count()
 	currentIndex = 0
-	maxSegmentSize = socket.getMaxSeg()
+
+	if socket = invalid OR NOT socket.eOK() then
+		RTA_logError("Could not send back response for requestType: " + json.type, stringPayload)
+		return
+	else
+		if stringPayload.len() < 1024 then
+			RTA_logDebug("Sending back response for requestType: " + json.type, stringPayload)
+		else
+			RTA_logDebug("Sending back large response (id: " + json.id + ", requestType: " + json.type + ", success: " + response.success.toStr() + ", timeTaken: " + response.timeTaken.toStr() + ")")
+		end if
+	end if
+
 	while bytesRemaining > 0
 		bytesSent = socket.send(ba, currentIndex, bytesRemaining)
 		if bytesSent > 0 then
@@ -519,7 +511,10 @@ sub sendResponseToClient(request as Object, response as Object, binaryPayloadByt
 			currentIndex += bytesSent
 		end if
 
-		while socket.getCountSendBuf() > maxSegmentSize
+		while socket.getCountSendBuf() > 0
+			if NOT socket.eOK() then
+				RTA_logError("Failed in the middle of sending requestType: " + json.type, stringPayload)
+			end if
 			sleep(1)
 		end while
 	end while
