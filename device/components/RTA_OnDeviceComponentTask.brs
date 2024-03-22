@@ -99,7 +99,7 @@ sub handleSocketEvent(message as Object)
 			end if
 		end if
 	else
-		' We are switching from recursive code to letting us receive another roSocketEvent where we can handle the different parts of the request
+		' We are relying on the fact that we will continue to get a roSocketEvent until the buffer is empty instead of recursive code to handle receiving the data
 		handleClientSocketEvent(messageSocketId)
 	end if
 end sub

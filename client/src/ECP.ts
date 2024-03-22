@@ -51,7 +51,9 @@ export class ECP {
 		this.device.setConfig(config);
 	}
 
-	/** Provides a way to get the whole config not just this classes' Config */
+	/**
+	 * Get the full RTA config
+	 */
 	public getRtaConfig() {
 		if (!this.config) {
 			this.config = utils.getConfigFromEnvironmentOrConfigFile();
@@ -59,6 +61,9 @@ export class ECP {
 		return this.config;
 	}
 
+	/**
+	 * Get the ECP config from the full RTA config.
+	 */
 	public getConfig() {
 		return this.getRtaConfig()?.ECP;
 	}

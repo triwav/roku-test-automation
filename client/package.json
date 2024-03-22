@@ -91,6 +91,7 @@
     },
     "mocha": {
         "timeout": 72000,
+        "bail": true,
         "require": [
             "source-map-support/register"
         ],

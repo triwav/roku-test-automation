@@ -200,7 +200,7 @@ class Utils {
 		return error;
 	}
 
-	public getTestTitlePath(contextOrSuite: Mocha.Context | Mocha.Suite, sterilize = true) {
+	public getTestTitlePath(contextOrSuite: Mocha.Context | Mocha.Suite, sanitize = true) {
 		let ctx: Mocha.Context;
 		if (contextOrSuite.constructor.name === 'Context') {
 			ctx = contextOrSuite as Mocha.Context;
@@ -215,7 +215,7 @@ class Utils {
 		}
 
 		const pathParts = ctx.currentTest?.titlePath();
-		if (sterilize) {
+		if (sanitize) {
 			for (const [index, pathPart] of pathParts.entries()) {
 				pathParts[index] = filenamify(pathPart);
 			}

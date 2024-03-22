@@ -20,7 +20,9 @@ export class NetworkProxy {
 		this.config = config;
 	}
 
-	/** Provides a way to get the whole config not just this classes' Config */
+	/**
+	 * Get the full RTA config
+	 */
 	public getRtaConfig() {
 		if (!this.config) {
 			this.config = utils.getConfigFromEnvironmentOrConfigFile();
@@ -28,6 +30,9 @@ export class NetworkProxy {
 		return this.config;
 	}
 
+	/**
+	 * Get the NetworkProxy config from the full RTA config.
+	 */
 	public getConfig() {
 		return this.getRtaConfig()?.NetworkProxy;
 	}
