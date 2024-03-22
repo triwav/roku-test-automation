@@ -32,11 +32,16 @@ export class OnDeviceComponent {
 		this.device.setConfig(config);
 	}
 
-	public getConfig() {
+	/** Provides a way to get the whole config not just this classes' Config */
+	public getRtaConfig() {
 		if (!this.config) {
 			this.config = utils.getConfigFromEnvironmentOrConfigFile();
 		}
-		return this.config?.OnDeviceComponent;
+		return this.config;
+	}
+
+	public getConfig() {
+		return this.getRtaConfig()?.OnDeviceComponent;
 	}
 
 	//#region requests run on render thread
@@ -729,7 +734,7 @@ export class OnDeviceComponent {
 
 			const socketConnect = () => {
 				this.debugLog(`Attempting to connect to Roku at ${host} on port ${port}`);
-				socket.connect(9000, host);
+				socket.connect(port, host);
 			};
 
 			socket.on('connect', () => {
@@ -874,9 +879,12 @@ export class OnDeviceComponent {
 		const headerBuffer = Buffer.alloc(8);
 		headerBuffer.writeInt32LE(stringPayload.length, 0); // Write string payload length
 
-		const requestBuffers = [headerBuffer, Buffer.from(stringPayload, 'utf-8')];
 		if (binaryBuffer) {
 			headerBuffer.writeInt32LE(binaryBuffer.length, 4); // Write binary payload length
+		}
+
+		const requestBuffers = [headerBuffer, Buffer.from(stringPayload, 'utf-8')];
+		if (binaryBuffer) {
 			requestBuffers.push(binaryBuffer);
 		}
 

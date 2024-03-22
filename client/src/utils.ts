@@ -1,6 +1,7 @@
 import type * as fsExtra from 'fs-extra';
 import type * as path from 'path';
 import type * as Mocha from 'mocha';
+import * as filenamify from 'filenamify';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
 
@@ -199,7 +200,7 @@ class Utils {
 		return error;
 	}
 
-	public getTestTitlePath(contextOrSuite: Mocha.Context | Mocha.Suite) {
+	public getTestTitlePath(contextOrSuite: Mocha.Context | Mocha.Suite, sterilize = true) {
 		let ctx: Mocha.Context;
 		if (contextOrSuite.constructor.name === 'Context') {
 			ctx = contextOrSuite as Mocha.Context;
@@ -209,16 +210,23 @@ class Utils {
 			throw new Error('Neither Mocha.Context or Mocha.Suite passed in');
 		}
 
-		if (!(ctx.test?.constructor.name === 'Test')) {
+		if (!(ctx.currentTest?.constructor.name === 'Test')) {
 			throw new Error('Mocha.Context did not contain test. At least surrounding Mocha.Suite must use non arrow function');
 		}
 
-		return ctx.test?.titlePath();
+		const pathParts = ctx.currentTest?.titlePath();
+		if (sterilize) {
+			for (const [index, pathPart] of pathParts.entries()) {
+				pathParts[index] = filenamify(pathPart);
+			}
+
+		}
+		return pathParts;
 	}
 
-	public generateFileNameForTest(contextOrSuite: Mocha.Context | Mocha.Suite, extension: string) {
+	public generateFileNameForTest(contextOrSuite: Mocha.Context | Mocha.Suite, extension: string, postFix = '', separator = '_') {
 		const titlePath = this.getTestTitlePath(contextOrSuite);
-		return titlePath.join('/') + `.${extension}`;
+		return titlePath.join(separator) + postFix + `.${extension}`;
 	}
 
 	public async ensureDirExistForFilePath(filePath: string) {

@@ -1,5 +1,6 @@
 {
 	"rootDir": "../device",
+	"retainStagingFolder": true,
 	"plugins": [ "@rokucommunity/bslint" ],
 	"files": [
 		"components/**/*.+(xml|brs)",

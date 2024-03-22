@@ -91,7 +91,7 @@ export interface OnDeviceComponentConfigOptions {
 		/** List of paths to xml components to inject additional helpers into */
 		componentPaths: string[],
 
-		/** Gives a simple way to enable to disable helper injection. Defaults to true */
+		/** Gives a simple way to enable or disable helper injection. Defaults to true */
 		enabled?: boolean;
 	}
 }

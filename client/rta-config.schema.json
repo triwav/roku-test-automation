@@ -81,7 +81,7 @@
                             "type": "array"
                         },
                         "enabled": {
-                            "description": "Gives a simple way to enable to disable helper injection. Defaults to true",
+                            "description": "Gives a simple way to enable or disable helper injection. Defaults to true",
                             "type": "boolean"
                         }
                     },
