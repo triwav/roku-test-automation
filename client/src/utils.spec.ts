@@ -46,4 +46,16 @@ describe('utils', function () {
 			assert.fail('Should have thrown an exception');
 		});
 	});
+
+	describe('getTestTitlePath', function () {
+		it('Does not mess with test name if sanitize is off', function () {
+			const result = utils.getTestTitlePath(this, false);
+			expect(result[2]).to.equal(this.test?.title);
+		});
+
+		it('Properly sanitizes if turned on ;,.:*^', function () {
+			const result = utils.getTestTitlePath(this, true);
+			expect(result[2]).to.equal('Properly_sanitizes_if_turned_on_______');
+		});
+	});
 });
