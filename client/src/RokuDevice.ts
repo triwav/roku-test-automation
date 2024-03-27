@@ -4,7 +4,6 @@ import * as fsExtra from 'fs-extra';
 import * as querystring from 'needle/lib/querystring';
 import type * as mocha from 'mocha';
 import * as net from 'net';
-import * as path from 'path';
 
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
@@ -180,7 +179,7 @@ export class RokuDevice {
 	}
 
 	public async getTestScreenshot(contextOrSuite: mocha.Context | mocha.Suite, basePath = '', postFix = '', separator = '_') {
-		const screenshotPath = path.join(basePath, utils.getTestTitlePath(contextOrSuite).join(separator)) + postFix;
+		const screenshotPath = utils['getPath']().join(basePath, utils.getTestTitlePath(contextOrSuite).join(separator)) + postFix;
 		return await this.getScreenshot(screenshotPath);
 	}
 

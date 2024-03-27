@@ -1,14 +1,14 @@
 import type * as fsExtra from 'fs-extra';
 import type * as path from 'path';
 import type * as Mocha from 'mocha';
-import * as filenamify from 'filenamify';
 import * as Ajv from 'ajv';
 const ajv = new Ajv();
 
 import type { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
+type PathType = typeof path;
 
 class Utils {
-	private path?: typeof path;
+	private path?: PathType;
 
 	private fsExtra?: typeof fsExtra;
 
@@ -19,7 +19,7 @@ class Utils {
 
 	private getPath() {
 		if (!this.path) {
-			this.path = this.require<typeof path>('path');
+			this.path = this.require<PathType>('path');
 		}
 		return this.path;
 	}
@@ -210,14 +210,24 @@ class Utils {
 			throw new Error('Neither Mocha.Context or Mocha.Suite passed in');
 		}
 
-		if (!(ctx.currentTest?.constructor.name === 'Test')) {
+		let test: Mocha.Runnable;
+		if (ctx.currentTest?.constructor.name === 'Test') {
+			test = ctx.currentTest;
+		} else if (ctx.test?.constructor.name === 'Test') {
+			test = ctx.test;
+		} else {
 			throw new Error('Mocha.Context did not contain test. At least surrounding Mocha.Suite must use non arrow function');
 		}
 
-		const pathParts = ctx.currentTest?.titlePath();
+		const pathParts = test.titlePath();
 		if (sanitize) {
 			for (const [index, pathPart] of pathParts.entries()) {
-				pathParts[index] = filenamify(pathPart);
+				if (sanitize) {
+					pathParts[index] = pathPart.replace(/[^a-zA-Z0-9_]/g, '_');
+				} else {
+					pathParts[index] = pathPart;
+				}
+
 			}
 
 		}
