@@ -331,7 +331,7 @@ function RTA_callBrightscriptInterfaceFunction(keyPathPart as string, callOn as 
 		return Invalid
 	end if
 	numCharacters = closingParenthesisPosition - (openingParenthesisPosition + 2)
-	functionParams = mid(keyPathPart, openingParenthesisPosition + 2, numCharacters).tokenize(",")
+	functionParams = mid(keyPathPart, openingParenthesisPosition + 2, numCharacters).split(",")
 
 	if functionName = "getParent" then
 		if RTA_isNode(callOn) then
@@ -426,7 +426,7 @@ function RTA_getValueAtKeyPath(base as Object, keyPath as String, fallback = Inv
 	if NOT RTA_isKeyedValueType(base) AND NOT RTA_isNonEmptyArray(base) then return fallback
 	if keyPath = "" then return base
 
-	keys = keyPath.tokenize(".")
+	keys = keyPath.split(".")
 	level = base
 
 	while NOT keys.isEmpty()
@@ -551,7 +551,7 @@ function RTA_setValueAtKeyPath(base as Object, keyPath as String, value as Dynam
 	' We only allow setting on an AA or array as those are the only ones that should need this functionality
 	if NOT RTA_isAA(base) AND NOT RTA_isArray(base) then return false
 
-	keys = keyPath.tokenize(".")
+	keys = keyPath.split(".")
 	level = base
 	nextLevelNeedsToBeCreated = false
 	previousKeyOrIndex = ""

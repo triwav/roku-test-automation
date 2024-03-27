@@ -513,7 +513,7 @@ function processSetValueRequest(request as Object) as Object
 		end if
 	else
 		' Have to walk up the tree until we get to a node as anything that is a field on a node must be replaced
-		nodeParentKeyPathParts = keyPath.tokenize(".").toArray()
+		nodeParentKeyPathParts = keyPath.split(".")
 		setKeyPathParts = []
 
 		while NOT nodeParentKeyPathParts.isEmpty()
