@@ -187,11 +187,10 @@ function receiveDataForRequest(request as Object, socket as Object) as Boolean
 			closeSocket(request.socketId)
 		end if
 		request.stringPayload += receivedString
-	end if
-
-	if request.binaryLength = request.binaryBytesReceived then
-		' Doing extra check here to avoid an extra socket event if empty binary request (most are)
-		return true
+		if request.stringPayload.len() = request.stringLength AND request.binaryLength = request.binaryBytesReceived then
+			' Doing extra check here to avoid an extra socket event if empty binary request (most are)
+			return true
+		end if
 	end if
 
 	return false
