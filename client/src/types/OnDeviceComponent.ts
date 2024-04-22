@@ -3,6 +3,7 @@ import type { Socket } from 'net';
 export enum RequestType {
 	callFunc = 'callFunc',
 	createDirectory = 'createDirectory',
+	createChild = 'createChild',
 	deleteFile = 'deleteFile',
 	deleteNodeReferences = 'deleteNodeReferences',
 	deleteRegistrySections = 'deleteRegistrySections',
@@ -27,6 +28,7 @@ export enum RequestType {
 	onFieldChangeOnce = 'onFieldChangeOnce',
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
+	removeNode = 'removeNode',
 	removeNodeChildren = 'removeNodeChildren',
 	renameFile = 'renameFile',
 	setSettings = 'setSettings',
@@ -40,7 +42,7 @@ export enum RequestType {
 	writeRegistry = 'writeRegistry',
 }
 
-export type RequestArgs = CallFuncArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeChildrenArgs | DisableScreensaverArgs;
+export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
 	global = 'global',
@@ -264,6 +266,13 @@ export interface FocusNodeArgs extends BaseKeyPath {
 	/** Set to false to take away focus from the node. Defaults to true */
 	on?: boolean;
 }
+
+export interface CreateChildArgs extends BaseKeyPath {
+	subtype: string;
+	fields?: Partial<NodeRepresentation>;
+}
+
+export interface RemoveNodeArgs extends BaseKeyPath {}
 
 export interface RemoveNodeChildrenArgs extends BaseKeyPath {
 	/** The first index of the node(s) that we want to remove */

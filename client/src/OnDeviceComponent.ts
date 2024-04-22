@@ -584,6 +584,20 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	public async createChild(args: ODC.CreateChildArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+		const result = await this.sendRequest(ODC.RequestType.createChild, args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async removeNode(args: ODC.RemoveNodeArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+		const result = await this.sendRequest(ODC.RequestType.removeNode, args, options);
+		return result.json as ODC.ReturnTimeTaken;
+	}
+
 	public async removeNodeChildren(args: ODC.RemoveNodeChildrenArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
@@ -918,7 +932,7 @@ export class OnDeviceComponent {
 					try {
 						const json = response.json;
 						this.debugLog('Received response:', response.json);
-						if (json?.success) {
+						if (json?.error === undefined) {
 							resolve(response);
 						} else {
 							let error: Error;

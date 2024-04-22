@@ -457,10 +457,6 @@ sub sendBackError(request as Object, message as String)
 end sub
 
 sub sendResponseToClient(request as Object, response as Object, binaryPayloadByteArray = Invalid as Dynamic)
-	if NOT RTA_isBoolean(response.success) then
-		response.success = true
-	end if
-
 	if request.timespan <> Invalid then
 		response["timeTaken"] = request.timespan.totalMilliseconds()
 		request.delete("timeTaken")
@@ -499,7 +495,7 @@ sub sendResponseToClient(request as Object, response as Object, binaryPayloadByt
 		if stringPayload.len() < 1024 then
 			RTA_logDebug("Sending back response for requestType: " + json.type, stringPayload)
 		else
-			RTA_logDebug("Sending back large response (id: " + json.id + ", requestType: " + json.type + ", success: " + response.success.toStr() + ", timeTaken: " + response.timeTaken.toStr() + ")")
+			RTA_logDebug("Sending back large response (id: " + json.id + ", requestType: " + json.type + ", timeTaken: " + response.timeTaken.toStr() + ")")
 		end if
 	end if
 
