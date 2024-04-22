@@ -1003,6 +1003,101 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('createChild', function () {
+		const baseKeyPath = '#temporaryNodesGroup';
+		this.afterEach(async () => {
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			if (childCount > 0) {
+				await odc.removeNodeChildren({
+					keyPath: baseKeyPath,
+					index: 0,
+					count: -1
+				});
+			}
+		});
+
+		it('should successfully create a child on the specified parent', async () => {
+			// Make sure there are no children to start
+			const { value: startingChildCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(startingChildCount).to.equal(0);
+
+			// Add our child
+			const childId = utils.addRandomPostfix('child');
+			const customFieldValue = utils.addRandomPostfix('customFieldValue');
+			await odc.createChild({
+				keyPath: baseKeyPath,
+				subtype: 'Group',
+				fields: {
+					id: childId,
+					customField: customFieldValue
+				}
+			});
+
+			// Make sure it got added to the right parent
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(1);
+
+			// Make sure it added the fields we requested
+			const { value: child, found } = await odc.getValue({
+				keyPath: `${baseKeyPath}.#${childId}`
+			});
+			expect(found).to.be.true;
+			expect(child.customField).to.equal(customFieldValue);
+		});
+
+		it('should fail if the subtype for the child does not exist', async () => {
+			try {
+				await odc.createChild({
+					keyPath: baseKeyPath,
+					subtype: 'IDoNotExist'
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			throw new Error('Should have thrown an exception');
+		});
+	});
+
+	describe('removeNode', function () {
+		const baseKeyPath = '#temporaryNodesGroup';
+
+		it('should successfully remove a node', async () => {
+			// Add a child node
+			const nodeId = utils.addRandomPostfix('node');
+			await odc.createChild({
+				keyPath: baseKeyPath,
+				subtype: 'Group',
+				fields: {
+					id: nodeId
+				}
+			});
+
+			// Make sure the child got added
+			const { value: startingChildCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(startingChildCount).to.equal(1);
+
+			// Remove the node
+			await odc.removeNode({
+				keyPath: `${baseKeyPath}.#${nodeId}`
+			});
+
+			// Make sure it got removed
+			const { value: childCount } = await odc.getValue({
+				keyPath: `${baseKeyPath}.getChildCount()`
+			});
+			expect(childCount).to.equal(0);
+		});
+	});
+
 	describe('removeNodeChildren', function () {
 		it('should successfully delete the child at the specified index', async () => {
 			// Add a child node

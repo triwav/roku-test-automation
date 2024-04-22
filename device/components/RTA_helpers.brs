@@ -47,7 +47,6 @@ end function
 
 function RTA_buildErrorResponseObject(message as String) as Object
 	return {
-		"success": false
 		"error": {
 			"message": message
 		}

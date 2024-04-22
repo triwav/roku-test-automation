@@ -5,28 +5,30 @@ sub init()
 	m.task.control = "RUN"
 	m.validRequestTypes = {
 		"callFunc": processCallFuncRequest
-		"getFocusedNode": processGetFocusedNodeRequest
 		"callFunc": processCallFuncRequest
+		"createChild": processCreateChildRequest
+		"deleteNodeReferences": processDeleteNodeReferencesRequest
+		"disableScreenSaver": processDisableScreenSaverRequest
+		"focusNode": processFocusNodeRequest
+		"getAllCount": processGetAllCountRequest
+		"getFocusedNode": processGetFocusedNodeRequest
+		"getNodesInfo": processGetNodesInfoRequest
+		"getNodesWithProperties": processGetNodesWithPropertiesRequest
+		"getResponsivenessTestingData": processGetResponsivenessTestingDataRequest
+		"getRootsCount": processGetRootsCountRequest
 		"getValue": processGetValueRequest
 		"getValues": processGetValuesRequest
 		"hasFocus": processHasFocusRequest
 		"isInFocusChain": processIsInFocusChainRequest
-		"onFieldChangeOnce": processOnFieldChangeOnceRequest
-		"setValue": processSetValueRequest
-		"getAllCount": processGetAllCountRequest
-		"getRootsCount": processGetRootsCountRequest
-		"storeNodeReferences": processStoreNodeReferencesRequest
-		"deleteNodeReferences": processDeleteNodeReferencesRequest
-		"getNodesInfo": processGetNodesInfoRequest
-		"getNodesWithProperties": processGetNodesWithPropertiesRequest
-		"startResponsivenessTesting": processStartResponsivenessTestingRequest
-		"getResponsivenessTestingData": processGetResponsivenessTestingDataRequest
-		"stopResponsivenessTesting": processStopResponsivenessTestingRequest
-		"disableScreenSaver": processDisableScreenSaverRequest
-		"focusNode": processFocusNodeRequest
-		"removeNodeChildren": processRemoveNodeChildrenRequest
 		"isShowingOnScreen": processIsShowingOnScreenRequest
+		"onFieldChangeOnce": processOnFieldChangeOnceRequest
+		"removeNode": processRemoveNodeRequest
+		"removeNodeChildren": processRemoveNodeChildrenRequest
 		"setSettings": processSetSettingsRequest
+		"setValue": processSetValueRequest
+		"startResponsivenessTesting": processStartResponsivenessTestingRequest
+		"stopResponsivenessTesting": processStopResponsivenessTestingRequest
+		"storeNodeReferences": processStoreNodeReferencesRequest
 	}
 
 	m.activeObserveFieldRequests = {}
@@ -1224,6 +1226,68 @@ function processFocusNodeRequest(request as Object) as Object
 	return {}
 end function
 
+function processCreateChildRequest(request as Object) as Object
+	args = request.args
+	result = processGetValueRequest(args)
+	if RTA_isErrorObject(result) then
+		return result
+	end if
+
+	if result.found <> true then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+	end if
+
+	parent = result.value
+	if NOT RTA_isNode(parent) then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	end if
+
+	nodeSubtype = RTA_getStringAtKeyPath(args, "subtype")
+	node = parent.createChild(nodeSubtype)
+	if node <> Invalid then
+		fields = args.fields
+		if fields <> invalid then
+			node.update(fields, true)
+		end if
+	else
+		return RTA_buildErrorResponseObject("Failed to create " + nodeSubtype + " node")
+	end if
+
+	return {}
+end function
+
+function processRemoveNodeRequest(request as Object) as Object
+	args = request.args
+	result = processGetValueRequest(args)
+	if RTA_isErrorObject(result) then
+		return result
+	end if
+
+	if result.found <> true then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("No value found at key path '" + keyPath + "'")
+	end if
+
+	node = result.value
+	if NOT RTA_isNode(node) then
+		keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+		return RTA_buildErrorResponseObject("Value at key path '" + keyPath + "' was not a node")
+	end if
+
+	success = false
+	parent = node.getParent()
+	if parent <> Invalid then
+		success = parent.removeChild(node)
+		if NOT success then
+			return RTA_buildErrorResponseObject("Failed to remove node")
+		end if
+	end if
+
+	return {}
+end function
+
 function processRemoveNodeChildrenRequest(request as Object) as Object
 	args = request.args
 	result = processGetValueRequest(args)
@@ -1249,7 +1313,10 @@ function processRemoveNodeChildrenRequest(request as Object) as Object
 		count = node.getChildCount()
 	end if
 
-	node.removeChildrenIndex(count, index)
+	success = node.removeChildrenIndex(count, index)
+	if NOT success then
+		return RTA_buildErrorResponseObject("Failed to remove children")
+	end if
 
 	return {}
 end function
