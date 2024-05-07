@@ -1786,6 +1786,46 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('isSubtype', function () {
+		it('should return true if self subtype matches by default', async () => {
+			const isSubtype = await odc.isSubtype({
+				keyPath: '#pagesContainerGroup',
+				subtype: 'Group'
+			});
+			expect(isSubtype).to.be.true;
+		});
+
+		it('should return false if self subtype matches and matchOnSelfSubtype=false', async () => {
+			const isSubtype = await odc.isSubtype({
+				keyPath: '#pagesContainerGroup',
+				matchOnSelfSubtype: false,
+				subtype: 'Group'
+			});
+			expect(isSubtype).to.be.false;
+		});
+
+		it('should return false if subtype does not match', async () => {
+			const isSubtype = await odc.isSubtype({
+				keyPath: '#pagesContainerGroup',
+				subtype: 'RowList'
+			});
+			expect(isSubtype).to.be.false;
+		});
+
+		it('should throw an error if node does not exist', async () => {
+			try {
+				await odc.isSubtype({
+					keyPath: '#doesNotExist',
+					subtype: 'Group'
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+	});
+
 	describe('setValue', function () {
 		it('should be able to set a key on global', async () => {
 			await setAndVerifyValue({

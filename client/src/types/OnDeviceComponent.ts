@@ -24,6 +24,7 @@ export enum RequestType {
 	getVolumeList = 'getVolumeList',
 	hasFocus = 'hasFocus',
 	isInFocusChain = 'isInFocusChain',
+	isSubtype = 'isSubtype',
 	isShowingOnScreen = 'isShowingOnScreen',
 	onFieldChangeOnce = 'onFieldChangeOnce',
 	readFile = 'readFile',
@@ -42,7 +43,7 @@ export enum RequestType {
 	writeRegistry = 'writeRegistry',
 }
 
-export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
+export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
 	global = 'global',
@@ -353,6 +354,18 @@ export interface FindNodesAtLocationArgs extends StoreNodeReferencesArgs {
 
 	/** Will always be true no matter what is passed in */
 	includeBoundingRectInfo?: true;
+}
+
+export interface IsShowingOnScreenArgs extends BaseKeyPath {}
+
+export interface IsSubtypeArgs extends BaseKeyPath {
+	/** The subtype we are checking against */
+	subtype: string;
+
+	/** isSubtype does not normally match the current node's subtype which is usually not the desired behavior.
+	 *  Because of this we also will match on the node's own subtype by default.
+	 *  Setting this to false will make it match on only a descendant subtype.  */
+	matchOnSelfSubtype?: boolean;
 }
 
 interface MatchObject extends BaseKeyPath {
