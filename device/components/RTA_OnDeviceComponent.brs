@@ -21,6 +21,7 @@ sub init()
 		"hasFocus": processHasFocusRequest
 		"isInFocusChain": processIsInFocusChainRequest
 		"isShowingOnScreen": processIsShowingOnScreenRequest
+		"isSubtype": processIsSubtypeRequest
 		"onFieldChangeOnce": processOnFieldChangeOnceRequest
 		"removeNode": processRemoveNodeRequest
 		"removeNodeChildren": processRemoveNodeChildrenRequest
@@ -575,6 +576,38 @@ function calculateNodeCount(nodes) as Object
 	end for
 
 	return result
+end function
+
+function processIsSubtypeRequest(request) as Object
+	args = request.args
+
+	subtype = args.subtype
+	if NOT RTA_isString(subtype) then
+		return RTA_buildErrorResponseObject("Missing valid 'subtype' param")
+	end if
+
+	result = processGetValueRequest(args)
+	if RTA_isErrorObject(result) then
+		return result
+	end if
+
+	if result.found <> true then
+		return RTA_buildErrorResponseObject("No value found at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
+	end if
+
+	node = result.value
+	if NOT RTA_isNode(node) then
+		return RTA_buildErrorResponseObject("Value at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "' was not a node")
+	end if
+
+	isSubtype = node.isSubtype(subtype)
+	if NOT isSubtype AND RTA_getBooleanAtKeyPath(args, "matchOnSelfSubtype", true) then
+		isSubtype = (node.subtype() = subtype)
+	end if
+
+	return {
+		"isSubtype": isSubtype
+	}
 end function
 
 function processStoreNodeReferencesRequest(request as Object) as Object

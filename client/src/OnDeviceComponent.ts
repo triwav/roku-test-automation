@@ -605,7 +605,7 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
-	public async isShowingOnScreen(args: ODC.GetValueArgs, options: ODC.RequestOptions = {}) {
+	public async isShowingOnScreen(args: ODC.IsShowingOnScreenArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 		const result = await this.sendRequest(ODC.RequestType.isShowingOnScreen, args, options);
@@ -613,6 +613,12 @@ export class OnDeviceComponent {
 			isShowing: boolean;
 			isFullyShowing: boolean;
 		};
+	}
+
+	public async isSubtype(args: ODC.IsSubtypeArgs, options: ODC.RequestOptions = {}) {
+		this.conditionallyAddDefaultBase(args);
+		const result = await this.sendRequest(ODC.RequestType.isSubtype, {...args, convertResponseToJsonCompatible: false}, options);
+		return result.json.isSubtype as boolean;
 	}
 	//#endregion
 
