@@ -240,12 +240,7 @@ export class OnDeviceComponent {
 
 		args.convertResponseToJsonCompatible = false;
 
-		let result: ODC.RequestResponse;
-		if (args.field !== undefined) {
-			result = await this.sendRequest(ODC.RequestType.setValue, args, options);
-		} else {
-			result = await this.sendRequest(ODC.RequestType.setValue, this.breakOutFieldFromKeyPath(args), options);
-		}
+		const result = await this.sendRequest(ODC.RequestType.setValue, this.breakOutFieldFromKeyPath(args), options);
 
 		return result.json as ODC.ReturnTimeTaken;
 	}
@@ -733,12 +728,17 @@ export class OnDeviceComponent {
 
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
-	private breakOutFieldFromKeyPath(args: ODC.CallFuncArgs | ODC.OnFieldChangeOnceArgs | ODC.SetValueArgs) {
+	private breakOutFieldFromKeyPath(args: ODC.OnFieldChangeOnceArgs | ODC.SetValueArgs) {
 		if (!args.keyPath) {
 			args.keyPath = '';
 		}
-		const keyPathParts = args.keyPath.split('.');
-		return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
+
+		if (args.field === undefined) {
+			const keyPathParts = args.keyPath.split('.');
+			return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
+		}
+
+		return args;
 	}
 
 	private setupClientSocket(options: ODC.RequestOptions) {

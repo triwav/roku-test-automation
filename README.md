@@ -37,6 +37,10 @@
 
 Roku Test Automation (RTA from here on out) helps with automating functional tests for Roku devices. It has quite a bit more capabilities than [Roku's first party option](https://developer.roku.com/docs/developer-program/dev-tools/automated-channel-testing/automated-testing-overview.md) and does not require a Go server in the middle to convert ECP commands.
 
+## Contributing & Getting Help
+
+There is always more things that we would like to add than we have time for. If you would like to help contribute the best spot to reach out is in the [Roku Developers Slack](https://join.slack.com/t/rokudevelopers/shared_invite/zt-4vw7rg6v-NH46oY7hTktpRIBM_zGvwA). (We're in the #rta channel). If you are having trouble getting RTA working feel free to reach out there as well. If you see an issue or would like to see something added then feel free to [create a new Github Issue](https://github.com/triwav/roku-test-automation/issues/new)
+
 ## v2.0 Changes
 
 Some incompatibility changes were made in v2.0. These include:

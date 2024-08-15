@@ -380,6 +380,9 @@ export interface OnFieldChangeOnceArgs extends BaseKeyPath {
 	/** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
 	retryTimeout?: number;
 
+	/** The field that we want to observe for changes on. If not supplied, the last part of `keyPath` will be  */
+	field?: string;
+
 	/** If provided will only return when this matches (including if it already equals that value) */
 	match?: MatchObject | ComparableValueTypes;
 }
