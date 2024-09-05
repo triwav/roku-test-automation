@@ -190,6 +190,14 @@ function processGetValueRequest(request as Object) as Object
 	end if
 
 	keyPath = RTA_getStringAtKeyPath(args, "keyPath")
+	if RTA_isNonEmptyString(args.field) then
+		if keyPath = "" then
+			keyPath = args.field
+		else
+			keyPath += "." + args.field
+		end if
+	end if
+
 
 	if RTA_isNonEmptyString(keyPath) then
 		value = RTA_getValueAtKeyPath(base, keyPath, "[[VALUE_NOT_FOUND]]")
@@ -325,7 +333,13 @@ end function
 function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
-	result = processGetValueRequest(args)
+
+	' We have to exclude the field from the args so we can get the parent node
+	getValueArgs = {}
+	getValueArgs.append(args)
+	getValueArgs.field = invalid
+
+	result = processGetValueRequest(getValueArgs)
 	if RTA_isErrorObject(result) then
 		return result
 	end if
@@ -336,6 +350,7 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	parentRTA_isNode = RTA_isNode(node)
 	fieldExists = parentRTA_isNode AND node.doesExist(field)
 	timePassed = 0
+
 	if NOT parentRTA_isNode OR NOT fieldExists then
 		retryTimeout = args.retryTimeout
 		if retryTimeout > 0 then

@@ -191,6 +191,7 @@ export class OnDeviceComponent {
 	public async onFieldChangeOnce(args: ODC.OnFieldChangeOnceArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
+		args = this.breakOutFieldFromKeyPath(args);
 
 		const match = args.match;
 		if (match !== undefined) {
@@ -198,10 +199,11 @@ export class OnDeviceComponent {
 			if (((match instanceof Object) && (match.constructor.name === 'Object') && ('keyPath' in match))) {
 				this.conditionallyAddDefaultBase(match);
 			} else {
-				// If it's not we take base and keyPath from the base and keyPath args
+				// If it's not we take base and keyPath from the base, keyPath and field args
 				args.match = {
 					base: args.base,
 					keyPath: args.keyPath,
+					field: args.field,
 					value: (match as any)
 				};
 			}
@@ -226,7 +228,7 @@ export class OnDeviceComponent {
 
 		args.retryTimeout = retryTimeout;
 
-		const result = await this.sendRequest(ODC.RequestType.onFieldChangeOnce, this.breakOutFieldFromKeyPath(args), options);
+		const result = await this.sendRequest(ODC.RequestType.onFieldChangeOnce, args, options);
 		return result.json as {
 			/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not */
 			observerFired: boolean;

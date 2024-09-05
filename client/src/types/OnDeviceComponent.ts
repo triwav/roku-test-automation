@@ -206,7 +206,10 @@ export interface GetFocusedNodeArgs extends MaxChildDepth, NodeRefKey {
 	returnFocusedArrayGridChild?: boolean;
 }
 
-export interface GetValueArgs extends BaseKeyPath {}
+export interface GetValueArgs extends BaseKeyPath {
+	/** Allows supplying a keypath to a node and the field fpr that node separately to allow for better integration with an elements library */
+	field?: string;
+}
 
 export interface GetValuesArgs {
 	/** Retrieve multiple values with a single request. A list of the individual getValue args */
@@ -368,7 +371,7 @@ export interface IsSubtypeArgs extends BaseKeyPath {
 	matchOnSelfSubtype?: boolean;
 }
 
-interface MatchObject extends BaseKeyPath {
+interface MatchObject extends GetValueArgs {
 	/** If the match value is passed in then the observer will be fired when the field value equals to the value in match */
 	value: ComparableValueTypes;
 }
@@ -380,7 +383,7 @@ export interface OnFieldChangeOnceArgs extends BaseKeyPath {
 	/** If the `keyPath` does not exist yet, this specifies how long to wait before erroring out in milliseconds */
 	retryTimeout?: number;
 
-	/** The field that we want to observe for changes on. If not supplied, the last part of `keyPath` will be  */
+	/** The field that we want to observe for changes on. If not supplied, the last part of `keyPath` will be used  */
 	field?: string;
 
 	/** If provided will only return when this matches (including if it already equals that value) */

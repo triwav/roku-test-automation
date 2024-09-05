@@ -2111,6 +2111,17 @@ describe('OnDeviceComponent', function () {
 			expect(timeTaken).to.be.a('number');
 		});
 
+		it('should succeed if provided a field', async () => {
+			const args = { base: 'global', keyPath: 'AuthManager', field: 'isLoggedIn' } as ODC.BaseKeyPath;
+			await setAndVerifyValue({ ...args, value: false });
+			const observePromise = odc.onFieldChangeOnce({ ...args });
+			await setAndVerifyValue({ ...args, value: true });
+			const { value, observerFired, timeTaken } = await observePromise;
+			expect(value).to.be.true;
+			expect(observerFired).to.be.true;
+			expect(timeTaken).to.be.a('number');
+		});
+
 		it('should wait for value to match if requested and should work with simple match property', async () => {
 			const args = { base: 'global', keyPath: 'stringValue' } as ODC.BaseKeyPath;
 			const expectedValue = utils.addRandomPostfix('secondValue');
