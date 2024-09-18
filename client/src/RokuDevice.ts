@@ -4,6 +4,7 @@ import * as fsExtra from 'fs-extra';
 import * as querystring from 'needle/lib/querystring';
 import type * as mocha from 'mocha';
 import * as net from 'net';
+import * as request from 'postman-request';
 
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
@@ -230,13 +231,31 @@ export class RokuDevice {
 
 	private async generateScreenshot() {
 		const url = `http://${this.getCurrentDeviceConfig().host}/plugin_inspect`;
-		const data = {
+		const formData = {
 			archive: '',
 			mysubmit: 'Screenshot'
 		};
 		const options = this.getNeedleOptions(true);
-		options.multipart = true;
-		return await this.needle('post', url, data, options);
+
+		const requestOptions = {
+			url: url,
+			auth: {
+				user: options.username,
+				pass: options.password,
+				sendImmediately: false
+			},
+			formData: formData,
+			agentOptions: { 'keepAlive': false }
+		};
+
+		return await new Promise((resolve, reject) => {
+			request.post(requestOptions, (err, resp, body) => {
+				if (err) {
+					return reject(err);
+				}
+				return resolve({ response: resp, body: body });
+			});
+		});
 	}
 
 	private async saveScreenshot(outputFilePath?: string) {
@@ -292,7 +311,7 @@ export class RokuDevice {
 
 	private debugLog(message: string, ...args) {
 		if (this.getConfig()?.clientDebugLogging) {
-			console.log(`[NetworkProxy] ${message}`, ...args);
+			console.log(`[RokuDevice] ${message}`, ...args);
 		}
 	}
 }

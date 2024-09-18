@@ -35,6 +35,7 @@
         "http-network-proxy": "^1.0.11",
         "needle": "^2.9.1",
         "path": "^0.12.7",
+        "postman-request": "^2.88.1-postman.40",
         "roku-deploy": "^3.10.2"
     },
     "devDependencies": {
