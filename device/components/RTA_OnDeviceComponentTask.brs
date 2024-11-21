@@ -155,7 +155,17 @@ sub handleNodeEvent(message)
 	if message.getField() = "renderThreadResponse" then
 		response = message.getData()
 		request = m.activeRequests[response.id]
-		m.activeRequests.delete(response.id)
+		if request = invalid then return 'Just to play safe, however it is not supossed to happen
+		'If request is of the type onFieldChangeRepeat we do not delete the request from the active ones.
+		if request <> invalid and request.json <> invalid and request.json.type <> invalid and request.json.type = "onFieldChangeRepeat" then	
+			RTA_logVerbose("Request not deleted from m.activeRequests because is of type onFieldChangeRepeat")
+		else
+			if request <> invalid and request.json <> invalid and request.json.type <> invalid and request.json.type = "cancelOnFieldChangeRepeat" and m.activeRequests[request.json.args.cancelRequestId] <> invalid then
+				RTA_logVerbose("Canceled Request with ID ", request.json.args.cancelRequestId)
+				m.activeRequests.delete(request.json.args.cancelRequestId)
+			end if
+			m.activeRequests.delete(response.id)
+		end if
 		sendResponseToClient(request, response)
 	else
 		RTA_logWarn(fieldName + " not handled")

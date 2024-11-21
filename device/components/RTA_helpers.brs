@@ -44,6 +44,13 @@ end function
 '*************************************************************************
 '#region *** RTA helpers
 '*************************************************************************
+function RTA_buildSuccessResponseObject(message as String) as Object
+	return {
+		"success": {
+			"message": message
+		}
+	}
+end function
 
 function RTA_buildErrorResponseObject(message as String) as Object
 	return {

@@ -236,6 +236,60 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	//This function onFieldChangeRepeat have a lot of repeated code, we may could create a common function to handle the common thing and just change the output based on if it has callback or not
+	public async onFieldChangeRepeat(args: ODC.OnFieldChangeOnceArgs, options: ODC.RequestOptions = {}, callback: (response) => void) {
+		this.conditionallyAddDefaultBase(args);
+		this.conditionallyAddDefaultNodeReferenceKey(args);
+		args = this.breakOutFieldFromKeyPath(args);
+
+		const match = args.match;
+		if (match !== undefined) {
+			// Check if it's an object. Also have to check constructor as array is also an instanceof Object, make sure it has the keyPath key
+			if (((match instanceof Object) && (match.constructor.name === 'Object') && ('keyPath' in match))) {
+				this.conditionallyAddDefaultBase(match);
+			} else {
+				// If it's not we take base and keyPath from the base, keyPath and field args
+				args.match = {
+					base: args.base,
+					keyPath: args.keyPath,
+					field: args.field,
+					value: (match as any)
+				};
+			}
+		}
+
+		if (!args.retryInterval) args.retryInterval = 100;
+
+		const deviceConfig = this.device.getCurrentDeviceConfig();
+		let retryTimeout: number;
+
+		if (args.retryTimeout !== undefined) {
+			retryTimeout = args.retryTimeout;
+			// Adding a reasonable amount of time so that we get a more specific error message instead of the generic timeout
+			options.timeout = retryTimeout + 200;
+		} else {
+			retryTimeout = options.timeout ?? deviceConfig.defaultTimeout ?? this.defaultTimeout;
+			retryTimeout -= 200;
+		}
+
+		const multiplier = deviceConfig.timeoutMultiplier ?? 1;
+		retryTimeout *= multiplier;
+
+		args.retryTimeout = retryTimeout;
+
+		//We wait because we need the result of the sendRequest to create the cancelObserverCallback
+		const result = await this.sendRequest(ODC.RequestType.onFieldChangeRepeat, args, options, callback);
+		//We return the cancel Observer Function to easily cancel the continous observer 
+		const cancelObserverFunc = async () => {
+			//Is json.id the correct place to extract the request ID?
+			//const requestID = result.json.id
+			const cancelStatus = await this.sendRequest(ODC.RequestType.cancelOnFieldChangeRepeat, {cancelRequestId: result.json.id});
+			return cancelStatus;
+		}
+		
+		return cancelObserverFunc;
+	}
+
 	public async setValue(args: ODC.SetValueArgs, options: ODC.RequestOptions = {}) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
@@ -862,7 +916,19 @@ export class OnDeviceComponent {
 						if (callback) {
 							callback(receivingRequestResponse);
 						}
-						delete this.activeRequests[json.id];
+
+						//Delete active requests as usual if it is not of type onFieldChangeRepeat
+						if (request.type != 'onFieldChangeRepeat'){
+							delete this.activeRequests[json.id];
+						}
+
+						// On the case of request.type onFieldChangeRepeat we just proceed for deletion if it has request.args.cancelRequestId
+						if (request.type == 'cancelOnFieldChangeRepeat'){
+							if((request["args"] != null && request.args["cancelRequestId"] != null && this.activeRequests[request.args["cancelRequestId"]] != null)){
+								delete this.activeRequests[request.args["cancelRequestId"]];
+							}
+						}
+						
 					}
 				}
 			});
@@ -877,7 +943,7 @@ export class OnDeviceComponent {
 		return this.clientSocketPromise;
 	}
 
-	private async sendRequest(type: ODC.RequestType, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
+	private async sendRequest(type: ODC.RequestType, args: ODC.RequestArgs, options: ODC.RequestOptions = {}, callback?) {
 		const requestId = utils.randomStringGenerator();
 		const request: ODC.Request = {
 			id: requestId,
@@ -942,6 +1008,10 @@ export class OnDeviceComponent {
 						this.debugLog('Received response:', response.json);
 						if (json?.error === undefined) {
 							resolve(response);
+							//Important to send response to the callback when onFieldChangeRepeat is used 
+							if (callback){
+								callback(response);
+							};
 						} else {
 							let error: Error;
 							if (stackTraceError) {
