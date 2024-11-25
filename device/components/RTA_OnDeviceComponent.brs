@@ -457,7 +457,13 @@ function processCancelOnFieldChangeRepeat(request as Object) as Dynamic
 	args = request.args
 	cancelRequestId = args.cancelRequestId
 	if cancelRequestId <> invalid and m.activeObserveFieldRequests[cancelRequestId] <> invalid then
-		m.activeObserveFieldRequests.delete(cancelRequestId)
+		deletedRequest = m.activeObserveFieldRequests[cancelRequestId]
+		if m.activeObserveFieldRequests.delete(cancelRequestId) then 'We should remove the observer first
+			if deletedRequest.node <> invalid and deletedRequest.args <> invalid and deletedRequest.args.field <> invalid then
+				cleanObservers(deletedRequest.node, deletedRequest.args.field) 'Remove the observer if there is no more requests using it
+				deletedRequest = invalid
+			end if
+		end if
 		RTA_logDebug("Deleted Active Request ID " + cancelRequestId)
 		sendResponseToTask(request, RTA_buildSuccessResponseObject("Successfully removed the continuous observer!"))
 		return invalid
@@ -466,6 +472,23 @@ function processCancelOnFieldChangeRepeat(request as Object) as Dynamic
 	sendResponseToTask(request, RTA_buildErrorResponseObject("Error on remove the continuous observer!"))
 	return invalid
 end function
+
+sub cleanObservers(node, field, data = invalid)
+	remainingObservers = 0
+	request = invalid
+	for each requestId in m.activeObserveFieldRequests
+		request = m.activeObserveFieldRequests[requestId]
+		args = request.args
+		if node.isSameNode(request.node) AND args.field = field then
+			remainingObservers++
+		end if
+	end for
+	if remainingObservers = 0 then
+		' If we got to here then we sent back all responses for this field so we can remove our observer now
+		RTA_logDebug("cleanObservers: Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
+		node.unobserveFieldScoped(field)
+	end if
+end sub
 
 sub onProcessObserveFieldRequestRetryFired(event as Object)
 	requestId = event.getNode()
