@@ -458,7 +458,7 @@ function processCancelOnFieldChangeRepeat(request as Object) as Dynamic
 	cancelRequestId = args.cancelRequestId
 	if cancelRequestId <> invalid and m.activeObserveFieldRequests[cancelRequestId] <> invalid then
 		deletedRequest = m.activeObserveFieldRequests[cancelRequestId]
-		if m.activeObserveFieldRequests.delete(cancelRequestId) then 'We should remove the observer first
+		if m.activeObserveFieldRequests.delete(cancelRequestId) then
 			if deletedRequest.node <> invalid and deletedRequest.args <> invalid and deletedRequest.args.field <> invalid then
 				cleanObservers(deletedRequest.node, deletedRequest.args.field) 'Remove the observer if there is no more requests using it
 				deletedRequest = invalid
@@ -475,7 +475,6 @@ end function
 
 sub cleanObservers(node, field, data = invalid)
 	remainingObservers = 0
-	request = invalid
 	for each requestId in m.activeObserveFieldRequests
 		request = m.activeObserveFieldRequests[requestId]
 		args = request.args
