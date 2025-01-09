@@ -535,6 +535,8 @@ sub observeFieldCallback(event as Object)
 				'Do not delete requests of type onFieldChangeRepeat, those will be deleted by the request cancelOnFieldChangeRepeat
 				if not request.type = "onFieldChangeRepeat" then 
 					m.activeObserveFieldRequests.delete(requestId)
+				else
+					remainingObservers++
 				end if
 				sendResponseToTask(request, {
 					"value": data
@@ -545,9 +547,6 @@ sub observeFieldCallback(event as Object)
 			end if
 		end if
 	end for
-
-	'Return here as we want to keep observing this field until explicit cancel is requested
-	if request <> invalid and request.type = "onFieldChangeRepeat" then return
 
 	if remainingObservers = 0 then
 		' If we got to here then we sent back all responses for this field so we can remove our observer now
