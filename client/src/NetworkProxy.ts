@@ -350,7 +350,7 @@ export interface NetworkProxyCallbackShouldProcessArgs {
 		[key: string]: string[] | string | undefined;
 	};
 	url: string;
-	requestBody: any;
+	requestBody?: any;
 	req: http.IncomingMessage;
 }
 
