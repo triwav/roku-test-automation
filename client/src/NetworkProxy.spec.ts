@@ -72,9 +72,12 @@ describe('NetworkProxy', function () {
 			shouldProcess: (args) => {
 				return args.url === testUrl;
 			},
-			processRequest: ({url}) => {
-				expect(url).to.contain(testUrl);
+			processRequest: ({url, requestBody}) => {
+				expect(!!requestBody).to.be.true;
+				expect(url).to.equal(testUrl);
+
 				return JSON.stringify({
+					...requestBody,
 					overrideRequest: true,
 				});
 			},
@@ -111,16 +114,18 @@ describe('NetworkProxy', function () {
 		});
 
 		const imageHostName = 'picsum.photos';
-		const imagePath =  '/600/?r=' + Math.random();
+		const randomQuery = Math.random().toString();
+		const imagePath =  '/600/?r=' + randomQuery;
 		const imageUrl = `http://${imageHostName}${imagePath}`;
 
 		const removeCallback = proxy.addCallback({
 			shouldProcess: ({url}) => {
 				return imageUrl === url;
 			},
-			processRequest: ({url, path, hostname}) => {
+			processRequest: ({url, path, hostname, query}) => {
 				expect(hostname).to.equal(imageHostName);
 				expect(path).to.equal(imagePath);
+				expect(query?.r).to.equal(randomQuery);
 				expect(url).to.equal(imageUrl);
 			},
 			processResponse: () => {

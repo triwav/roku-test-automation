@@ -198,7 +198,7 @@ export class NetworkProxy {
 	private rewriteHost(req) {
 		const urlParts = url.parse(req.originalUrl.replace('/;', ''));
 
-		// Used to proxy request to Charles for development purposes `http://xxx.xxx.x.xxx:8888/;${pathList.protocol}//${pathList.hostname}${port}`
+		// Used to proxy request to Charles for development purposes
 		const forwardProxy = this.getConfig()?.forwardProxy;
 		if (forwardProxy) {
 			const urlParts = url.parse(forwardProxy);
@@ -245,14 +245,18 @@ export class NetworkProxy {
 	private getCommonFields(req: express.Request) {
 		const urlParts = url.parse(req.originalUrl.replace('/;', ''), true);
 
-		return {
+		const fields: Omit<NetworkProxyCallbackShouldProcessArgs, 'req'> = {
 			method: req.method,
 			protocol: urlParts.protocol ?? '',
 			hostname: urlParts.hostname ?? '',
 			path: urlParts.path ?? '',
 			pathname: urlParts.pathname ?? '',
+			query: urlParts.query,
 			url: urlParts.href,
+			requestBody: req.body
 		};
+
+		return fields;
 	}
 
 
@@ -275,11 +279,6 @@ export class NetworkProxy {
 		if (!callback?.processRequest) {
 			return;
 		}
-
-		// let jsonBody;
-		// if(req.is('application/json')) {
-		// 	jsonBody = req.body;
-		// }
 
 		let response = callback.processRequest(args);
 		if (response !== undefined) {
@@ -347,7 +346,11 @@ export interface NetworkProxyCallbackShouldProcessArgs {
 	hostname: string;
 	pathname: string;
 	path: string;
+	query?: {
+		[key: string]: string[] | string | undefined;
+	};
 	url: string;
+	requestBody: any;
 	req: http.IncomingMessage;
 }
 
