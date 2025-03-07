@@ -11,7 +11,7 @@ end sub
 function injectProxy(url)
 	valueType = type(RTA_injectProxy) 'bs:disable-line: 1001
 	if (valueType = "roFunction") OR (valueType = "Function") then
-		url = RTA_injectProxy(url) 'bs:disable-line: 1001
+		url = RTA_injectProxy(url) 'bs:disable-line: 1140
 	else
 		print "Proxy was not injected for url '" url "'"
 	end if
