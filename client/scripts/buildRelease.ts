@@ -52,6 +52,8 @@ if (argv[2] === '--dev') {
 	let options = '';
 	if (argv[2] === '--beta') {
 		options = '--tag beta';
+	} else if (argv[2] === '--alpha') {
+		options = '--tag alpha';
 	}
 	output = execSync(`npm publish ${options} ${outputFolder}`, {
 		encoding: 'utf8'

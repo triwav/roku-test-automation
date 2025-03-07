@@ -14,6 +14,7 @@
         "buildRequestTypesSchema": "typescript-json-schema src/types/OnDeviceComponent.ts RequestType --out requestTypes.schema.json --ignoreErrors",
         "buildRequestArgsSchema": "typescript-json-schema src/types/OnDeviceComponent.ts RequestArgs --propOrder --out requestArgs.schema.json --ignoreErrors",
         "buildRelease": "npx ts-node scripts/buildRelease.ts",
+        "buildRelease:alpha": "npx ts-node scripts/buildRelease.ts --alpha",
         "buildRelease:beta": "npx ts-node scripts/buildRelease.ts --beta",
         "buildRelease:dev": "npx ts-node scripts/buildRelease.ts --dev",
         "increment:beta": "npm version prerelease"
