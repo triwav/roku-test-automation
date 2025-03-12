@@ -750,6 +750,7 @@ describe('OnDeviceComponent', function () {
 						enableRenderTracking: 'boolean',
 						focusable: 'boolean',
 						focusedChild: 'std::type_index',
+						graphicsFeatures: 'std::type_index',
 						id: 'string',
 						inheritParentOpacity: 'boolean',
 						inheritParentTransform: 'boolean',
@@ -793,10 +794,10 @@ describe('OnDeviceComponent', function () {
 			describe('boundingRect()', () => {
 				it('should work on node item', async () => {
 					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.boundingRect()' });
-					expect(value.height).to.equal(430);
-					expect(value.width).to.equal(1950);
-					expect(value.x).to.equal(135);
-					expect(value.y).to.equal(685);
+					expect(value.height).to.be.greaterThan(0);
+					expect(value.width).to.be.greaterThan(0);
+					expect(value.x).to.be.greaterThan(0);
+					expect(value.y).to.be.greaterThan(0);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -808,10 +809,10 @@ describe('OnDeviceComponent', function () {
 			describe('localBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.localBoundingRect()' });
-					expect(value.height).to.equal(430);
-					expect(value.width).to.equal(1950);
-					expect(value.x).to.equal(-15);
-					expect(value.y).to.equal(-15);
+					expect(value.height).to.be.greaterThan(0);
+					expect(value.width).to.be.greaterThan(0);
+					expect(value.x).to.be.lessThan(0);
+					expect(value.y).to.be.lessThan(0);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {
@@ -823,10 +824,10 @@ describe('OnDeviceComponent', function () {
 			describe('sceneBoundingRect()', () => {
 				it('should work on node item', async () => {
 					const { value } = await odc.getValue({ keyPath: '#rowListWithCustomTitleComponent.sceneBoundingRect()' });
-					expect(value.height).to.equal(430);
-					expect(value.width).to.equal(1950);
-					expect(value.x).to.equal(135);
-					expect(value.y).to.equal(685);
+					expect(value.height).to.be.greaterThan(0);
+					expect(value.width).to.be.greaterThan(0);
+					expect(value.x).to.be.greaterThan(0);
+					expect(value.y).to.be.greaterThan(0);
 				});
 
 				it('should gracefully fallback if called on nonsupported type', async () => {

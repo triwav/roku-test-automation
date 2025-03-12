@@ -516,6 +516,9 @@ function processSetValueRequest(request as Object) as Object
 	end if
 
 	base = getBaseObject(args)
+	if RTA_isErrorObject(base) then
+		return base
+	end if
 	nodeParent = Invalid
 
 	if field = "" then
