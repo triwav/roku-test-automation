@@ -266,7 +266,7 @@ export class NetworkProxy {
 
 
 	/**
-	 * Callback method triggered when a req is been proxied.
+	 * Callback method triggered when a request is being proxied.
 	 * All requests will be go through this method
 	 */
 	private onProxyReq(proxyReq: http.ClientRequest, req: express.Request, res: express.Response) {
