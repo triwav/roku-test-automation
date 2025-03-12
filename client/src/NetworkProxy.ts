@@ -2,6 +2,7 @@ import * as express from 'express';
 import { createProxyMiddleware, responseInterceptor } from 'http-proxy-middleware';
 import * as url from 'url';
 import type * as http from 'http';
+import * as portfinder from 'portfinder';
 import type { ConfigOptions, OnDeviceComponent} from '.';
 import { utils } from '.';
 
@@ -50,6 +51,10 @@ export class NetworkProxy {
 
 		if(!proxyPort) {
 			proxyPort = config?.port;
+
+			if (!proxyPort) {
+				proxyPort = await portfinder.getPortPromise();
+			}
 
 			if (!proxyPort) {
 				throw utils.makeError('NetworkProxyOptionsPortNotSet', `NetworkProxyOptions.port not set in config file`);
@@ -265,8 +270,6 @@ export class NetworkProxy {
 	 * All requests will be go through this method
 	 */
 	private onProxyReq(proxyReq: http.ClientRequest, req: express.Request, res: express.Response) {
-		// debugger;
-
 		const args = {
 			...this.getCommonFields(req),
 			req: req,
@@ -280,7 +283,12 @@ export class NetworkProxy {
 			return;
 		}
 
-		let response = callback.processRequest(args);
+		let response = callback.processRequest({
+			...args,
+			removeCallback: () => {
+				this.removeCallback(callback);
+			}
+		});
 		if (response !== undefined) {
 			if (typeof response === 'string') {
 				response = Buffer.from(response);
@@ -310,7 +318,13 @@ export class NetworkProxy {
 
 		const internalOnProxyRes = responseInterceptor((responseBuffer, proxyRes, req, res) => {
 			if (callback?.processResponse) {
-				let response = callback?.processResponse({...matchArgs, responseBuffer});
+				let response = callback?.processResponse({
+					...matchArgs,
+					responseBuffer: responseBuffer,
+					removeCallback: () => {
+						this.removeCallback(callback);
+					}
+				});
 				if (response) {
 					if (typeof response === 'string') {
 						response = Buffer.from(response);
@@ -358,6 +372,9 @@ export interface NetworkProxyCallbackShouldProcessArgs {
 export interface NetworkProxyCallbackProcessRequestArgs extends NetworkProxyCallbackShouldProcessArgs {
 	proxyReq: http.ClientRequest;
 	res: http.ServerResponse;
+
+	/* Allows removing the callback that matched shouldProcess first */
+	removeCallback: () => void;
 }
 
 
@@ -365,4 +382,7 @@ export interface NetworkProxyCallbackProcessResponseArgs extends NetworkProxyCal
 	responseBuffer: Buffer;
 	res: http.ServerResponse;
 	proxyRes: http.IncomingMessage;
+
+	/* Allows removing the callback that matched shouldProcess first */
+	removeCallback: () => void;
 }
