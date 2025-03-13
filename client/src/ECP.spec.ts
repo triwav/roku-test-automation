@@ -172,7 +172,9 @@ describe('ECP', function () {
 				assert.fail('sleep was not called');
 			}
 		});
+	});
 
+	describe('sendKeyDown', function () {
 		it('sends_key_down_event', async () => {
 			const postStub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(ECP.Key.Play);
@@ -184,6 +186,21 @@ describe('ECP', function () {
 			expect(postStub.getCall(0).lastArg).to.include('keydown/Play');
 		});
 
+		it('sends_multiple_key_events', async () => {
+			const postStub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
+				expect(path).to.contain(ECP.Key.Play);
+			}) as any);
+
+			await ecp.sendKeyDown(ECP.Key.Play, 0, { count: 3 });
+
+			expect(postStub.callCount).equals(3);
+			expect(postStub.getCall(0).lastArg).to.include('keydown/Play');
+			expect(postStub.getCall(1).lastArg).to.include('keydown/Play');
+			expect(postStub.getCall(2).lastArg).to.include('keydown/Play');
+		});
+	});
+
+	describe('sendKeyUp', function () {
 		it('sends_key_up_event', async () => {
 			const postStub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(ECP.Key.Play);
@@ -194,7 +211,9 @@ describe('ECP', function () {
 			expect(postStub.callCount).equals(1);
 			expect(postStub.getCall(0).lastArg).to.include('keyup/Play');
 		});
+	});
 
+	describe('sendKeyPressAndHold', function () {
 		it('sends_long_key_press', async () => {
 			const postStub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(ECP.Key.Play);
@@ -210,20 +229,9 @@ describe('ECP', function () {
 			expect(postStub.getCall(0).lastArg).to.include('keydown/Play');
 			expect(postStub.getCall(1).lastArg).to.include('keyup/Play');
 		});
+	});
 
-		it('sends_multiple_key_events', async () => {
-			const postStub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
-				expect(path).to.contain(ECP.Key.Play);
-			}) as any);
-
-			await ecp.sendKeyDown(ECP.Key.Play, 0, { count: 3 });
-
-			expect(postStub.callCount).equals(3);
-			expect(postStub.getCall(0).lastArg).to.include('keydown/Play');
-			expect(postStub.getCall(1).lastArg).to.include('keydown/Play');
-			expect(postStub.getCall(2).lastArg).to.include('keydown/Play');
-		});
-
+	describe('sendKeyEvent', function () {
 		it('sends_regular_key_press_when_press_and_hold_has_no_duration', async () => {
 			const postStub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {
 				expect(path).to.contain(ECP.Key.Play);
