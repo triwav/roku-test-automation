@@ -17,7 +17,8 @@ sub init()
 		"intValue": 1
 		"emptyAAValue": {}
 		"arrayValue": [{ "name": "firstItem" }, { "name": "secondItem" }, { "name": "lastItem" }]
-		"launchComplete": false
+		"launchComplete": false,
+		"repeatingTimerFireCount": 0
 	})
 
 	m.timer = createObject("roSGNode", "Timer")
@@ -27,6 +28,18 @@ sub init()
 
 	landingPage = m.top.pagesContainer.createChild("LandingPage")
 	setFocus(landingPage)
+	
+	'To test the onFieldChangeRepeat
+	m.repeatingTimer = createObject("roSGNode","Timer")
+	m.repeatingTimer.observeFieldScoped("fire", "onRepeatingTimerFired")
+	m.repeatingTimer.duration = 1
+	m.repeatingTimer.repeat = true
+	m.repeatingTimer.control = "start"
+
+end sub
+
+sub onRepeatingTimerFired()
+	m.global.repeatingTimerFireCount++
 end sub
 
 sub onTimerFired()

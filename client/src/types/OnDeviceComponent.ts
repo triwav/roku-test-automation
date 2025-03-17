@@ -2,6 +2,7 @@ import type { Socket } from 'net';
 
 export enum RequestType {
 	callFunc = 'callFunc',
+	cancelOnFieldChangeRepeat = 'cancelOnFieldChangeRepeat',
 	createDirectory = 'createDirectory',
 	createChild = 'createChild',
 	deleteFile = 'deleteFile',
@@ -27,6 +28,7 @@ export enum RequestType {
 	isSubtype = 'isSubtype',
 	isShowingOnScreen = 'isShowingOnScreen',
 	onFieldChangeOnce = 'onFieldChangeOnce',
+	onFieldChangeRepeat = 'onFieldChangeRepeat',
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
 	removeNode = 'removeNode',
@@ -43,7 +45,7 @@ export enum RequestType {
 	writeRegistry = 'writeRegistry',
 }
 
-export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
+export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | CancelOnFieldChangeRepeatArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
 	global = 'global',
@@ -388,6 +390,12 @@ export interface OnFieldChangeOnceArgs extends BaseKeyPath {
 
 	/** If provided will only return when this matches (including if it already equals that value) */
 	match?: MatchObject | ComparableValueTypes;
+}
+
+//We may could use OnFieldChangeArgs to avoid more code but to keep the pattern we've created this
+export interface CancelOnFieldChangeRepeatArgs extends BaseKeyPath {
+	/** requestId that should be canceled */
+	cancelRequestId: string;
 }
 
 export interface SetValueArgs extends BaseKeyPath {

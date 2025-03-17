@@ -6,6 +6,7 @@ sub init()
 	m.validRequestTypes = {
 		"callFunc": processCallFuncRequest
 		"callFunc": processCallFuncRequest
+		"cancelOnFieldChangeRepeat": processCancelOnFieldChangeRepeat
 		"createChild": processCreateChildRequest
 		"deleteNodeReferences": processDeleteNodeReferencesRequest
 		"disableScreenSaver": processDisableScreenSaverRequest
@@ -22,7 +23,8 @@ sub init()
 		"isInFocusChain": processIsInFocusChainRequest
 		"isShowingOnScreen": processIsShowingOnScreenRequest
 		"isSubtype": processIsSubtypeRequest
-		"onFieldChangeOnce": processOnFieldChangeOnceRequest
+		"onFieldChangeOnce": processOnFieldChangeRequest
+		"onFieldChangeRepeat": processOnFieldChangeRequest
 		"removeNode": processRemoveNodeRequest
 		"removeNodeChildren": processRemoveNodeChildrenRequest
 		"setSettings": processSetSettingsRequest
@@ -330,7 +332,7 @@ function processIsInFocusChainRequest(request as Object) as Object
 	}
 end function
 
-function processOnFieldChangeOnceRequest(request as Object) as Dynamic
+function processOnFieldChangeRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
 
@@ -441,13 +443,56 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	request.node = node
 	m.activeObserveFieldRequests[requestId] = request
 
+	'The following if is needed to the onFieldChangeRepeat in order to avoid block the execution on client side, 
+	'for example if we use match: 3 we will get blocked until get the first response on that line on the OnDeviceComponent.spec.ts tests
+	if request <> invalid and request.type <> invalid and request.type = "onFieldChangeRepeat" and request.cancelRequestId = invalid then
+		RTA_logDebug("Now observing '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
+		sendResponseToTask(request, RTA_buildSuccessResponseObject("Successfully set the observer!"))
+	end if
+
 	return Invalid
 end function
+
+function processCancelOnFieldChangeRepeat(request as Object) as Dynamic
+	args = request.args
+	cancelRequestId = args.cancelRequestId
+	if cancelRequestId <> invalid and m.activeObserveFieldRequests[cancelRequestId] <> invalid then
+		deletedRequest = m.activeObserveFieldRequests[cancelRequestId]
+		if m.activeObserveFieldRequests.delete(cancelRequestId) then
+			if deletedRequest.node <> invalid and deletedRequest.args <> invalid and deletedRequest.args.field <> invalid then
+				cleanObservers(deletedRequest.node, deletedRequest.args.field) 'Remove the observer if there is no more requests using it
+				deletedRequest = invalid
+			end if
+		end if
+		RTA_logDebug("Deleted Active Request ID " + cancelRequestId)
+		sendResponseToTask(request, RTA_buildSuccessResponseObject("Successfully removed the continuous observer!"))
+		return invalid
+	end if
+	RTA_logDebug("Unable to delete cctive request ID " + cancelRequestId)
+	sendResponseToTask(request, RTA_buildErrorResponseObject("Error on remove the continuous observer!"))
+	return invalid
+end function
+
+sub cleanObservers(node, field, data = invalid)
+	remainingObservers = 0
+	for each requestId in m.activeObserveFieldRequests
+		request = m.activeObserveFieldRequests[requestId]
+		args = request.args
+		if node.isSameNode(request.node) AND args.field = field then
+			remainingObservers++
+		end if
+	end for
+	if remainingObservers = 0 then
+		' If we got to here then we sent back all responses for this field so we can remove our observer now
+		RTA_logDebug("cleanObservers: Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
+		node.unobserveFieldScoped(field)
+	end if
+end sub
 
 sub onProcessObserveFieldRequestRetryFired(event as Object)
 	requestId = event.getNode()
 	request = m.activeObserveFieldRequests[requestId]
-	response = processOnFieldChangeOnceRequest(request)
+	response = processOnFieldChangeRequest(request)
 
 	' If response isn't invalid then we have to send it back ourselves
 	if response <> Invalid then
@@ -461,6 +506,7 @@ sub observeFieldCallback(event as Object)
 	data = event.getData()
 	RTA_logDebug("Received callback for node field '" + field + "' with value ", data)
 	remainingObservers = 0
+	request = invalid
 	for each requestId in m.activeObserveFieldRequests
 		request = m.activeObserveFieldRequests[requestId]
 		args = request.args
@@ -486,7 +532,12 @@ sub observeFieldCallback(event as Object)
 			end if
 
 			if success then
-				m.activeObserveFieldRequests.delete(requestId)
+				'Do not delete requests of type onFieldChangeRepeat, those will be deleted by the request cancelOnFieldChangeRepeat
+				if not request.type = "onFieldChangeRepeat" then 
+					m.activeObserveFieldRequests.delete(requestId)
+				else
+					remainingObservers++
+				end if
 				sendResponseToTask(request, {
 					"value": data
 					"observerFired": true
@@ -1466,6 +1517,7 @@ sub sendResponseToTask(request as Object, response as Object)
 
 	response.id = request.id
 	response["timeTaken"] = request.timespan.totalMilliseconds()
+	request.timespan.mark() 'For the onFieldChangeRepeat, maybe needs an adjustment on future, for now it will only indicates the time between the same request id
 	m.task.renderThreadResponse = response
 end sub
 
