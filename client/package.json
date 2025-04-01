@@ -40,7 +40,8 @@
         "path": "^0.12.7",
         "portfinder": "^1.0.33",
         "postman-request": "^2.88.1-postman.40",
-        "roku-deploy": "^3.10.2"
+        "roku-deploy": "^3.10.2",
+        "stoppable": "^1.1.0"
     },
     "devDependencies": {
         "@rokucommunity/bslint": "^0.7.3",

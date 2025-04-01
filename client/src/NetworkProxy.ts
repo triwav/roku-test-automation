@@ -4,6 +4,7 @@ import * as url from 'url';
 import type * as http from 'http';
 import * as portfinder from 'portfinder';
 import type { ConfigOptions, OnDeviceComponent} from '.';
+const stoppable = require('stoppable');
 import { utils } from '.';
 
 export class NetworkProxy {
@@ -87,6 +88,9 @@ export class NetworkProxy {
 			.use(express.json())
 			.use('*', apiProxy)
 			.listen(proxyPort);
+
+		// We are using stoppable to avoid getting in a state where a request is still pending but we are done with our test and can't end the script because the server is still running.
+		stoppable(this.server, 0);
 
 		const proxyAddress = `${host}:${proxyPort}`;
 		this.savedProxyAddress = proxyAddress;
@@ -177,11 +181,12 @@ export class NetworkProxy {
 				return;
 			}
 
-			this.server.on('close', function() {
+			// Added with stoppable so have to call this way as Typescript doesn't know about it.
+			this.server['stop']();
+
+			this.server.close(() => {
 				resolve(null);
 			});
-
-			this.server.close();
 
 			this.savedProxyAddress = undefined;
 		});
@@ -214,10 +219,19 @@ export class NetworkProxy {
 			};
 		}
 
+		let port: number;
+		if (urlParts.port) {
+			port = +urlParts.port;
+		} else if (urlParts.protocol === 'https:') {
+			port = 443;
+		} else {
+			port = 80;
+		}
+
 		return {
 			host: urlParts.hostname ?? '',
 			protocol: urlParts.protocol ?? '',
-			port: urlParts.port ?? urlParts.protocol === 'https:' ? 443 : 80
+			port: port
 		};
 	}
 
