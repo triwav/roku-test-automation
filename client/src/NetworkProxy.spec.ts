@@ -65,7 +65,6 @@ describe('NetworkProxy', function () {
 
 	it('should be able to intercept a request off device', async () => {
 		const originalRequestBody = {original: true};
-
 		const testUrl = `http://127.0.0.1:${testServerPort}/test?key=value`;
 
 		const removeCallback = proxy.addCallback({
@@ -101,6 +100,7 @@ describe('NetworkProxy', function () {
 
 		const promise = needle('post', `http://127.0.0.1:${proxyPort}/;${testUrl}`, JSON.stringify(originalRequestBody), options);
 		const response = await utils.promiseTimeout(promise, 2000, 'Did not receive proxy request');
+
 		expect(response.body.received).to.be.true;
 		expect(response.body.overrideResponse).to.be.true;
 		removeCallback();
