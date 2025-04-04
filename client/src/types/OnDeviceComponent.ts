@@ -2,7 +2,7 @@ import type { Socket } from 'net';
 
 export enum RequestType {
 	callFunc = 'callFunc',
-	cancelOnFieldChangeRepeat = 'cancelOnFieldChangeRepeat',
+	cancelRequest = 'cancelRequest',
 	createDirectory = 'createDirectory',
 	createChild = 'createChild',
 	deleteFile = 'deleteFile',
@@ -27,8 +27,7 @@ export enum RequestType {
 	isInFocusChain = 'isInFocusChain',
 	isSubtype = 'isSubtype',
 	isShowingOnScreen = 'isShowingOnScreen',
-	onFieldChangeOnce = 'onFieldChangeOnce',
-	onFieldChangeRepeat = 'onFieldChangeRepeat',
+	onFieldChange = 'onFieldChange',
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
 	removeNode = 'removeNode',
@@ -45,7 +44,7 @@ export enum RequestType {
 	writeRegistry = 'writeRegistry',
 }
 
-export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeOnceArgs | CancelOnFieldChangeRepeatArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
+export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeArgs | CancelRequestArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
 	global = 'global',
@@ -91,6 +90,7 @@ export interface Request {
 	id: string;
 	args: RequestArgs;
 	type: RequestType;
+	isRecuring: boolean;
 	callback?: (response: RequestResponse) => void;
 }
 
@@ -172,6 +172,9 @@ export interface BoundingRect {
 }
 
 export interface ReturnTimeTaken {
+	/** id for this request */
+	id: string;
+
 	/** How long this request took to run on the device */
 	timeTaken: number;
 }
@@ -378,7 +381,7 @@ interface MatchObject extends GetValueArgs {
 	value: ComparableValueTypes;
 }
 
-export interface OnFieldChangeOnceArgs extends BaseKeyPath {
+export interface OnFieldChangeArgs extends BaseKeyPath {
 	/** If the `keyPath` does not exist yet, this specifies how often to recheck to see if it now exists in milliseconds */
 	retryInterval?: number;
 
@@ -392,10 +395,15 @@ export interface OnFieldChangeOnceArgs extends BaseKeyPath {
 	match?: MatchObject | ComparableValueTypes;
 }
 
-//We may could use OnFieldChangeArgs to avoid more code but to keep the pattern we've created this
-export interface CancelOnFieldChangeRepeatArgs extends BaseKeyPath {
-	/** requestId that should be canceled */
-	cancelRequestId: string;
+export interface OnFieldChangeOnceArgs extends OnFieldChangeArgs {
+	/** If supplied controls how long after the observer has been set that we will wait for the observer to fire before considering the request to have failed. */
+	observerFireTimeout?: number;
+}
+
+export interface OnFieldChangeResponse extends ReturnTimeTaken {
+	/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not */
+	observerFired: boolean;
+	value: any;
 }
 
 export interface SetValueArgs extends BaseKeyPath {
@@ -436,4 +444,8 @@ export interface GetServerHostArgs {}
 
 export interface SetSettingsArgs {
 	logLevel: LogLevels;
+}
+
+export interface CancelRequestArgs {
+	id: string;
 }
