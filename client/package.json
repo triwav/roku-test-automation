@@ -94,7 +94,7 @@
         "branches": 100
     },
     "mocha": {
-        "timeout": 72000,
+        "timeout": 10000,
         "bail": false,
         "require": [
             "source-map-support/register"
