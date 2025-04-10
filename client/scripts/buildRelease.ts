@@ -55,7 +55,7 @@ if (argv[2] === '--dev') {
 	} else if (argv[2] === '--alpha') {
 		options = '--tag alpha';
 	}
-	output = execSync(`npm publish ${options} ${outputFolder}`, {
+	output = execSync(`npm publish ${options} '${outputFolder}'`, {
 		encoding: 'utf8'
 	});
 }

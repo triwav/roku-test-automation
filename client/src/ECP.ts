@@ -76,6 +76,80 @@ export class ECP {
 		}
 	}
 
+	public async sendKeyDown(key: Key, keyEventOptions: SendKeyEventOptions = 0, keypressOptions?: SendKeypressOptions) {
+		const { eventOptions, pressOptions } = this.normalizeOptions(keyEventOptions, keypressOptions);
+		eventOptions.keydown = true;
+		eventOptions.keyup = false;
+		await this.sendKeyEvent(key, eventOptions, pressOptions);
+	}
+
+	public async sendKeyUp(key: Key, keyEventOptions: SendKeyEventOptions = 0, keypressOptions?: SendKeypressOptions) {
+		const { eventOptions, pressOptions } = this.normalizeOptions(keyEventOptions, keypressOptions);
+		eventOptions.keyup = true;
+		eventOptions.keydown = false;
+		await this.sendKeyEvent(key, eventOptions, pressOptions);
+	}
+
+	public async sendKeyPressAndHold(key: Key, keyEventOptions: SendKeyEventOptions, keypressOptions?: SendKeypressOptions) {
+		const { eventOptions, pressOptions } = this.normalizeOptions(keyEventOptions, keypressOptions);
+		eventOptions.keydown = true;
+		eventOptions.keyup = true;
+		await this.sendKeyEvent(key, eventOptions, pressOptions);
+	}
+
+	public async sendKeyEvent(key: Key, keyEventOptions: SendKeyEventOptions, keypressOptions?: SendKeypressOptions) {
+		const { eventOptions, pressOptions } = this.normalizeOptions(keyEventOptions, keypressOptions);
+		const keydown = eventOptions?.keydown; 
+		const keyup = eventOptions?.keyup; 
+		const duration = eventOptions.duration;
+
+		if (keydown != keyup || duration) {
+			const keypressDelay = this.getConfig()?.default?.keypressDelay;
+			let wait = pressOptions?.wait;
+			if (!wait && keypressDelay) {
+				wait = keypressDelay;
+			}
+
+			const encodedKey = encodeURIComponent(key);
+
+			for (let i = 0; i < (pressOptions?.count ?? 1); i++) {
+				if (keydown) {
+					await this.device.sendEcpPost(`keydown/${encodedKey}`);
+				}
+
+				if (duration) {
+					await this.utils.sleep(duration);
+				}
+
+				if (keyup) {
+					await this.device.sendEcpPost(`keyup/${encodedKey}`);
+				}
+
+				if (wait) await this.utils.sleep(wait);
+			}
+		} else {	
+			await this.sendKeypress(key, pressOptions);
+		}
+	}
+
+	private normalizeOptions(eventOptions: SendKeyEventOptions, pressOptions: SendKeypressOptions = {}): { eventOptions, pressOptions } {
+		if (typeof eventOptions === 'number') {
+			eventOptions = {
+				duration: eventOptions,
+				keydown: true,
+				keyup: true
+			};
+		}
+
+		if (typeof pressOptions === 'number') {
+			pressOptions = {
+				wait: pressOptions
+			};
+		} 
+
+		return { eventOptions: eventOptions, pressOptions: pressOptions };
+	}
+
 	public async sendKeypress(key: Key, options?: SendKeypressOptions) {
 		if (typeof options === 'number') {
 			options = {
@@ -91,6 +165,7 @@ export class ECP {
 		if (raspEquivalent) {
 			this.addRaspFileStep(`press: ${raspEquivalent}`);
 		}
+
 		await this.device.sendEcpPost(`keypress/${encodeURIComponent(key)}`);
 
 		const keypressDelay = this.getConfig()?.default?.keypressDelay;
@@ -359,4 +434,11 @@ export class ECP {
 type SendKeypressOptions = number | {
 	wait?: number;
 	count?: number;
+}
+
+/** If value is a number then we convert it to an object with number used for duration and keydown and keyup set */
+type SendKeyEventOptions = number | {
+	keydown?: boolean;
+	keyup?: boolean;
+	duration: number;
 }
