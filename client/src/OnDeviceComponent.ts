@@ -189,6 +189,41 @@ export class OnDeviceComponent {
 	}
 
 	public async onFieldChangeOnce(args: ODC.OnFieldChangeOnceArgs, options: ODC.RequestOptions = {}) {
+		// If observerFireTimeout is not supplied then we default to the timeout
+		if (!args.observerFireTimeout) {
+			args.observerFireTimeout = this.getTimeOut(options);
+		}
+
+		let callback: Parameters<typeof this.onFieldChange>[2] = () => {
+			throw new Error('onFieldChangeOnce temporary callback should not be called');
+		};
+
+		const promise = new Promise<ODC.OnFieldChangeResponse>((resolve) => {
+			callback = async (response: ODC.OnFieldChangeResponse) => {
+				// We use whether the response has observerFired to know if this was an actual observer response vs just the observer being set
+				if (response.observerFired !== undefined) {
+					// TODO add in support for doing match checks here as well
+
+					await this.cancelRequest({id: response.id});
+
+					// After we cancel the request we return the response
+					resolve(response);
+				}
+			};
+		});
+
+		// Wait for observer to be set
+		const cancelObserver = await this.onFieldChange(args, options, callback);
+		try {
+			return await utils.promiseTimeout(promise, args.observerFireTimeout, `onFieldChangeOnce timed out after ${args.observerFireTimeout}ms`);
+		} catch (error) {
+			// If we timed out we cancel the observer and throw the error
+			await cancelObserver();
+			throw error;
+		}
+	}
+
+	public async onFieldChange(args: ODC.OnFieldChangeArgs, options: ODC.RequestOptions = {}, callback: (response: ODC.OnFieldChangeResponse) => Promise<void> | void) {
 		this.conditionallyAddDefaultBase(args);
 		this.conditionallyAddDefaultNodeReferenceKey(args);
 		args = this.breakOutFieldFromKeyPath(args);
@@ -228,12 +263,25 @@ export class OnDeviceComponent {
 
 		args.retryTimeout = retryTimeout;
 
-		const result = await this.sendRequest(ODC.RequestType.onFieldChangeOnce, args, options);
-		return result.json as {
-			/** If a match value was provided and already equaled the requested value the observer won't get fired. This lets you be able to check if that occurred or not */
-			observerFired: boolean;
-			value: any;
-		} & ODC.ReturnTimeTaken;
+		//We wait because we need the result of the sendRequest to create the cancelObserverCallback
+		const result = await this.sendRequest(ODC.RequestType.onFieldChange, args, options, async (response) => {
+			const json = response.json;
+			// Using the observerFired key to know if this was an actual response vs just the observer being set
+			if (json.observerFired !== undefined) {
+				await callback(json);
+			}
+
+			// We let script continue on after the observer has been set
+			return true;
+		});
+
+		//We return the cancel Observer Function to easily cancel the continuous observer
+		const cancelObserverFunc = async () => {
+			const requestId = result.json.id;
+			return await this.cancelRequest({id: requestId});
+		};
+
+		return cancelObserverFunc;
 	}
 
 	public async setValue(args: ODC.SetValueArgs, options: ODC.RequestOptions = {}) {
@@ -722,15 +770,28 @@ export class OnDeviceComponent {
 	//#endregion
 
 	//#region requests run on both
-	public async setSettings(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
+	public async setSettings(args: ODC.SetSettingsArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.setSettings, args, options);
 		return result.json as ODC.ReturnTimeTaken;
+	}
+
+	public async cancelRequest(args: ODC.CancelRequestArgs, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest(ODC.RequestType.cancelRequest, args, options);
+
+		// If we were successful in canceling the request we remove it from our activeRequests
+		delete this.activeRequests[args.id];
+
+		return result.json as ODC.ReturnTimeTaken & {
+			success: {
+				message: string
+			};
+		};
 	}
 	//#endregion
 
 
 	// In some cases it makes sense to break out the last key path part as `field` to simplify code on the device
-	private breakOutFieldFromKeyPath(args: ODC.OnFieldChangeOnceArgs | ODC.SetValueArgs) {
+	private breakOutFieldFromKeyPath(args: ODC.OnFieldChangeArgs | ODC.SetValueArgs) {
 		if (!args.keyPath) {
 			args.keyPath = '';
 		}
@@ -855,14 +916,19 @@ export class OnDeviceComponent {
 					const receivingRequestResponse = this.receivingRequestResponse;
 					this.receivingRequestResponse = undefined;
 					const json = JSON.parse(receivingRequestResponse.stringPayload);
+
 					receivingRequestResponse.json = json;
 					if (json.id && this.activeRequests[json.id]) {
 						const request = this.activeRequests[json.id];
-						const callback = request.callback;
-						if (callback) {
-							callback(receivingRequestResponse);
+
+						if (!request.callback) {
+							// Should never happen as we should always have a callback but just in case
+							console.error('Request did not have callback');
+						} else {
+							request.callback(receivingRequestResponse);
 						}
-						delete this.activeRequests[json.id];
+					} else {
+						this.debugLog('Received response for unknown request:', json);
 					}
 				}
 			});
@@ -877,12 +943,16 @@ export class OnDeviceComponent {
 		return this.clientSocketPromise;
 	}
 
-	private async sendRequest(type: ODC.RequestType, args: ODC.RequestArgs, options: ODC.RequestOptions = {}) {
+	private async sendRequest(type: ODC.RequestType, args: ODC.RequestArgs, options: ODC.RequestOptions = {}, requestorCallback?: (response: ODC.RequestResponse) => Promise<boolean>) {
 		const requestId = utils.randomStringGenerator();
+
+		this.debugLog(`Sending request ${requestId} of type ${type} with args:`, args);
+
 		const request: ODC.Request = {
 			id: requestId,
 			type: type,
-			args: args
+			args: args,
+			isRecuring: !!requestorCallback
 		};
 
 		let stackTraceError: Error | undefined;
@@ -936,27 +1006,39 @@ export class OnDeviceComponent {
 		clientSocket.write(Buffer.concat(requestBuffers));
 
 		const promise = new Promise<ODC.RequestResponse>((resolve, reject) => {
-				request.callback = (response) => {
-					try {
-						const json = response.json;
-						this.debugLog('Received response:', response.json);
-						if (json?.error === undefined) {
-							resolve(response);
-						} else {
-							let error: Error;
-							if (stackTraceError) {
-								error = stackTraceError;
-								this.removeOnDeviceComponentFromErrorStack(error);
-							} else {
-								error = new Error();
+			request.callback = async (response) => {
+				try {
+					const json = response.json;
+					this.debugLog('Received response:', json);
+					if (json?.error === undefined) {
+						if (requestorCallback) {
+							if (await requestorCallback(response)) {
+								resolve(response);
 							}
-							error.message = `${json?.error?.message}`;
-							reject(error);
+						} else {
+							// Only delete request if there wasn't a callback
+							const requestId = json.id;
+							this.debugLog(`Deleting request ${requestId}`);
+
+							delete this.activeRequests[requestId];
+
+							resolve(response);
 						}
-					} catch(e) {
-						reject(e);
+					} else {
+						let error: Error;
+						if (stackTraceError) {
+							error = stackTraceError;
+							this.removeOnDeviceComponentFromErrorStack(error);
+						} else {
+							error = new Error();
+						}
+						error.message = `${json?.error?.message}`;
+						reject(error);
 					}
-				};
+				} catch(e) {
+					reject(e);
+				}
+			};
 		});
 
 		const timeout = this.getTimeOut(options);

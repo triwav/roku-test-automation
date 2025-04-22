@@ -6,6 +6,7 @@ sub init()
 	m.validRequestTypes = {
 		"callFunc": processCallFuncRequest
 		"callFunc": processCallFuncRequest
+		"cancelRequest": processCancelRequest
 		"createChild": processCreateChildRequest
 		"deleteNodeReferences": processDeleteNodeReferencesRequest
 		"disableScreenSaver": processDisableScreenSaverRequest
@@ -22,7 +23,7 @@ sub init()
 		"isInFocusChain": processIsInFocusChainRequest
 		"isShowingOnScreen": processIsShowingOnScreenRequest
 		"isSubtype": processIsSubtypeRequest
-		"onFieldChangeOnce": processOnFieldChangeOnceRequest
+		"onFieldChange": processOnFieldChangeRequest
 		"removeNode": processRemoveNodeRequest
 		"removeNodeChildren": processRemoveNodeChildrenRequest
 		"setSettings": processSetSettingsRequest
@@ -32,7 +33,7 @@ sub init()
 		"storeNodeReferences": processStoreNodeReferencesRequest
 	}
 
-	m.activeObserveFieldRequests = {}
+	m.activeRequests = {}
 
 	m.nodeReferences = {}
 end sub
@@ -330,9 +331,11 @@ function processIsInFocusChainRequest(request as Object) as Object
 	}
 end function
 
-function processOnFieldChangeOnceRequest(request as Object) as Dynamic
+function processOnFieldChangeRequest(request as Object) as Dynamic
 	args = request.args
 	requestId = request.id
+
+	m.activeRequests[requestId] = request
 
 	' We have to exclude the field from the args so we can get the parent node
 	getValueArgs = {}
@@ -351,6 +354,7 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 	fieldExists = parentRTA_isNode AND node.doesExist(field)
 	timePassed = 0
 
+	' If node doesn't exist or field doesn't exist we set a timer to retry after a delay
 	if NOT parentRTA_isNode OR NOT fieldExists then
 		retryTimeout = args.retryTimeout
 		if retryTimeout > 0 then
@@ -360,15 +364,15 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 				timer = createObject("roSGNode", "Timer")
 				timer.duration = args.retryInterval / 1000
 				timer.id = requestId
-				timer.observeFieldScoped("fire", "onProcessObserveFieldRequestRetryFired")
+				timer.observeFieldScoped("fire", "onProcessOnFieldChangeRequestRetryFired")
+				timer.control = "start"
 
 				requestContext = {
 					"timer": timer
 					"timespan": createObject("roTimespan")
 				}
 				request.context = requestContext
-				m.activeObserveFieldRequests[requestId] = request
-				timer.control = "start"
+
 				return Invalid
 			else
 				timePassed = requestContext.timespan.totalMilliseconds()
@@ -388,16 +392,45 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 		else
 			errorMessage = "Node did not have field named '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'"
 		end if
+
 		if timePassed > 0 then
 			errorMessage += " timed out after " + timePassed.toStr() + "ms"
 		end if
+
 		RTA_logWarn(errorMessage)
 
-		m.activeObserveFieldRequests.delete(requestId)
+		m.activeRequests.delete(requestId)
+
 		sendResponseToTask(request, RTA_buildErrorResponseObject(errorMessage))
 
 		' Might be called asynchronously, and we already handled this, so return Invalid
 		return Invalid
+	end if
+
+
+
+	' Set by reference in activeRequests request AA
+	request.node = node
+
+	' Only want to observe if we weren't already observing this node field
+	alreadyObserving = false
+	for each requestId in m.activeRequests
+		existingRequest = m.activeRequests[requestId]
+		if request.type = "onFieldChange" then
+			if node.isSameNode(existingRequest.node) AND existingRequest.args.field = field AND requestId <> request.id then
+				RTA_logDebug("Already observing '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
+				alreadyObserving = true
+				exit for
+			end if
+		end if
+	end for
+
+	if NOT alreadyObserving then
+		if node.observeFieldScoped(field, "observeFieldCallback") then
+			RTA_logDebug("Now observing '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
+		else
+			return RTA_buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
+		end if
 	end if
 
 	' If match was provided, check to see if it already matches the expected value
@@ -411,6 +444,7 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 
 		' IMPROVEMENT hook into compareValues() functionality and eventually build out to support more complicated types
 		if result.found AND result.value = match.value then
+			' In this case our first response is actually an observer response
 			return {
 				"value": node[field]
 				"observerFired": false
@@ -418,36 +452,71 @@ function processOnFieldChangeOnceRequest(request as Object) as Dynamic
 		end if
 	end if
 
-	' Only want to observe if we weren't already observing this node field
-	alreadyObserving = false
-	for each observedRequestId in m.activeObserveFieldRequests
-		activeObserveFieldRequest = m.activeObserveFieldRequests[observedRequestId]
+	return RTA_buildSuccessResponseObject("Successfully set the observer!")
+end function
 
-		if node.isSameNode(activeObserveFieldRequest.node) AND activeObserveFieldRequest.args.field = field then
-			RTA_logDebug("Already observing '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
-			alreadyObserving = true
-			exit for
+Function processCancelRequest(request as Object) as Object
+	args = request.args
+
+	requestIdToCancel = RTA_getStringAtKeyPath(args, "id")
+	request = m.activeRequests[requestIdToCancel]
+
+	if request <> invalid then
+		requestType = request.type
+		if requestType = "onFieldChange" then
+			conditionallyCleanObservers(request.node, request.args.field, requestIdToCancel)
+			response = RTA_buildSuccessResponseObject("Observer removed")
+		else
+			response = RTA_buildErrorResponseObject("Request ID '" + requestIdToCancel + "' can not be canceled")
+		end if
+
+		if RTA_isErrorObject(response) = false then
+			m.activeRequests.delete(requestIdToCancel)
+		else
+			RTA_logDebug("processCancelRequest: Error removing observer for request ID '" + requestIdToCancel + "'")
+		end if
+
+		return response
+	end if
+
+
+	return RTA_buildErrorResponseObject("Request ID '" + requestIdToCancel + "' not found")
+End Function
+
+' @param triggerRequestId - The requestId that triggered this cleanup. We need to exclude this requestId when checking if we can clean up the observer
+sub conditionallyCleanObservers(node, field, triggerRequestId)
+	if RTA_isNode(node) = false then
+		RTA_logDebug("conditionallyCleanObservers node is not a node")
+		return
+	end if
+
+	if RTA_isString(field) = false then
+		RTA_logDebug("conditionallyCleanObservers field is not a string")
+		return
+	end if
+
+	remainingObservers = 0
+	for each requestId in m.activeRequests
+		request = m.activeRequests[requestId]
+		if request.type = "onFieldChange" then
+			args = request.args
+			if triggerRequestId <> requestId AND node.isSameNode(request.node) AND args.field = field then
+				remainingObservers++
+			end if
 		end if
 	end for
 
-	if NOT alreadyObserving then
-		if node.observeFieldScoped(field, "observeFieldCallback") then
-			RTA_logDebug("Now observing '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
-		else
-			return RTA_buildErrorResponseObject("Could not observe field '" + field + "' at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
-		end if
+	if remainingObservers = 0 then
+		' If we got to here then we sent back all responses for this field so we can remove our observer now
+		RTA_logDebug("conditionallyCleanObservers: Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
+		node.unobserveFieldScoped(field)
 	end if
+end sub
 
-	request.node = node
-	m.activeObserveFieldRequests[requestId] = request
-
-	return Invalid
-end function
-
-sub onProcessObserveFieldRequestRetryFired(event as Object)
+sub onProcessOnFieldChangeRequestRetryFired(event as Object)
 	requestId = event.getNode()
-	request = m.activeObserveFieldRequests[requestId]
-	response = processOnFieldChangeOnceRequest(request)
+	request = m.activeRequests[requestId]
+	response = processOnFieldChangeRequest(request)
 
 	' If response isn't invalid then we have to send it back ourselves
 	if response <> Invalid then
@@ -460,51 +529,51 @@ sub observeFieldCallback(event as Object)
 	field = event.getField()
 	data = event.getData()
 	RTA_logDebug("Received callback for node field '" + field + "' with value ", data)
-	remainingObservers = 0
-	for each requestId in m.activeObserveFieldRequests
-		request = m.activeObserveFieldRequests[requestId]
-		args = request.args
-		if node.isSameNode(request.node) AND args.field = field then
-			success = true
-			RTA_logVerbose("Found matching requestId: " + requestId)
-			match = args.match
-			if RTA_isAA(match) then
-				result = processGetValueRequest(match)
-				if RTA_isErrorObject(result) then
-					RTA_logVerbose("observeFieldCallback: Encountered error", result)
-					sendResponseToTask(request, result)
-					success = false
+
+	requestFound = false
+
+	request = invalid
+	for each requestId in m.activeRequests
+		request = m.activeRequests[requestId]
+		if request.type = "onFieldChange" then
+			args = request.args
+			if node.isSameNode(request.node) AND args.field = field then
+				requestFound = true
+
+				success = true
+				RTA_logVerbose("Found matching requestId: " + requestId)
+				match = args.match
+				if RTA_isAA(match) then
+					result = processGetValueRequest(match)
+					if RTA_isErrorObject(result) then
+						RTA_logVerbose("observeFieldCallback: Encountered error", result)
+						sendResponseToTask(request, result)
+						success = false
+					end if
+
+					if result.found = false OR result.value <> match.value then
+						RTA_logVerbose("observeFieldCallback: Match.value did not match requested value continuing to wait", {
+							"result": result.value
+							"match": match.value
+						})
+						success = false
+					end if
 				end if
 
-				if result.found = false OR result.value <> match.value then
-					RTA_logVerbose("observeFieldCallback: Match.value did not match requested value continuing to wait", {
-						"result": result.value
-						"match": match.value
+				if success then
+					RTA_logVerbose("observeFieldCallback: Sending back response", data)
+					sendResponseToTask(request, {
+						"value": data
+						"observerFired": true
 					})
-					success = false
 				end if
-			end if
-
-			if success then
-				m.activeObserveFieldRequests.delete(requestId)
-				sendResponseToTask(request, {
-					"value": data
-					"observerFired": true
-				})
-			else
-				remainingObservers++
 			end if
 		end if
 	end for
 
-	if remainingObservers = 0 then
-		' If we got to here then we sent back all responses for this field so we can remove our observer now
-		RTA_logDebug("Unobserved '" + field + "' on " + node.subtype() + "(" + node.id + ")")
-		node.unobserveFieldScoped(field)
-		return
+	if requestFound = false then
+		RTA_logError("Received callback for unknown node or field ", node)
 	end if
-
-	RTA_logError("Received callback for unknown node or field ", node)
 end sub
 
 function processSetValueRequest(request as Object) as Object
@@ -1440,8 +1509,6 @@ function processSetSettingsRequest(request as Object) as Object
 	return {}
 end function
 
-
-
 function getBaseObject(args as Object) as Dynamic
 	baseType = RTA_getStringAtKeyPath(args, "base")
 	if baseType = "global" then return m.global
@@ -1466,6 +1533,7 @@ sub sendResponseToTask(request as Object, response as Object)
 
 	response.id = request.id
 	response["timeTaken"] = request.timespan.totalMilliseconds()
+	request.timespan.mark() 'For the onFieldChangeRepeat, maybe needs an adjustment on future, for now it will only indicates the time between the same request id
 	m.task.renderThreadResponse = response
 end sub
 

@@ -155,7 +155,23 @@ sub handleNodeEvent(message)
 	if message.getField() = "renderThreadResponse" then
 		response = message.getData()
 		request = m.activeRequests[response.id]
-		m.activeRequests.delete(response.id)
+
+		if RTA_getBooleanAtKeyPath(request, "json.isRecuring") = true then
+			RTA_logVerbose("Request not deleted from m.activeRequests because isRecuring was true. Handled by a cancelRequest request")
+		else
+			m.activeRequests.delete(response.id)
+		end if
+
+		if request.type = "cancelRequest" then
+			cancelRequestId = RTA_getStringAtKeyPath(request.args, "id")
+			if m.activeRequests[cancelRequestId] <> Invalid then
+				m.activeRequests.delete(cancelRequestId)
+			end if
+
+			sendResponseToClient(request, {})
+			return
+		end if
+
 		sendResponseToClient(request, response)
 	else
 		RTA_logWarn(fieldName + " not handled")

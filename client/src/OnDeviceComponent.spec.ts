@@ -2196,6 +2196,157 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('onFieldChange', function () {
+		it('check multiple onFieldChange requests running simultaneously, match tested', async () => {
+
+			//RESET COUNTER
+			await odc.setValue({
+				base: 'global',
+				keyPath: 'repeatingTimerFireCount',
+				value: 0,
+			});
+
+			const args1 = { base: 'global', keyPath: 'repeatingTimerFireCount' } as ODC.BaseKeyPath;
+			const args2 = { base: 'global', keyPath: 'repeatingTimerFireCount', match: 2 } as ODC.BaseKeyPath;
+			const args3 = { base: 'global', keyPath: 'repeatingTimerFireCount', match: 7 } as ODC.BaseKeyPath;
+
+			const events1: object[] = [];
+			const events2: object[] = [];
+			const events3: object[] = [];
+
+			const cancelRequest1 = await odc.onFieldChange({ ...args1 }, { timeout: (20 * 1000) }, (response) => {
+				if (response.value != null) {
+					events1.push(response);
+				}
+			});
+
+			const cancelRequest2 = await odc.onFieldChange({ ...args2 }, { timeout: (20 * 1000) }, (response) => {
+				if (response.value != null) {
+					events2.push(response);
+				}
+				return;
+			});
+
+			const cancelRequest3 = await odc.onFieldChange({ ...args3 }, { timeout: (20 * 1000) }, (response) => {
+				if (response.value != null) {
+					events3.push(response);
+				}
+				return;
+			});
+
+			await utils.sleep(3000);
+			expect(events1.length).to.be.lessThan(4); //We expect to have 3
+
+			const cancelResponse1 = await cancelRequest1();
+			const cancelMessage1 = cancelResponse1.success.message;
+			expect(cancelMessage1).to.be.a('string');
+
+			await utils.sleep(3 * 1000);
+			expect(events1.length).to.be.lessThan(4); //We expect to have 3
+
+			const cancelResponse2 = await cancelRequest2();
+			const cancelMessage2 = cancelResponse2.success.message;
+			expect(cancelMessage2).to.be.a('string');
+			await utils.sleep(2 * 1000);
+
+			const cancelResponse3 = await cancelRequest3();
+			const cancelMessage3 = cancelResponse3.success.message;
+			expect(cancelMessage3).to.be.a('string');
+			expect(events1.length).to.be.lessThan(4); //We expect to have 3
+			expect(events2.length).to.be.equal(1); //We expect to have 1
+			expect(events3.length).to.be.equal(1); //We expect to have 1
+		});
+
+		it('should only receive the event where the value is 3', async () => {
+
+			//RESET COUNTER
+			await odc.setValue({
+				base: 'global',
+				keyPath: 'repeatingTimerFireCount',
+				value: 0,
+			});
+
+			const args = { base: 'global', keyPath: 'repeatingTimerFireCount', match: 3 } as ODC.BaseKeyPath;
+			const events: object[] = [];
+			const cancelRequest = await odc.onFieldChange({ ...args }, { timeout: (20 * 1000) }, (response) => {
+				if (response.value != null) {
+					events.push(response);
+				}
+				return;
+			});
+			await utils.sleep(4 * 1000);
+			expect(events).to.be.an('array');
+			expect(events).to.have.lengthOf(1);
+			const cancelResult = await cancelRequest();
+			const cancelMessage = cancelResult.success.message;
+			expect(cancelMessage).to.be.a('string');
+		});
+
+		it('should have some events on the events array', async () => {
+			const args = { base: 'global', keyPath: 'repeatingTimerFireCount' } as ODC.BaseKeyPath;
+			const events: object[] = [];
+			const cancelRequest = await odc.onFieldChange({ ...args }, { timeout: (20 * 1000) }, (response) => {
+				if (response.value != null) {
+					events.push(response);
+				}
+				return;
+			});
+			await utils.sleep(3 * 1000);
+			expect(events).to.be.an('array');
+			expect(events).to.not.be.empty;
+			const cancelResult = await cancelRequest();
+			const cancelMessage = cancelResult.success.message;
+			expect(cancelMessage).to.be.a('string');
+		});
+
+		it('check multiple onFieldChange requests running simultaneously', async () => {
+
+			//RESET COUNTER
+			await odc.setValue({
+				base: 'global',
+				keyPath: 'repeatingTimerFireCount',
+				value: 0,
+			});
+
+			//Same args for both requests
+			const args = { base: 'global', keyPath: 'repeatingTimerFireCount' } as ODC.BaseKeyPath;
+
+			const events1: object[] = [];
+			const events2: object[] = [];
+
+			const cancelRequest1 = await odc.onFieldChange({ ...args }, { timeout: (20 * 1000) }, (response) => {
+				if (response.value != null) {
+					events1.push(response);
+				}
+				return;
+			});
+
+			const cancelRequest2 = await odc.onFieldChange({ ...args }, { timeout: (20 * 1000) }, (response) => {
+				if (response.value != null) {
+					events2.push(response);
+				}
+				return;
+			});
+
+			await utils.sleep(3 * 1000); //Wait 3 seconds
+			expect(events1).to.be.an('array');
+			expect(events1).to.not.be.empty;
+
+			const cancelResponse1 = await cancelRequest1();
+			const cancelMessage1 = cancelResponse1.success.message;
+			expect(cancelMessage1).to.be.a('string');
+
+			await utils.sleep(4 * 1000); //Wait more 3 seconds
+			expect(events2).to.be.an('array');
+			expect(events2.length).to.be.greaterThan(3); //We expect to have 6
+
+			const cancelResponse2 = await cancelRequest2();
+			const cancelMessage2 = cancelResponse2.success.message;
+			expect(cancelMessage2).to.be.a('string');
+		});
+
+	});
+
 	describe('callFunc', function () {
 		it('should fail if given invalid keyPath', async () => {
 			try {
