@@ -10,8 +10,10 @@ const sinon = sinonImport.createSandbox();
 const expect = chai.expect;
 
 import { ECP } from './ECP';
-import * as utils from './test/utils';
+import * as testUtils from './test/utils';
 import type { ConfigOptions } from './types/ConfigOptions';
+import type { AppUIResponse, AppUIResponseChild } from '.';
+import { utils } from '.';
 
 describe('ECP', function () {
 	let ecp: ECP;
@@ -29,13 +31,7 @@ describe('ECP', function () {
 				return ecpResponse;
 			}
 		};
-		config = {
-			RokuDevice: {
-				devices: []
-			}
-		};
-		ecp = new ECP(config);
-		ecp['device'] = device;
+		ecp = new ECP(device);
 		ecpUtils = ecp['utils'];
 		ecpResponse = '';
 	});
@@ -248,7 +244,7 @@ describe('ECP', function () {
 
 	describe('getActiveApp', function () {
 		it('app_active', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getActiveApp();
 			expect(result.app?.id).to.equal('dev');
 			expect(result.app?.title).to.equal('mockAppTitle');
@@ -257,14 +253,14 @@ describe('ECP', function () {
 		});
 
 		it('no_app_or_screensaver_active', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getActiveApp();
 			expect(result.app?.id).to.not.be.ok;
 			expect(result.app?.title).to.equal('Roku');
 		});
 
 		it('screensaver_active_app_open', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getActiveApp();
 			expect(result.app?.id).to.equal('dev');
 			expect(result.app?.title).to.equal('mockAppTitle');
@@ -278,7 +274,7 @@ describe('ECP', function () {
 		});
 
 		it('screensaver_active_no_app_open', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getActiveApp();
 			expect(result.screensaver?.id).to.equal('261525');
 			expect(result.screensaver?.title).to.equal('Aquatic Life');
@@ -292,7 +288,7 @@ describe('ECP', function () {
 
 	describe('sendLaunchChannel', function () {
 		it('should_not_throw_if_successful_and_verification_is_enabled', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			await ecp.sendLaunchChannel({
 				channelId: 'dev',
 				params: {},
@@ -355,7 +351,7 @@ describe('ECP', function () {
 
 	describe('getMediaPlayer', function () {
 		it('app_closed', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getMediaPlayer();
 			expect(result.state).to.equal('close');
 			expect(result.error).to.equal(false);
@@ -363,7 +359,7 @@ describe('ECP', function () {
 		});
 
 		it('player_closed', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getMediaPlayer();
 
 			expect(result.state).to.equal('close');
@@ -375,7 +371,7 @@ describe('ECP', function () {
 		});
 
 		it('player_startup', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getMediaPlayer();
 
 			expect(result.state).to.equal('startup');
@@ -397,7 +393,7 @@ describe('ECP', function () {
 		});
 
 		it('player_buffering', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getMediaPlayer();
 
 			expect(result.state).to.equal('buffer');
@@ -419,7 +415,7 @@ describe('ECP', function () {
 		});
 
 		it('player_playing', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getMediaPlayer();
 
 			expect(result.state).to.equal('play');
@@ -447,7 +443,7 @@ describe('ECP', function () {
 		});
 
 		it('player_paused', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getMediaPlayer();
 
 			expect(result.state).to.equal('pause');
@@ -477,7 +473,7 @@ describe('ECP', function () {
 
 	describe('getChanperf', function () {
 		it('app_closed', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getChanperf();
 			expect(result.error).to.equal('Channel not running');
 			expect(result.status).to.equal('FAILED');
@@ -485,7 +481,7 @@ describe('ECP', function () {
 		});
 
 		it('app_open', async () => {
-			ecpResponse = await utils.getNeedleMockResponse(this);
+			ecpResponse = await testUtils.getNeedleMockResponse(this);
 			const result = await ecp.getChanperf();
 			expect(result.status).to.equal('OK');
 			expect(result.plugin?.id).to.equal('dev');

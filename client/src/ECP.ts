@@ -1,10 +1,10 @@
-import type { HttpRequestOptions} from './RokuDevice';
-import { RokuDevice } from './RokuDevice';
+import type { HttpRequestOptions } from './RokuDevice';
+import type { RokuDevice } from './RokuDevice';
 import type { ActiveAppResponse } from './types/ActiveAppResponse';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import * as fsExtra from 'fs-extra';
 import type { MediaPlayerResponse } from './types/MediaPlayerResponse';
+import type { AppUIResponse, AppUIResponseChild } from './types/AppUIResponse';
 
 export enum Key {
 	Back = 'Back',
@@ -38,8 +38,8 @@ export class ECP {
 	public static readonly Key = Key;
 	public readonly Key = Key;
 
-	constructor(config?: ConfigOptions) {
-		this.device = new RokuDevice(config);
+	constructor(device: RokuDevice, config?: ConfigOptions) {
+		this.device = device;
 		if (config) {
 			this.setConfig(config);
 		}
@@ -68,7 +68,7 @@ export class ECP {
 		return this.getRtaConfig()?.ECP;
 	}
 
-	public async sendText(text: string, options?: SendKeypressOptions & {raspTemplateVariable?: 'script-login' | 'script-password'}) {
+	public async sendText(text: string, options?: SendKeypressOptions & { raspTemplateVariable?: 'script-login' | 'script-password' }) {
 		this.addRaspFileStep(`text: ${options?.raspTemplateVariable ?? text}`);
 		for (const char of text) {
 			const value: any = `LIT_${char}`;
@@ -99,8 +99,8 @@ export class ECP {
 
 	public async sendKeyEvent(key: Key, keyEventOptions: SendKeyEventOptions, keypressOptions?: SendKeypressOptions) {
 		const { eventOptions, pressOptions } = this.normalizeOptions(keyEventOptions, keypressOptions);
-		const keydown = eventOptions?.keydown; 
-		const keyup = eventOptions?.keyup; 
+		const keydown = eventOptions?.keydown;
+		const keyup = eventOptions?.keyup;
 		const duration = eventOptions.duration;
 
 		if (keydown != keyup || duration) {
@@ -127,7 +127,7 @@ export class ECP {
 
 				if (wait) await this.utils.sleep(wait);
 			}
-		} else {	
+		} else {
 			await this.sendKeypress(key, pressOptions);
 		}
 	}
@@ -145,7 +145,7 @@ export class ECP {
 			pressOptions = {
 				wait: pressOptions
 			};
-		} 
+		}
 
 		return { eventOptions: eventOptions, pressOptions: pressOptions };
 	}
@@ -289,6 +289,168 @@ export class ECP {
 		return response;
 	}
 
+	public async getAppUI() {
+		const result = await this.device.sendEcpGet(`query/app-ui`);
+
+		const children = result.body?.children;
+		if (!children || children[0].name != 'status' || children[0].value != 'OK' || children[1].name != 'topscreen' || children[1].children[0].name != 'plugin' || children[1].children[1].name != 'screen') {
+			throw this.utils.makeError('getAppUIInvalidResponse', 'Received invalid app-ui response from device');
+		}
+
+		const screen = children[1].children[1];
+
+		const response: AppUIResponse = {
+			plugin: children[1].children[0].attributes,
+			screen: {
+				focused: screen.attributes.focused == 'true',
+				type: screen.attributes.type,
+				children: this.convertChildrenForGetAppUI(screen.children)
+			}
+		};
+
+		const sceneNode = response.screen.children[0];
+		sceneNode.base = 'scene';
+		sceneNode.keyPath = '';
+
+		if (sceneNode.children) {
+			for (const [position, child] of sceneNode.children.entries()) {
+				this.generateKeyPathsFromAppUIResponse(child, position);
+			}
+		}
+
+		this.calculateSceneBoundingRects(sceneNode);
+
+		return response;
+	}
+
+
+	private convertChildrenForGetAppUI(children: any[]) {
+		const response: AppUIResponseChild[] = [];
+		for (const child of children) {
+			// Do some conversions
+			if (child.attributes.name) {
+				child.attributes.id = child.attributes.name;
+			}
+
+			child.attributes.focusable = (child.attributes.focusable == 'true');
+			child.attributes.focused = (child.attributes.focused == 'true');
+			child.attributes.visible = (child.attributes.visible !== 'false');
+			child.attributes.inheritParentOpacity = (child.attributes.inheritParentOpacity !== 'false');
+			child.attributes.inheritParentTransform = (child.attributes.inheritParentTransform !== 'false');
+
+			const opacity = child.attributes.opacity ?? '100';
+			child.attributes.opacity = +opacity / 100;
+
+			if (child.attributes.translation) {
+				child.attributes.translation = this.convertAppUiArray(child.attributes.translation);
+			}
+
+			if (child.attributes.bounds) {
+				child.attributes.bounds = this.convertAppUiArray(child.attributes.bounds);
+			}
+
+			const childResponse: AppUIResponseChild = {
+				...child.attributes,
+				subtype: child.name == 'RenderableNode' ? 'Group' : child.name,
+			};
+
+			if (Array.isArray(child.children) && child.children.length > 0) {
+				childResponse.children = this.convertChildrenForGetAppUI(child.children);
+			} else {
+				delete childResponse.children;
+			}
+			response.push(childResponse);
+		}
+
+		return response;
+	}
+
+	private calculateSceneBoundingRects(node: AppUIResponseChild, offset: number[] = [0, 0], useBounds = false) {
+		if (useBounds && node.bounds) {
+			offset = [
+				node.bounds[0] + offset[0],
+				node.bounds[1] + offset[1]
+			];
+		} else if (node.translation) {
+			offset = [
+				node.translation[0] + offset[0],
+				node.translation[1] + offset[1]
+			];
+		}
+
+		if (node.bounds && node.subtype != 'RowListItem') {
+			// Not doing RowListItem calculation since it isn't needed and everything is finally working
+			node.sceneRect = {
+				x: offset[0],
+				y: offset[1],
+				width: node.bounds[2],
+				height: node.bounds[3]
+			};
+		}
+
+		if (node.subtype == 'RowListItem') {
+			// We have to subtract the row offset from the bounds for correct positioning
+			if (node.children && node.children[node.children.length - 1]) {
+				const lastChild = node.children[node.children.length - 1];
+				if (lastChild.translation) {
+					offset = [
+						offset[0] - lastChild.translation[0],
+						offset[1] - lastChild.translation[1]
+					];
+				}
+			}
+
+			if (node.bounds) {
+				offset[0] += node.bounds[0];
+				offset[1] += node.bounds[1];
+			}
+		} else if (node.subtype == 'MarkupGrid') {
+			useBounds = true;
+		}
+
+		node['offset'] = offset;
+
+		for (const child of node.children ?? []) {
+			this.calculateSceneBoundingRects(child, offset, useBounds);
+		}
+	}
+
+	private generateKeyPathsFromAppUIResponse(node: AppUIResponseChild, position: number, keyPathParts: string[] = [], duplicateIdsFound = false) {
+		const currentNodeKeyPathParts = [...keyPathParts];
+
+		if (node.id && !duplicateIdsFound) {
+			currentNodeKeyPathParts.push(`#${node.id}`);
+		} else {
+			currentNodeKeyPathParts.push(position.toString());
+		}
+
+		node.base = 'scene';
+		node.keyPath = currentNodeKeyPathParts.join('.');
+
+		const children = node.children ?? [];
+		for (const [childPosition, childNode] of children.entries()) {
+			duplicateIdsFound = children.filter((child, index) => {
+				if (child.id) {
+					if (child.id == childNode.id && index != childPosition) {
+						return true;
+					}
+				}
+				return false;
+			}).length > 0;
+
+			this.generateKeyPathsFromAppUIResponse(childNode, childPosition, currentNodeKeyPathParts, duplicateIdsFound);
+		}
+	}
+
+	private convertAppUiArray(input?: string, fallback?: number[]) {
+		if (!input) {
+			return fallback;
+		}
+
+		// the app-ui api returns arrays with curly braces that we need to convert to square braces and then run JSON.parse on
+		return JSON.parse(input.replace(/[{}]/g, match => match === '{' ? '[' : ']'));
+	}
+
 	public getChannelId(channelId?: string) {
 		if (!channelId) {
 			const configChannelId = this.getConfig()?.default?.launchChannelId;
@@ -333,7 +495,7 @@ export class ECP {
 	}
 
 	public async getChanperf(options: HttpRequestOptions = {}) {
-		const {body} = await this.device.sendEcpGet(`query/chanperf`, undefined, options);
+		const { body } = await this.device.sendEcpGet(`query/chanperf`, undefined, options);
 
 		const response = this.simplifyEcpResponse(body);
 		const plugin = response.plugin;
@@ -426,7 +588,7 @@ export class ECP {
 		raspFileLines.push(`steps:`);
 		raspFileLines = raspFileLines.concat(this.raspFileSteps);
 		this.raspFileSteps = undefined;
-		fsExtra.writeFileSync(outputPath, raspFileLines.join('\n'));
+		utils.getFsExtra().writeFileSync(outputPath, raspFileLines.join('\n'));
 	}
 }
 

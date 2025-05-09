@@ -54,6 +54,7 @@
                 "defaultBase": {
                     "description": "Allows specifying the default base that will be used if one was not provided in the args for a request",
                     "enum": [
+                        "elementId",
                         "focusedNode",
                         "global",
                         "nodeRef",

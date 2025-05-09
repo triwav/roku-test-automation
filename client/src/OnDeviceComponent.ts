@@ -401,6 +401,13 @@ export class OnDeviceComponent {
 		return output;
 	}
 
+	public async assignElementIdOnAllNodes(args: ODC.AssignElementIdOnAllNodesArgs = {}, options: ODC.RequestOptions = {}) {
+		const result = await this.sendRequest(ODC.RequestType.assignElementIdOnAllNodes, {...args, convertResponseToJsonCompatible: false}, options);
+		const output = result.json as ODC.AssignElementIdOnAllNodesResponse;
+
+		return output;
+	}
+
 	private buildKeyPathsRecursively(nodeTrees: ODC.TreeNode[], keyPathParts = [] as string[], parentIsRowlistItem = false, parentIsTitleGroup = false) {
 		for (const nodeTree of nodeTrees) {
 			let keyPathPostfix = '';

@@ -1,6 +1,7 @@
 import type { Socket } from 'net';
 
 export enum RequestType {
+	assignElementIdOnAllNodes = 'assignElementIdOnAllNodes',
 	callFunc = 'callFunc',
 	cancelRequest = 'cancelRequest',
 	createDirectory = 'createDirectory',
@@ -28,6 +29,7 @@ export enum RequestType {
 	isSubtype = 'isSubtype',
 	isShowingOnScreen = 'isShowingOnScreen',
 	onFieldChange = 'onFieldChange',
+	onFieldChangeOnce = 'onFieldChangeOnce',
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
 	removeNode = 'removeNode',
@@ -47,10 +49,11 @@ export enum RequestType {
 export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeArgs | CancelRequestArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
+	elementId = 'elementId',
+	focusedNode = 'focusedNode',
 	global = 'global',
-	scene = 'scene',
 	nodeRef = 'nodeRef',
-	focusedNode = 'focusedNode'
+	scene = 'scene'
 }
 
 export declare type LogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
@@ -240,6 +243,11 @@ export interface StoreNodeReferencesArgs extends NodeRefKey {
 	includeBoundingRectInfo?: boolean;
 }
 
+export interface AssignElementIdOnAllNodesArgs {
+	/** True by default. If false will regenerate a new element id for all elements even if one was previously assigned */
+	maintainExistingElementId?: boolean;
+}
+
 export interface StoreNodeReferencesResponse extends ReturnTimeTaken {
 	flatTree: TreeNode[];
 	rootTree: TreeNode[];
@@ -250,6 +258,9 @@ export interface StoreNodeReferencesResponse extends ReturnTimeTaken {
 		height: number;
 		resolution: 'FHD' | 'HD';
 	}
+}
+
+export interface AssignElementIdOnAllNodesResponse extends ReturnTimeTaken {
 }
 
 export interface DeleteNodeReferencesArgs extends NodeRefKey {}

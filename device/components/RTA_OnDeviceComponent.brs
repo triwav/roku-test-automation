@@ -4,6 +4,7 @@ sub init()
 	m.task.observeFieldScoped("renderThreadRequest", "onRenderThreadRequestChange")
 	m.task.control = "RUN"
 	m.validRequestTypes = {
+		"assignElementIdOnAllNodes": processAssignElementIdOnAllNodesRequest
 		"callFunc": processCallFuncRequest
 		"callFunc": processCallFuncRequest
 		"cancelRequest": processCancelRequest
@@ -36,6 +37,8 @@ sub init()
 	m.activeRequests = {}
 
 	m.nodeReferences = {}
+
+	m.currentElementId = 0
 end sub
 
 sub onRenderThreadRequestChange(event as Object)
@@ -808,6 +811,30 @@ function processStoreNodeReferencesRequest(request as Object) as Object
 	return result
 end function
 
+function processAssignElementIdOnAllNodesRequest(request as Object) as Object
+	args = request.args
+
+	maintainExistingElementId = RTA_getBooleanAtKeyPath(args, "maintainExistingElementId", true)
+
+	if maintainExistingElementId = false then
+		m.currentElementId = 0
+	end if
+
+	result = {}
+
+	allNodes = m.top.getAll()
+	for each node in allNodes
+		if maintainExistingElementId AND node.getUIElementId() <> "" then
+			' Skipping as already stored
+		else
+			node.setUIElementId("RTA_" + m.currentElementId.toStr())
+			m.currentElementId++
+		end if
+	end for
+
+	return result
+end function
+
 ' ArrayGrid children can't be built with a normal call to buildTree since you can only get the parent not the children.
 ' Often times nodes are in different spots, so this will also standardize them to a single consistent spot
 sub buildItemComponentTrees(storedNodes as Object, flatTree as Object, itemComponentNodes as Object, arrayGridNodes as Object, allNodes as Object, includeBoundingRectInfo = false as Boolean)
@@ -1522,6 +1549,17 @@ function getBaseObject(args as Object) as Dynamic
 		else
 			return base
 		end if
+	else if baseType = "elementId" then
+		elementId = RTA_getStringAtKeyPath(args, "elementId")
+
+		allNodes = m.top.getAll()
+		for each node in allNodes
+			if node.getUIElementId() = elementId then
+				return node
+			end if
+		end for
+
+		return RTA_buildErrorResponseObject("Could not find elementId '" + elementId + "'")
 	end if
 	return RTA_buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
 end function
