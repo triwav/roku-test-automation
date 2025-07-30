@@ -16,7 +16,7 @@ export interface AppUIResponseChild {
 	base: keyof typeof BaseType;
 	keyPath: string;
 	subtype: string;
-	sceneRect: BoundingRect;
+	sceneRect?: BoundingRect;
 	bounds?: number[];
 	children?: AppUIResponseChild[];
 	color?: string;

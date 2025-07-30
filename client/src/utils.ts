@@ -281,9 +281,11 @@ class Utils {
 		return Math.floor(Math.random() * (max - min + 1) ) + min;
 	}
 
-	public findNodesAtLocation(appUIResponse: AppUIResponse, x: number, y: number) {
+	public findNodesAtLocation(args: { appUIResponse: AppUIResponse, x: number, y: number, includeMatchesWithoutKeyPath?: boolean }) {
 		const matches = [] as AppUIResponseChild[];
-		this.findNodesAtLocationCore(x, y, appUIResponse.screen.children, matches);
+		this.findNodesAtLocationCore({...args , children: args.appUIResponse.screen.children, matches: matches});
+
+		const {x, y} = args;
 
 		// We now want to sort our matches to try and return the best one first
 		matches.sort((a, b) => {
@@ -314,7 +316,11 @@ class Utils {
 		};
 	}
 
-	private findNodesAtLocationCore(x: number, y: number, children: AppUIResponseChild[], matches: AppUIResponseChild[], isArrayGridChild = false) {
+	private findNodesAtLocationCore(args: {x: number, y: number, children: AppUIResponseChild[], matches: AppUIResponseChild[], isArrayGridChild?: boolean, includeMatchesWithoutKeyPath?: boolean}) {
+		let isArrayGridChild = args.isArrayGridChild ?? false;
+
+		const {x, y, children, matches} = args;
+
 		for (const child of children) {
 			let isLocationWithinNodeDimensions = false;
 			if (child.sceneRect) {
@@ -329,11 +335,13 @@ class Utils {
 
 			if ((isLocationWithinNodeDimensions && isVisible) || isArrayGridChild) {
 				if (isLocationWithinNodeDimensions && isVisible) {
-					matches.push(child);
+					if (child.keyPath != undefined || args.includeMatchesWithoutKeyPath) {
+						matches.push(child);
+					}
 				}
 
 				if (child.children?.length) {
-					this.findNodesAtLocationCore(x, y, child.children, matches, isArrayGridChild);
+					this.findNodesAtLocationCore({x: x, y: y, children: child.children, matches: matches, isArrayGridChild: isArrayGridChild});
 				}
 			}
 		}

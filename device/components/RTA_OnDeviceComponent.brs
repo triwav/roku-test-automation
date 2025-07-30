@@ -8,6 +8,7 @@ sub init()
 		"callFunc": processCallFuncRequest
 		"callFunc": processCallFuncRequest
 		"cancelRequest": processCancelRequest
+		"convertKeyPathToSceneKeyPath": processConvertKeyPathToSceneKeyPath
 		"createChild": processCreateChildRequest
 		"deleteNodeReferences": processDeleteNodeReferencesRequest
 		"disableScreenSaver": processDisableScreenSaverRequest
@@ -178,6 +179,61 @@ function processGetFocusedNodeRequest(request as Object) as Object
 	end if
 
 	return result
+end function
+
+function processConvertKeyPathToSceneKeyPath(request as Object) as Object
+	args = request.args
+
+	result = processGetValueRequest(args)
+	if RTA_isErrorObject(result) then
+		return result
+	end if
+
+	if result.found <> true then
+		return RTA_buildErrorResponseObject("No value found at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
+	end if
+
+	node = result.value
+	if NOT RTA_isNode(node) then
+		return RTA_buildErrorResponseObject("Value at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "' was not a node")
+	end if
+
+	keyPathParts = []
+
+	' If we found the matching node then we are going to walk up the tree to build the scene key path. If we don't end up with scene at the top then then we know we didn't succeed
+	while true
+		parent = node.getParent()
+		if parent <> invalid then
+			nodeId = node.id
+			if nodeId <> "" then
+				keyPathParts.unshift("#" + nodeId)
+			else
+				position = RTA_getNodeParentIndex(node, parent)
+				keyPathParts.unshift(position.toStr())
+			end if
+
+			' If this is a child of global then we need to not continue as global will return the Scene when getParent is called but it won't be a valid key path
+			if m.global.isSameNode(node) then
+				exit while
+			end if
+
+			node = parent
+		else
+			' If we got to the top and the node is a scene then we can return the key path
+			if node.isSubtype("Scene") then
+				keyPath = keyPathParts.join(".")
+				return {
+					"base": "scene"
+					"keyPath": keyPath
+				}
+			else
+				exit while
+			end if
+		end if
+	end while
+
+	' If we got to the top and the node is not a scene then we can't convert it to a scene key path
+	return RTA_buildErrorResponseObject("Could not convert key path to scene key path as the node was not a child of the Scene")
 end function
 
 function processGetValueRequest(request as Object) as Object
@@ -581,13 +637,16 @@ end sub
 
 function processSetValueRequest(request as Object) as Object
 	args = request.args
+
+	' Need to call getBaseObject first as this will modify path for elementId based key paths
+	base = getBaseObject(args)
+
 	keyPath = RTA_getStringAtKeyPath(args, "keyPath")
 	field = args.field
 	if NOT RTA_isString(field) then
 		return RTA_buildErrorResponseObject("Missing valid 'field' param")
 	end if
 
-	base = getBaseObject(args)
 	if RTA_isErrorObject(base) then
 		return base
 	end if
@@ -1550,16 +1609,25 @@ function getBaseObject(args as Object) as Dynamic
 			return base
 		end if
 	else if baseType = "elementId" then
-		elementId = RTA_getStringAtKeyPath(args, "elementId")
+		' Element ID will always be the first part of the key path
+		keyPathParts = RTA_getStringAtKeyPath(args, "keyPath").split(".")
+
+		matchingElementId = keyPathParts.shift()
+		if matchingElementId = invalid then
+			return RTA_buildErrorResponseObject("Base type of elementId but no keyPath provided")
+		end if
 
 		allNodes = m.top.getAll()
 		for each node in allNodes
-			if node.getUIElementId() = elementId then
+			elementId = node.getUIElementId()
+			if elementId = matchingElementId then
+				' We have to modify the returned key path to exclude the elementId part of the key path. Still debating if it should be a separate argument or continue including in keyPath arg.
+				args.keyPath = keyPathParts.join(".")
 				return node
 			end if
 		end for
 
-		return RTA_buildErrorResponseObject("Could not find elementId '" + elementId + "'")
+		return RTA_buildErrorResponseObject("Could not find elementId '" + matchingElementId + "'")
 	end if
 	return RTA_buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
 end function

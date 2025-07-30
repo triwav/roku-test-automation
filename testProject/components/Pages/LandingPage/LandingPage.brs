@@ -38,7 +38,7 @@ function makeRowListContent()
 		row.id = row.title
 		itemCount = 1
 		if rowIndex MOD 2 = 1 then
-			itemCount = 8
+			itemCount = 50
 		end if
 		for itemIndex = 0 to itemCount - 1
 			item = row.createChild("ContentNode")

@@ -1,9 +1,11 @@
 import type { Socket } from 'net';
+import type { AppUIResponse } from './AppUIResponse';
 
 export enum RequestType {
 	assignElementIdOnAllNodes = 'assignElementIdOnAllNodes',
 	callFunc = 'callFunc',
 	cancelRequest = 'cancelRequest',
+	convertKeyPathToSceneKeyPath = 'convertKeyPathToSceneKeyPath',
 	createDirectory = 'createDirectory',
 	createChild = 'createChild',
 	deleteFile = 'deleteFile',
@@ -49,6 +51,7 @@ export enum RequestType {
 export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeArgs | CancelRequestArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
+	appUI = 'appUI',
 	elementId = 'elementId',
 	focusedNode = 'focusedNode',
 	global = 'global',
@@ -66,6 +69,9 @@ interface NodeRefKey {
 export interface BaseArgs extends NodeRefKey {
 	/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
 	base?: BaseType |  keyof typeof BaseType;
+
+	/** If base type is appUI then a request will normally be made to the device using ecp.getAppUI. If you wish to avoid this extra call for multiple requests in a row you can pass in an AppUIResponse. */
+	appUIResponse?: AppUIResponse;
 }
 
 export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
@@ -460,3 +466,5 @@ export interface SetSettingsArgs {
 export interface CancelRequestArgs {
 	id: string;
 }
+
+export interface ConvertKeyPathToSceneKeyPathArgs extends BaseKeyPath {}

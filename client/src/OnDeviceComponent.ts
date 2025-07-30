@@ -4,6 +4,8 @@ import type { RokuDevice } from './RokuDevice';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 import * as ODC from './types/OnDeviceComponent';
+import type { AppUIResponse, AppUIResponseChild } from '.';
+import { ecp } from '.';
 
 export class OnDeviceComponent {
 	public device: RokuDevice;
@@ -51,8 +53,7 @@ export class OnDeviceComponent {
 
 	//#region requests run on render thread
 	public async callFunc(args: ODC.CallFuncArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 
 		const result = await this.sendRequest(ODC.RequestType.callFunc, args, options);
 		return result.json as {
@@ -106,8 +107,7 @@ export class OnDeviceComponent {
 	}
 
 	public async getValue(args: ODC.GetValueArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 
 		const result = await this.sendRequest(ODC.RequestType.getValue, args, options);
 		return result.json as {
@@ -117,10 +117,20 @@ export class OnDeviceComponent {
 	}
 
 	public async getValues(args: ODC.GetValuesArgs, options: ODC.RequestOptions = {}) {
+		if (this.hasMultipleAppUIRequests(args)) {
+			// If we have multiple appUI requests we get the appUIResponse first and assign to each to avoid multiple calls
+			const appUIResponse = await ecp.getAppUI();
+			for (const key in args.requests) {
+				const requestArgs = args.requests[key];
+				if (requestArgs.base === 'appUI') {
+					requestArgs.appUIResponse = appUIResponse;
+				}
+			}
+		}
+
 		for (const key in args.requests) {
 			const requestArgs = args.requests[key];
-			this.conditionallyAddDefaultBase(requestArgs);
-			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
+			await this.applySharedKeyPathLogic(requestArgs, options);
 		}
 
 		const result = await this.sendRequest(ODC.RequestType.getValues, args, options);
@@ -135,10 +145,20 @@ export class OnDeviceComponent {
 	}
 
 	public async getNodesInfo(args: ODC.GetNodesInfoArgs, options: ODC.RequestOptions = {}) {
+		if (this.hasMultipleAppUIRequests(args)) {
+			// If we have multiple appUI requests we get the appUIResponse first and assign to each to avoid multiple calls
+			const appUIResponse = await ecp.getAppUI();
+			for (const key in args.requests) {
+				const requestArgs = args.requests[key];
+				if (requestArgs.base === 'appUI') {
+					requestArgs.appUIResponse = appUIResponse;
+				}
+			}
+		}
+
 		for (const key in args.requests) {
 			const requestArgs = args.requests[key];
-			this.conditionallyAddDefaultBase(requestArgs);
-			this.conditionallyAddDefaultNodeReferenceKey(requestArgs);
+			await this.applySharedKeyPathLogic(requestArgs, options);
 		}
 
 		const result = await this.sendRequest(ODC.RequestType.getNodesInfo, args, options);
@@ -162,7 +182,7 @@ export class OnDeviceComponent {
 	}
 
 	public async getFocusedNode(args: ODC.GetFocusedNodeArgs = {}, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 
 		const result = await this.sendRequest(ODC.RequestType.getFocusedNode, args, options);
 		return result.json as {
@@ -173,16 +193,14 @@ export class OnDeviceComponent {
 	}
 
 	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 
 		const result = await this.sendRequest(ODC.RequestType.hasFocus, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json.hasFocus as boolean;
 	}
 
 	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 
 		const result = await this.sendRequest(ODC.RequestType.isInFocusChain, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json.isInFocusChain as boolean;
@@ -224,15 +242,14 @@ export class OnDeviceComponent {
 	}
 
 	public async onFieldChange(args: ODC.OnFieldChangeArgs, options: ODC.RequestOptions = {}, callback: (response: ODC.OnFieldChangeResponse) => Promise<void> | void) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 		args = this.breakOutFieldFromKeyPath(args);
 
 		const match = args.match;
 		if (match !== undefined) {
 			// Check if it's an object. Also have to check constructor as array is also an instanceof Object, make sure it has the keyPath key
 			if (((match instanceof Object) && (match.constructor.name === 'Object') && ('keyPath' in match))) {
-				this.conditionallyAddDefaultBase(match);
+				await this.applySharedKeyPathLogic(match, options);
 			} else {
 				// If it's not we take base and keyPath from the base, keyPath and field args
 				args.match = {
@@ -285,8 +302,7 @@ export class OnDeviceComponent {
 	}
 
 	public async setValue(args: ODC.SetValueArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 
 		args.convertResponseToJsonCompatible = false;
 
@@ -295,16 +311,152 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
-	private conditionallyAddDefaultBase(args: ODC.BaseArgs) {
+	/** Needed to convert appUI key path to scene but might be useful in other cases as well. Takes in a key path and will try and call getParent() on each node in the tree until it gets to the Scene */
+	public async convertKeyPathToSceneKeyPath(args: ODC.ConvertKeyPathToSceneKeyPathArgs, options: ODC.RequestOptions = {}) {
+		await this.applySharedKeyPathLogic(args, options);
+
+		const result = await this.sendRequest(ODC.RequestType.convertKeyPathToSceneKeyPath, args, options);
+		return result.json as {
+			base?: 'scene';
+			keyPath: string;
+		} & ODC.ReturnTimeTaken;
+	}
+
+	private async applySharedKeyPathLogic(args: ODC.BaseKeyPath, options: ODC.RequestOptions) {
+		// If no default base was provided we default to scene
 		if (!args.base) {
 			args.base = (this.getConfig()?.defaultBase) ?? ODC.BaseType.scene;
 		}
-	}
 
-	private conditionallyAddDefaultNodeReferenceKey(args: ODC.BaseArgs) {
+		// Add nodeRefKey if needed
 		if (!args.nodeRefKey) {
 			if (!args.base || args.base === 'nodeRef') {
 				args.nodeRefKey = this.defaultNodeReferencesKey;
+			}
+		}
+
+		// If we receive an appUI keypath then we need to convert it
+		if (args.base === 'appUI' && args.keyPath !== undefined) {
+			// First check if we already have a AppUIResponse
+			let appUIResponse: AppUIResponse;
+			if (args.appUIResponse) {
+				appUIResponse = args.appUIResponse;
+			} else {
+				const startTime = Date.now();
+				// Want our error to throw not the general timeout
+				const timeout = this.getTimeOut(options) - 100;
+
+				// eslint-disable-next-line no-constant-condition
+				while (true) {
+					try {
+						// If we don't then we need to get it
+						// First have to tag nodes
+						await this.assignElementIdOnAllNodes();
+						appUIResponse = await ecp.getAppUI();
+						break;
+					} catch(e) {
+						if (Date.now() - startTime > timeout) {
+							throw e;
+						}
+
+						// If we fail to get the appUI then we wait a bit and try again
+						await utils.sleep(100);
+					}
+				}
+			}
+
+			const keyPath = this.convertAppUIKeyPath(appUIResponse.screen.children[0], args.keyPath.split('.'));
+			if (keyPath) {
+				args.base = 'elementId';
+				args.keyPath = keyPath;
+			} else {
+				throw new Error(`Could not convert appUI keyPath '${args.keyPath}' to a valid elementId key path`);
+			}
+		}
+	}
+
+	private hasMultipleAppUIRequests(args: ODC.GetValuesArgs) {
+		let requestsUsingAppUIBase = 0;
+		for (const key in args.requests) {
+			const request = args.requests[key];
+			if (request.base === 'appUI') {
+				requestsUsingAppUIBase++;
+				if (requestsUsingAppUIBase > 1) {
+					return true;
+				}
+			}
+		}
+	}
+
+	private convertAppUIKeyPath(parent: AppUIResponseChild, keyPathParts: string[]) {
+		let currentKeyPathPart = keyPathParts.shift();
+
+		let matchingChild: AppUIResponseChild | undefined;
+
+		// Check if key path starts with # so we can use the id
+		if (currentKeyPathPart) {
+			// Have to handle the magic word cases for RowLists
+			if (currentKeyPathPart === 'items') {
+				if (parent.children?.[2]?.subtype === 'MarkupGrid') {
+					currentKeyPathPart = '2';
+				} else {
+					// Shouldn't happen but just in case
+					throw new Error(`KeyPath did not have MarkupGrid in correct position`);
+				}
+			} else if (currentKeyPathPart === 'title') {
+				if (parent.children?.[0]?.subtype === 'Group') {
+					// If this is a custom title component then we want to return the first child of the group instead
+					parent = parent.children[0];
+					currentKeyPathPart = '0';
+				} else {
+					// If we want to try and access the built in label then we have to get more creative. First we get a uiElementId reference from the first item in the MarkupGrid and then make a key path to go back up the chain so we can access the label.
+					const uiElementId = parent.children?.[2]?.children?.[0]?.uiElementId;
+					if (uiElementId) {
+						let keyPath = `${uiElementId}.getParent().getParent().0`;
+						if (keyPathParts.length > 0) {
+							keyPath += `.${keyPathParts.join('.')}`;
+						}
+						return keyPath;
+					}
+				}
+			}
+
+			if (currentKeyPathPart.startsWith('#')) {
+				const id = currentKeyPathPart.substring(1);
+				for (const child of parent.children ?? []) {
+					if (child.id === id) {
+						matchingChild = child;
+						break;
+					}
+				}
+			} else {
+				// If we don't have an id then confirm we have a number
+				const keyPathInt = +currentKeyPathPart;
+				if (keyPathInt != 0 || currentKeyPathPart == '0') {
+					matchingChild = parent.children?.[keyPathInt];
+				} else {
+					throw new Error(`KeyPath part '${currentKeyPathPart}' is not a valid number or id`);
+				}
+			}
+
+			if (matchingChild) {
+				if (keyPathParts.length === 0) {
+					// If we have no more key path parts then we return the uiElementId
+					if (matchingChild.uiElementId) {
+						return matchingChild.uiElementId;
+					} else {
+						throw new Error(`KeyPath part '${currentKeyPathPart}' does not have a uiElementId`);
+					}
+				} else {
+					return this.convertAppUIKeyPath(matchingChild, keyPathParts);
+				}
+			} else {
+				// If we didn't find a match then check if our parent has a uiElementId
+				if (parent.uiElementId) {
+					keyPathParts.unshift(currentKeyPathPart);
+					// If so we convert the key path to use the uiElementId
+					return `${parent.uiElementId}.${keyPathParts.join('.')}`;
+				}
 			}
 		}
 	}
@@ -326,7 +478,7 @@ export class OnDeviceComponent {
 	}
 
 	public async storeNodeReferences(args: ODC.StoreNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.storeNodeReferences, {...args, convertResponseToJsonCompatible: false}, options);
 		const output = result.json as ODC.StoreNodeReferencesResponse;
 
@@ -452,14 +604,14 @@ export class OnDeviceComponent {
 	}
 
 	public async deleteNodeReferences(args: ODC.DeleteNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+			await this.applySharedKeyPathLogic(args, options);
 
 		const result = await this.sendRequest(ODC.RequestType.deleteNodeReferences, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async getNodesWithProperties(args: ODC.GetNodesWithPropertiesArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 
 		// We allow short symbol operators but want to convert to a common format for simpler code on the Roku side
 		const operatorConversion: {
@@ -585,11 +737,13 @@ export class OnDeviceComponent {
 		return nodeFound;
 	}
 
+	/** deprecated will be removed in 3.0 */
 	public async startResponsivenessTesting(args: ODC.StartResponsivenessTestingArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.startResponsivenessTesting, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/** deprecated will be removed in 3.0 */
 	public async getResponsivenessTestingData(args = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getResponsivenessTestingData, args, options);
 		return result.json as ODC.ReturnTimeTaken & {
@@ -619,6 +773,7 @@ export class OnDeviceComponent {
 		};
 	}
 
+	/** deprecated will be removed in 3.0 */
 	public async stopResponsivenessTesting(args = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.stopResponsivenessTesting, args, options);
 		return result.json as ODC.ReturnTimeTaken;
@@ -630,36 +785,31 @@ export class OnDeviceComponent {
 	}
 
 	public async focusNode(args: ODC.FocusNodeArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.focusNode, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async createChild(args: ODC.CreateChildArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.createChild, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async removeNode(args: ODC.RemoveNodeArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.removeNode, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async removeNodeChildren(args: ODC.RemoveNodeChildrenArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.removeNodeChildren, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
 	public async isShowingOnScreen(args: ODC.IsShowingOnScreenArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
-		this.conditionallyAddDefaultNodeReferenceKey(args);
+		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.isShowingOnScreen, args, options);
 		return result.json as ODC.ReturnTimeTaken & {
 			isShowing: boolean;
@@ -668,7 +818,7 @@ export class OnDeviceComponent {
 	}
 
 	public async isSubtype(args: ODC.IsSubtypeArgs, options: ODC.RequestOptions = {}) {
-		this.conditionallyAddDefaultBase(args);
+		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.isSubtype, {...args, convertResponseToJsonCompatible: false}, options);
 		return result.json.isSubtype as boolean;
 	}

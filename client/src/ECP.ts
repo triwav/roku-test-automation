@@ -314,19 +314,24 @@ export class ECP {
 
 		if (sceneNode.children) {
 			for (const [position, child] of sceneNode.children.entries()) {
-				this.generateKeyPathsFromAppUIResponse(child, position);
+				this.generateKeyPathsFromAppUIResponse(child, { position: position });
 			}
 		}
 
 		this.calculateSceneBoundingRects(sceneNode);
-
 		return response;
 	}
 
 
-	private convertChildrenForGetAppUI(children: any[]) {
+	private convertChildrenForGetAppUI(children: any[], parentIsRowListItem = false) {
 		const response: AppUIResponseChild[] = [];
-		for (const child of children) {
+
+		// If we are a RowListItem then we are removing the duplicate Group returned in addition to the MarkupGrid to avoid confusion
+		if (parentIsRowListItem) {
+			children.pop(); // Remove the last child which is the Group
+		}
+
+		for (const [index, child] of children.entries()) {
 			// Do some conversions
 			if (child.attributes.name) {
 				child.attributes.id = child.attributes.name;
@@ -346,6 +351,10 @@ export class ECP {
 			}
 
 			if (child.attributes.bounds) {
+				// If we have bounds then we need to ensure translation is set or else we won't be able to move in the SceneGraph Inspector
+				if (!child.attributes.translation) {
+					child.attributes.translation = [0, 0];
+				}
 				child.attributes.bounds = this.convertAppUiArray(child.attributes.bounds);
 			}
 
@@ -355,10 +364,12 @@ export class ECP {
 			};
 
 			if (Array.isArray(child.children) && child.children.length > 0) {
-				childResponse.children = this.convertChildrenForGetAppUI(child.children);
+				childResponse.children = this.convertChildrenForGetAppUI(child.children ?? [], child.name == 'RowListItem');
 			} else {
+				// The response contains a property named children with the number of children but we are using the same name for the array so want to remove if no children
 				delete childResponse.children;
 			}
+
 			response.push(childResponse);
 		}
 
@@ -415,30 +426,72 @@ export class ECP {
 		}
 	}
 
-	private generateKeyPathsFromAppUIResponse(node: AppUIResponseChild, position: number, keyPathParts: string[] = [], duplicateIdsFound = false) {
+	private generateKeyPathsFromAppUIResponse(node: AppUIResponseChild, keyPathContext: {
+		position: number;
+		duplicateIdsFound?: boolean;
+		parent?: AppUIResponseChild;
+	}, keyPathParts: string[] = []) {
 		const currentNodeKeyPathParts = [...keyPathParts];
 
-		if (node.id && !duplicateIdsFound) {
+		// Only add key path if it doesn't already exist
+		let addKeyPath = !node.keyPath;
+
+		if (node.subtype == 'RowListItem') {
+			// Don't want to add key paths for RowListItem but want to add onto key path parts
+			addKeyPath = false;
+
+			currentNodeKeyPathParts.push(keyPathContext.position.toString());
+		} else if (keyPathContext.parent?.subtype == 'RowListItem') { // We have to make our magic key paths for RowList
+			// don't add key paths by default for RowListItem
+			addKeyPath = false;
+
+			// Title is always the first child of the RowListItem
+			if (keyPathContext.position == 0) {
+				currentNodeKeyPathParts.push('title');
+
+				if (node.subtype == 'Label') {
+					addKeyPath = true;
+				} else {
+					// We need to add it to the child instead so it is tied to the actual custom component
+					const child = node.children?.[0];
+					if (child) {
+						node.base = 'appUI';
+						child.keyPath = currentNodeKeyPathParts.join('.');
+					}
+				}
+			} else if (node.subtype === 'MarkupGrid') {
+				currentNodeKeyPathParts.push('items');
+			}
+		} else if (node.id && !keyPathContext.duplicateIdsFound) {
 			currentNodeKeyPathParts.push(`#${node.id}`);
 		} else {
-			currentNodeKeyPathParts.push(position.toString());
+			currentNodeKeyPathParts.push(keyPathContext.position.toString());
 		}
 
-		node.base = 'scene';
-		node.keyPath = currentNodeKeyPathParts.join('.');
+		if (addKeyPath) {
+			// We always need to use appUI as the base for the key path. Originally we would try to use scene for non ArrayGrid items but nodes that don't extend Group are excluded in the app-ui response so we can't use scene as the base because index based key path parts will then get off.
+			node.base = 'appUI';
+			node.keyPath = currentNodeKeyPathParts.join('.');
+		}
 
 		const children = node.children ?? [];
 		for (const [childPosition, childNode] of children.entries()) {
-			duplicateIdsFound = children.filter((child, index) => {
+			const duplicateIds = children.filter((child, index) => {
 				if (child.id) {
 					if (child.id == childNode.id && index != childPosition) {
 						return true;
 					}
 				}
 				return false;
-			}).length > 0;
+			});
 
-			this.generateKeyPathsFromAppUIResponse(childNode, childPosition, currentNodeKeyPathParts, duplicateIdsFound);
+			keyPathContext = {
+				position: childPosition,
+				parent: node,
+				duplicateIdsFound: duplicateIds.length > 0,
+			};
+
+			this.generateKeyPathsFromAppUIResponse(childNode, keyPathContext, currentNodeKeyPathParts);
 		}
 	}
 
