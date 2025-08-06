@@ -376,53 +376,54 @@ export class ECP {
 		return response;
 	}
 
-	private calculateSceneBoundingRects(node: AppUIResponseChild, offset: number[] = [0, 0], useBounds = false) {
-		if (useBounds && node.bounds) {
-			offset = [
-				node.bounds[0] + offset[0],
-				node.bounds[1] + offset[1]
-			];
-		} else if (node.translation) {
-			offset = [
-				node.translation[0] + offset[0],
-				node.translation[1] + offset[1]
-			];
-		}
-
-		if (node.bounds && node.subtype != 'RowListItem') {
-			// Not doing RowListItem calculation since it isn't needed and everything is finally working
+	private calculateSceneBoundingRects(node: AppUIResponseChild, parent?: AppUIResponseChild, offset: number[] = [0, 0]) {
+		if (node.bounds) {
 			node.sceneRect = {
-				x: offset[0],
-				y: offset[1],
+				x: node.bounds[0] + offset[0],
+				y: node.bounds[1] + offset[1],
 				width: node.bounds[2],
 				height: node.bounds[3]
 			};
+
+			node['offset'] = offset;
 		}
 
-		if (node.subtype == 'RowListItem') {
-			// We have to subtract the row offset from the bounds for correct positioning
-			if (node.children && node.children[node.children.length - 1]) {
-				const lastChild = node.children[node.children.length - 1];
-				if (lastChild.translation) {
-					offset = [
-						offset[0] - lastChild.translation[0],
-						offset[1] - lastChild.translation[1]
+		const children = node.children ?? [];
+
+		for (const child of children) {
+			let childOffset = offset;
+
+			if (node.subtype === 'RowListItem') {
+				if (node.bounds) {
+					if (child.subtype !== 'MarkupGrid') {
+						// If we aren't the MarkupGrid child then we need to subtract the translation of the MarkupGrid to get the correct offset for the title
+						const markupGrid = children[children.length - 1];
+						if (markupGrid.subtype !== 'MarkupGrid') {
+							// Shouldn't happen but just in case
+							console.log('Expected last child of RowListItem to be MarkupGrid');
+						} else {
+							if (markupGrid.translation) {
+								childOffset = [
+									childOffset[0] - markupGrid.translation[0],
+									childOffset[1] - markupGrid.translation[1]
+								];
+							}
+						}
+					}
+
+					childOffset = [
+						node.bounds[0] + childOffset[0],
+						node.bounds[1] + childOffset[1]
 					];
 				}
+			} else if (node.translation && (node.subtype !== 'MarkupGrid' || parent?.subtype !== 'RowListItem')) {
+				childOffset = [
+					node.translation[0] + childOffset[0],
+					node.translation[1] + childOffset[1]
+				];
 			}
 
-			if (node.bounds) {
-				offset[0] += node.bounds[0];
-				offset[1] += node.bounds[1];
-			}
-		} else if (node.subtype == 'MarkupGrid') {
-			useBounds = true;
-		}
-
-		node['offset'] = offset;
-
-		for (const child of node.children ?? []) {
-			this.calculateSceneBoundingRects(child, offset, useBounds);
+			this.calculateSceneBoundingRects(child, node, childOffset);
 		}
 	}
 
