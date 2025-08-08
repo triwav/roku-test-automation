@@ -221,7 +221,19 @@ function processConvertKeyPathToSceneKeyPath(request as Object) as Object
 		else
 			' If we got to the top and the node is a scene then we can return the key path
 			if node.isSubtype("Scene") then
+				' One final check, we want to see if we have an arrayGridChildElementId that we also need to resolve
+				arrayGridChildElementId = args.arrayGridChildElementId
+				if RTA_isNonEmptyString(arrayGridChildElementId) then
+					result = generateArrayGridChildKeyPath(arrayGridChildElementId)
+					if RTA_isErrorObject(result) then
+						return result
+					end if
+
+					keyPathParts.push(result)
+				end if
+
 				keyPath = keyPathParts.join(".")
+
 				return {
 					"base": "scene"
 					"keyPath": keyPath
@@ -234,6 +246,95 @@ function processConvertKeyPathToSceneKeyPath(request as Object) as Object
 
 	' If we got to the top and the node is not a scene then we can't convert it to a scene key path
 	return RTA_buildErrorResponseObject("Could not convert key path to scene key path as the node was not a child of the Scene")
+end function
+
+function generateArrayGridChildKeyPath(arrayGridChildElementId)
+		result = processGetValueRequest({
+			"base": "elementId"
+			"keyPath": arrayGridChildElementId
+		})
+
+		if RTA_isErrorObject(result) then
+			return result
+		end if
+
+		if result.found <> true then
+			return RTA_buildErrorResponseObject("Could not get base for elementId request. Not found")
+		end if
+
+		arrayGridChild = result.value
+		if NOT RTA_isNode(arrayGridChild) then
+			return RTA_buildErrorResponseObject("Could not get base for elementId request. Not a node")
+		end if
+
+		itemPosition = []
+		arrayGridKeyPathParts = []
+		currentContentNode = invalid
+
+		while true
+			' Have to walk up the tree to build our key path.
+			if currentContentNode <> invalid then
+				' If we have reached the itemContent then we need to create the starting key path part
+				contentNodeParent = currentContentNode.getParent()
+
+				if contentNodeParent = invalid then
+					RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as currentContentNode parent was invalid")
+				else if contentNodeParent.isSubtype("ArrayGrid") = true then
+					if contentNodeParent.isSubtype("RowList") = true then
+						' If it's a RowList and we have one itemPosition then this is a title key path
+						if itemPosition.count() = 1 then
+							arrayGridKeyPathParts.unshift(itemPosition[0].toStr() + ".title")
+						else if itemPosition.count() = 2 then
+							arrayGridKeyPathParts.unshift(itemPosition[0].toStr() + ".items." + itemPosition[1].toStr())
+						else
+							return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as itemPosition had unexpected number of parts for RowList")
+						end if
+					else
+						if itemPosition.count() = 1 then
+							arrayGridKeyPathParts.unshift(itemPosition[0].toStr())
+						else
+							return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as itemPosition had unexpected number of parts for ArrayGrid")
+						end if
+					end if
+
+					return arrayGridKeyPathParts.join(".")
+				end if
+
+				index = RTA_getNodeParentIndex(currentContentNode, contentNodeParent)
+				if index = -1 then
+					return RTA_buildErrorResponseObject("Could not find itemContent parent index")
+				end if
+
+				itemPosition.unshift(index)
+				currentContentNode = contentNodeParent
+			else if arrayGridChild.hasField("itemContent") then
+				' Putting as the second logic gate instead of first to prevent getting triggered after after currentContentNode has been set
+				if arrayGridChild.itemContent = invalid then
+					return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as itemContent was invalid")
+				end if
+
+				currentContentNode = arrayGridChild.itemContent
+			else
+				if arrayGridChild.id <> "" then
+					arrayGridKeyPathParts.unshift("#" + arrayGridChild.id)
+				else
+					index = RTA_getNodeParentIndex(arrayGridChild, arrayGridChild.getParent())
+					if index = -1 then
+						return RTA_buildErrorResponseObject("Could not find ArrayGrid child parent index")
+					end if
+
+					arrayGridKeyPathParts.unshift(index.toStr())
+				end if
+
+				arrayGridChild = arrayGridChild.getParent()
+
+				if arrayGridChild = invalid then
+					return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path")
+				end if
+			end if
+		end while
+
+		return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path")
 end function
 
 function processGetValueRequest(request as Object) as Object

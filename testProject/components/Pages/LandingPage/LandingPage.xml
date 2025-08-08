@@ -53,7 +53,7 @@
 			rowItemSpacing="[[30, 0]]"
 			rowItemSize="[[300, 150]]"
 			translation="[150, 700]" />
-		<MarkupGrid
+		<CustomMarkupGrid
 			id="markupGrid"
 			itemComponentName="MarkupGridItemComponent"
 			itemSize="[150, 150]"

@@ -467,4 +467,7 @@ export interface CancelRequestArgs {
 	id: string;
 }
 
-export interface ConvertKeyPathToSceneKeyPathArgs extends BaseKeyPath {}
+export interface ConvertKeyPathToSceneKeyPathArgs extends BaseKeyPath {
+	/** If we are trying to convert an appUI key path then we need to split up the key path for several edge cases */
+	arrayGridChildElementId?: string;
+}

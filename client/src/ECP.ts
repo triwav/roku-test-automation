@@ -404,7 +404,7 @@ export class ECP {
 						} else {
 							if (markupGrid.translation) {
 								childOffset = [
-									childOffset[0] - markupGrid.translation[0],
+									childOffset[0],
 									childOffset[1] - markupGrid.translation[1]
 								];
 							}
@@ -412,15 +412,23 @@ export class ECP {
 					}
 
 					childOffset = [
-						node.bounds[0] + childOffset[0],
+						childOffset[0],
 						node.bounds[1] + childOffset[1]
 					];
 				}
 			} else if (node.translation && (node.subtype !== 'MarkupGrid' || parent?.subtype !== 'RowListItem')) {
-				childOffset = [
-					node.translation[0] + childOffset[0],
-					node.translation[1] + childOffset[1]
-				];
+				// We have to add to offsets from bounds values for correct positioning of MarkupGrid children
+				if (parent?.subtype === 'MarkupGrid' && node.bounds) {
+					childOffset = [
+						node.bounds[0] + childOffset[0],
+						node.bounds[1] + childOffset[1]
+					];
+				} else {
+					childOffset = [
+						node.translation[0] + childOffset[0],
+						node.translation[1] + childOffset[1]
+					];
+				}
 			}
 
 			this.calculateSceneBoundingRects(child, node, childOffset);

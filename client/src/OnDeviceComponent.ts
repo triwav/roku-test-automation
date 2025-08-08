@@ -311,8 +311,83 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	private findElementIdInAppUIResponse(appUIResponseChild: AppUIResponseChild, uiElementId: string): AppUIResponseChild | undefined {
+		if (appUIResponseChild.uiElementId === uiElementId) {
+			console.log(appUIResponseChild.uiElementId);
+			return appUIResponseChild;
+		}
+
+		if (appUIResponseChild.children) {
+			for (const child of appUIResponseChild.children) {
+				const match = this.findElementIdInAppUIResponse(child, uiElementId);
+				if (match) {
+					return match;
+				}
+			}
+		}
+	}
+
 	/** Needed to convert appUI key path to scene but might be useful in other cases as well. Takes in a key path and will try and call getParent() on each node in the tree until it gets to the Scene */
 	public async convertKeyPathToSceneKeyPath(args: ODC.ConvertKeyPathToSceneKeyPathArgs, options: ODC.RequestOptions = {}) {
+		// Prevents changes made for this function from affecting the original args object
+		args = { ... args };
+
+		// We are handling the appUI conversion ourselves to handle it separately
+		if (args.base === 'appUI' && args.keyPath) {
+			// If we have an appUI base then we need to get the appUIResponse first since we may need to access it as well
+			await this.assignElementIdOnAllNodes();
+			args.appUIResponse = await ecp.getAppUI();
+			const result = this.convertAppUIKeyPathToElementIdKeyPath(args.appUIResponse.screen.children[0], args.keyPath.split('.'), true);
+			if (result.keyPath && result.remainingKeyPathParts && result.remainingKeyPathParts.length > 0) {
+				const appUIResponseChild = this.findElementIdInAppUIResponse(args.appUIResponse.screen.children[0], result.keyPath);
+				if (!appUIResponseChild) {
+					throw new Error(`Could not find elementId in appUI response`);
+				}
+
+				let arrayGridChild = appUIResponseChild;
+				while (arrayGridChild && result.remainingKeyPathParts.length > 0) {
+					const remainingKeyPathPart = result.remainingKeyPathParts.shift();
+
+					if (remainingKeyPathPart === 'items') {
+						if (!arrayGridChild.children || arrayGridChild.children.length === 0 || arrayGridChild.children[arrayGridChild.children.length - 1].subtype !== 'MarkupGrid') {
+							throw new Error(`Could not find internal markup grid`);
+						}
+
+						arrayGridChild = arrayGridChild.children[arrayGridChild.children.length - 1];
+					} else if (remainingKeyPathPart === 'title') {
+						// TODO add me
+					} else {
+						if (remainingKeyPathPart) {
+							// Check if remainingKeyPathPart starts with #
+							if (remainingKeyPathPart.startsWith('#')) {
+								const id = remainingKeyPathPart.substring(1);
+								for (const child of arrayGridChild.children ?? []) {
+									if (child.id === id) {
+										arrayGridChild = child;
+									}
+								}
+							} if(arrayGridChild?.children?.[+remainingKeyPathPart]) {
+								arrayGridChild = arrayGridChild.children[+remainingKeyPathPart];
+							}
+						}
+					}
+				}
+
+				if (!arrayGridChild || !arrayGridChild.uiElementId) {
+					throw new Error(`ArrayGrid part of key path did not have uiElementId`);
+				}
+
+				// Make sure the uiElementId for arrayGridChild isn't the same as the base arrayGrid uiElementId.
+				if (arrayGridChild.uiElementId === appUIResponseChild?.uiElementId) {
+					throw new Error('Could find ArrayGrid child');
+				}
+
+				args.base = 'elementId';
+				args.keyPath = appUIResponseChild.uiElementId;
+				args.arrayGridChildElementId = arrayGridChild.uiElementId;
+			}
+		}
+
 		await this.applySharedKeyPathLogic(args, options);
 
 		const result = await this.sendRequest(ODC.RequestType.convertKeyPathToSceneKeyPath, args, options);
@@ -365,13 +440,9 @@ export class OnDeviceComponent {
 				}
 			}
 
-			const keyPath = this.convertAppUIKeyPath(appUIResponse.screen.children[0], args.keyPath.split('.'));
-			if (keyPath) {
-				args.base = 'elementId';
-				args.keyPath = keyPath;
-			} else {
-				throw new Error(`Could not convert appUI keyPath '${args.keyPath}' to a valid elementId key path`);
-			}
+			const result = this.convertAppUIKeyPathToElementIdKeyPath(appUIResponse.screen.children[0], args.keyPath.split('.'), false);
+			args.base = result.base;
+			args.keyPath = result.keyPath;
 		}
 	}
 
@@ -388,7 +459,9 @@ export class OnDeviceComponent {
 		}
 	}
 
-	private convertAppUIKeyPath(parent: AppUIResponseChild, keyPathParts: string[]) {
+	private convertAppUIKeyPathToElementIdKeyPath(parent: AppUIResponseChild, keyPathParts: string[], stopOnFirstArrayGrid: boolean): ODC.BaseKeyPath & {
+		remainingKeyPathParts?: string[];
+	} {
 		let currentKeyPathPart = keyPathParts.shift();
 
 		let matchingChild: AppUIResponseChild | undefined;
@@ -401,7 +474,7 @@ export class OnDeviceComponent {
 					currentKeyPathPart = '2';
 				} else {
 					// Shouldn't happen but just in case
-					throw new Error(`KeyPath did not have MarkupGrid in correct position`);
+					throw new Error(`Key path did not have MarkupGrid in correct position`);
 				}
 			} else if (currentKeyPathPart === 'title') {
 				if (parent.children?.[0]?.subtype === 'Group') {
@@ -416,7 +489,11 @@ export class OnDeviceComponent {
 						if (keyPathParts.length > 0) {
 							keyPath += `.${keyPathParts.join('.')}`;
 						}
-						return keyPath;
+
+						return {
+							base: 'elementId',
+							keyPath: keyPath
+						};
 					}
 				}
 			}
@@ -440,25 +517,38 @@ export class OnDeviceComponent {
 			}
 
 			if (matchingChild) {
+				if (stopOnFirstArrayGrid) {
+					const arrayGridSubtypes = ['RowList', 'MarkupGrid', 'PosterGrid', 'MarkupList', 'LabelList', 'ZoomRowList'];
+					if (arrayGridSubtypes.includes(matchingChild.subtype) || arrayGridSubtypes.includes(matchingChild.extends ?? '')) {
+						if (!matchingChild.uiElementId) {
+							throw new Error(`'${currentKeyPathPart}' is an ArrayGrid type but does not have a uiElementId`);
+						}
+
+						return {
+							base: 'elementId',
+							keyPath: matchingChild.uiElementId,
+							remainingKeyPathParts: keyPathParts
+						};
+					}
+				}
+
 				if (keyPathParts.length === 0) {
 					// If we have no more key path parts then we return the uiElementId
 					if (matchingChild.uiElementId) {
-						return matchingChild.uiElementId;
+						return {
+							base: 'elementId',
+							keyPath: matchingChild.uiElementId
+						};
 					} else {
 						throw new Error(`KeyPath part '${currentKeyPathPart}' does not have a uiElementId`);
 					}
 				} else {
-					return this.convertAppUIKeyPath(matchingChild, keyPathParts);
-				}
-			} else {
-				// If we didn't find a match then check if our parent has a uiElementId
-				if (parent.uiElementId) {
-					keyPathParts.unshift(currentKeyPathPart);
-					// If so we convert the key path to use the uiElementId
-					return `${parent.uiElementId}.${keyPathParts.join('.')}`;
+					return this.convertAppUIKeyPathToElementIdKeyPath(matchingChild, keyPathParts, stopOnFirstArrayGrid);
 				}
 			}
 		}
+
+		throw new Error(`Could not convert appUI key path`);
 	}
 
 	public async getAllCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
