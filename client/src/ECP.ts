@@ -322,7 +322,6 @@ export class ECP {
 		return response;
 	}
 
-
 	private convertChildrenForGetAppUI(children: any[], parentIsRowListItem = false) {
 		const response: AppUIResponseChild[] = [];
 
@@ -471,9 +470,9 @@ export class ECP {
 			} else if (node.subtype === 'MarkupGrid') {
 				currentNodeKeyPathParts.push('items');
 			}
-		} else if (node.id && !keyPathContext.duplicateIdsFound) {
+		} else if (addKeyPath && node.id && !keyPathContext.duplicateIdsFound) {
 			currentNodeKeyPathParts.push(`#${node.id}`);
-		} else {
+		} else if (addKeyPath) {
 			currentNodeKeyPathParts.push(keyPathContext.position.toString());
 		}
 

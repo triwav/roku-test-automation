@@ -355,7 +355,13 @@ export class OnDeviceComponent {
 
 						arrayGridChild = arrayGridChild.children[arrayGridChild.children.length - 1];
 					} else if (remainingKeyPathPart === 'title') {
-						// TODO add me
+						// For time being just changing base. Will not always work correctly but existing code does not either
+						return Promise.resolve({
+							base: 'scene',
+							keyPath: args.keyPath,
+							timeTaken: 0,
+							id: ''
+						} as {base: 'scene'; keyPath: string;} & ODC.ReturnTimeTaken);
 					} else {
 						if (remainingKeyPathPart) {
 							// Check if remainingKeyPathPart starts with #
@@ -392,7 +398,7 @@ export class OnDeviceComponent {
 
 		const result = await this.sendRequest(ODC.RequestType.convertKeyPathToSceneKeyPath, args, options);
 		return result.json as {
-			base?: 'scene';
+			base: 'scene';
 			keyPath: string;
 		} & ODC.ReturnTimeTaken;
 	}
