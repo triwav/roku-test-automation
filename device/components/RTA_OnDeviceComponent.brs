@@ -44,7 +44,16 @@ end sub
 
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
-	RTA_logDebug("Received request: ", formatJson(request))
+
+	' Don't want to take the overhead if we are not logging debug
+	if RTA_canLog("debug") then
+		json = formatJson(request)
+		if json.len() > 1000 then
+			json = "large request showing first 1000 characters: " + json.left(1000) + "..."
+		end if
+
+		RTA_logDebug("Received request: ", json)
+	end if
 
 	requestType = request.type
 	request.timespan = createObject("roTimespan")

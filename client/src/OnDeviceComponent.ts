@@ -1199,12 +1199,17 @@ export class OnDeviceComponent {
 	private async sendRequest(type: ODC.RequestType, args: ODC.RequestArgs, options: ODC.RequestOptions = {}, requestorCallback?: (response: ODC.RequestResponse) => Promise<boolean>) {
 		const requestId = utils.randomStringGenerator();
 
-		this.debugLog(`Sending request ${requestId} of type ${type} with args:`, args);
+		const sentArgs = { ...args };
+
+		// Remove any known args that we don't want to send to the device
+		delete sentArgs['appUIResponse'];
+
+		this.debugLog(`Sending request ${requestId} of type ${type} with args:`, sentArgs);
 
 		const request: ODC.Request = {
 			id: requestId,
 			type: type,
-			args: args,
+			args: sentArgs,
 			isRecuring: !!requestorCallback
 		};
 
