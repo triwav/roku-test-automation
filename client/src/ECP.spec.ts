@@ -13,7 +13,6 @@ import { ECP } from './ECP';
 import * as testUtils from './test/utils';
 import type { ConfigOptions } from './types/ConfigOptions';
 import type { AppUIResponse, AppUIResponseChild } from '.';
-import { utils } from '.';
 
 describe('ECP', function () {
 	let ecp: ECP;
@@ -29,9 +28,17 @@ describe('ECP', function () {
 			},
 			sendEcpGet: () => {
 				return ecpResponse;
+			},
+			setConfig: (config) => { }
+		};
+
+		config = {
+			RokuDevice: {
+				devices: []
 			}
 		};
-		ecp = new ECP(device);
+
+		ecp = new ECP(device, config);
 		ecpUtils = ecp['utils'];
 		ecpResponse = '';
 	});
@@ -42,7 +49,7 @@ describe('ECP', function () {
 
 	describe('sendText', function () {
 		it('calls_device_sendEcpPost_for_each_character', async () => {
-			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => { }) as any);
 
 			const text = 'love my life';
 			await ecp.sendText(text);
@@ -52,16 +59,16 @@ describe('ECP', function () {
 		it('uses_raspTemplateVariable_if_provided_instead_of_text_for_rasp_output', async () => {
 			ecp.startRaspFileCreation();
 			const raspFileSteps = (ecp as any).raspFileSteps as string[];
-			await ecp.sendText('bob@hotmail.com', {raspTemplateVariable: 'script-login'});
+			await ecp.sendText('bob@hotmail.com', { raspTemplateVariable: 'script-login' });
 			expect(raspFileSteps[0]).to.contain('script-login');
-			await ecp.sendText('123456', {raspTemplateVariable: 'script-password'});
+			await ecp.sendText('123456', { raspTemplateVariable: 'script-password' });
 			expect(raspFileSteps[1]).to.contain('script-password');
 		});
 	});
 
 	describe('sendKeypressSequence', function () {
 		it('calls_device_sendEcpPost_for_each_key', async () => {
-			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => { }) as any);
 
 			const keys = [ECP.Key.Forward, ECP.Key.Play, ECP.Key.Rewind];
 			await ecp.sendKeypressSequence(keys);
@@ -81,16 +88,16 @@ describe('ECP', function () {
 				}
 			}) as any);
 
-			await ecp.sendKeypressSequence(keys, {count: count});
+			await ecp.sendKeypressSequence(keys, { count: count });
 			expect(stub.callCount).to.equal(keys.length * count);
 		});
 
 		it('should_not_send_any_keys_if_count_is_zero', async () => {
 			const keys = [ECP.Key.Forward, ECP.Key.Play, ECP.Key.Rewind];
 
-			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => {}) as any);
+			const stub = sinon.stub(device, 'sendEcpPost').callsFake(((path: string, params?: object, body?: needle.BodyData) => { }) as any);
 
-			await ecp.sendKeypressSequence(keys, {count: 0});
+			await ecp.sendKeypressSequence(keys, { count: 0 });
 			expect(stub.callCount).to.equal(0);
 		});
 	});
@@ -109,7 +116,7 @@ describe('ECP', function () {
 		});
 
 		it('does_not_sleep_if_not_requested', async () => {
-			const stub = sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
+			const stub = sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => { }) as any);
 
 			await ecp.sendKeypress(ECP.Key.Home, 0);
 
@@ -325,7 +332,7 @@ describe('ECP', function () {
 		});
 
 		it('should_throw_if_launch_not_successful_and_verification_is_enabled', async () => {
-			sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
+			sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => { }) as any);
 			try {
 				await ecp.sendLaunchChannel({
 					channelId: 'dev',
@@ -503,7 +510,7 @@ describe('ECP', function () {
 		const outputPath = 'test-path.rasp';
 
 		it('outputs_file_at_path_specified_with_correct_contents', async () => {
-			sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => {}) as any);
+			sinon.stub(ecpUtils, 'sleep').callsFake(((milliseconds: number) => { }) as any);
 			config.ECP = {
 				default: {
 					keypressDelay: 1500
@@ -523,7 +530,7 @@ describe('ECP', function () {
 			await ecp.sendKeypress(ecp.Key.Ok, 1);
 			ecp.finishRaspFileCreation(outputPath);
 			const expectedContents =
-`params:
+				`params:
     rasp_version: 1
     default_keypress_wait: 1.5
 steps:
@@ -549,6 +556,99 @@ steps:
 		});
 		after(() => {
 			fsExtra.removeSync(outputPath);
+		});
+	});
+
+	describe('getAppUI', function () {
+		let appUIResponse: AppUIResponse;
+
+		beforeEach(async () => {
+			ecpResponse = await testUtils.getNeedleMockResponse('ECP/getAppUI/appUIResponse');
+		});
+
+		it('Should add the sceneBoundingRects for scene', async () => {
+			appUIResponse = await ecp.getAppUI();
+
+			expect(appUIResponse.screen.children[0].sceneRect).to.haveOwnProperty('x');
+			expect(appUIResponse.screen.children[0].sceneRect).to.haveOwnProperty('y');
+			expect(appUIResponse.screen.children[0].sceneRect).to.haveOwnProperty('width');
+			expect(appUIResponse.screen.children[0].sceneRect).to.haveOwnProperty('height');
+		});
+
+		it('Should add the sceneBoundingRects for scene\'s children\'s children', async () => {
+			appUIResponse = await ecp.getAppUI();
+
+			for (const child of appUIResponse.screen?.children?.[0]?.children?.[4]?.children || []) {
+				expect(child.sceneRect).to.haveOwnProperty('x');
+				expect(child.sceneRect).to.haveOwnProperty('y');
+				expect(child.sceneRect).to.haveOwnProperty('width');
+				expect(child.sceneRect).to.haveOwnProperty('height');
+			}
+		});
+
+		it('should not return a key path for RowListItem or internal MarkupGrid but should still create the correct key path for its children', async () => {
+			appUIResponse = await ecp.getAppUI();
+			const row1 = appUIResponse.screen?.children?.[0]?.children?.[4]?.children?.[0]?.children?.[7]?.children?.[0];
+			expect(row1?.subtype).to.equal('RowListItem');
+			expect(row1?.keyPath).to.be.undefined;
+
+			const row1TitleComponent = row1?.children?.[0];
+			expect(row1TitleComponent?.subtype).to.equal('Label');
+			expect(row1TitleComponent?.keyPath).to.equal('#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.0.title');
+
+			const row1FirstItem = row1?.children?.[2]?.children?.[0];
+			expect(row1FirstItem?.subtype).to.equal('RowListItemComponent');
+			expect(row1FirstItem?.keyPath).to.equal('#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.0.items.0');
+		});
+
+		it('should return correct position for a node with offset bounds due to children', async () => {
+			appUIResponse = await ecp.getAppUI();
+			const rect3 = appUIResponse.screen?.children?.[0]?.children?.[4]?.children?.[0].children?.[2].children?.[0];
+			expect(rect3?.keyPath).to.equal('#pagesContainerGroup.0.#rect2.#rect3');
+			expect(rect3?.sceneRect?.height).to.equal(50);
+			expect(rect3?.sceneRect?.width).to.equal(50);
+			expect(rect3?.sceneRect?.x).to.equal(125);
+			expect(rect3?.sceneRect?.y).to.equal(125);
+		});
+
+		it('should return correct position for a node with offset bounds due to children', async () => {
+			appUIResponse = await ecp.getAppUI();
+			const offsetGroup = appUIResponse.screen?.children?.[0]?.children?.[4]?.children?.[0].children?.[3];
+			expect(offsetGroup?.keyPath).to.equal('#pagesContainerGroup.0.#offsetGroup');
+			expect(offsetGroup?.sceneRect?.height).to.equal(100);
+			expect(offsetGroup?.sceneRect?.width).to.equal(300);
+			expect(offsetGroup?.sceneRect?.x).to.equal(1600);
+			expect(offsetGroup?.sceneRect?.y).to.equal(200);
+		});
+
+		it('should return correct position for a RowList item', async () => {
+			appUIResponse = await ecp.getAppUI();
+			const rowListItemComponent0 = appUIResponse.screen?.children?.[0]?.children?.[4]?.children?.[0]?.children?.[7]?.children?.[0].children?.[2].children?.[0];
+			expect(rowListItemComponent0?.keyPath).to.equal('#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.0.items.0');
+			expect(rowListItemComponent0?.sceneRect?.height).to.equal(150);
+			expect(rowListItemComponent0?.sceneRect?.width).to.equal(300);
+			expect(rowListItemComponent0?.sceneRect?.x).to.equal(150);
+			expect(rowListItemComponent0?.sceneRect?.y).to.equal(336);
+		});
+
+		it('should return correct position for the second row RowList item', async () => {
+			appUIResponse = await ecp.getAppUI();
+			const rowListItemComponent1_0 = appUIResponse.screen?.children?.[0]?.children?.[4]?.children?.[0]?.children?.[7]?.children?.[1].children?.[2].children?.[0];
+			expect(rowListItemComponent1_0?.keyPath).to.equal('#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.1.items.0');
+			expect(rowListItemComponent1_0?.sceneRect?.height).to.equal(150);
+			expect(rowListItemComponent1_0?.sceneRect?.width).to.equal(300);
+			expect(rowListItemComponent1_0?.sceneRect?.x).to.equal(150);
+			expect(rowListItemComponent1_0?.sceneRect?.y).to.equal(536);
+		});
+
+		it('should return correct position for a custom row title element', async () => {
+			appUIResponse = await ecp.getAppUI();
+			const rowListCustomRowTitle0 = appUIResponse.screen?.children?.[0]?.children?.[4]?.children?.[0]?.children?.[8]?.children?.[0].children?.[0].children?.[0];
+			expect(rowListCustomRowTitle0?.keyPath).to.equal('#pagesContainerGroup.0.#rowListWithCustomTitleComponent.0.title');
+			expect(rowListCustomRowTitle0?.sceneRect?.height).to.equal(36);
+			expect(rowListCustomRowTitle0?.sceneRect?.width).to.equal(201);
+			expect(rowListCustomRowTitle0?.sceneRect?.x).to.equal(150);
+			expect(rowListCustomRowTitle0?.sceneRect?.y).to.equal(700);
 		});
 	});
 });
