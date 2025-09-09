@@ -4,7 +4,7 @@ import type { RokuDevice } from './RokuDevice';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
 import * as ODC from './types/OnDeviceComponent';
-import type { AppUIResponse, AppUIResponseChild } from '.';
+import type { AppUIResponse, AppUIResponseChild } from './types/AppUIResponse';
 import { ecp } from '.';
 
 export class OnDeviceComponent {
@@ -12,7 +12,7 @@ export class OnDeviceComponent {
 	private defaultTimeout = 10000;
 	private requestHeaderSize = 8;
 	private storedDeviceRegistry?: {
-		[section: string]: {[sectionItemKey: string]: string}
+		[section: string]: { [sectionItemKey: string]: string }
 	};
 	private config?: ConfigOptions;
 	private activeRequests: { [key: string]: ODC.Request } = {};
@@ -195,14 +195,14 @@ export class OnDeviceComponent {
 	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
-		const result = await this.sendRequest(ODC.RequestType.hasFocus, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.hasFocus, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json.hasFocus as boolean;
 	}
 
 	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
-		const result = await this.sendRequest(ODC.RequestType.isInFocusChain, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.isInFocusChain, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json.isInFocusChain as boolean;
 	}
 
@@ -222,7 +222,7 @@ export class OnDeviceComponent {
 				if (response.observerFired !== undefined) {
 					// TODO add in support for doing match checks here as well
 
-					await this.cancelRequest({id: response.id});
+					await this.cancelRequest({ id: response.id });
 
 					// After we cancel the request we return the response
 					resolve(response);
@@ -295,7 +295,7 @@ export class OnDeviceComponent {
 		//We return the cancel Observer Function to easily cancel the continuous observer
 		const cancelObserverFunc = async () => {
 			const requestId = result.json.id;
-			return await this.cancelRequest({id: requestId});
+			return await this.cancelRequest({ id: requestId });
 		};
 
 		return cancelObserverFunc;
@@ -330,7 +330,7 @@ export class OnDeviceComponent {
 	/** Needed to convert appUI key path to scene but might be useful in other cases as well. Takes in a key path and will try and call getParent() on each node in the tree until it gets to the Scene */
 	public async convertKeyPathToSceneKeyPath(args: ODC.ConvertKeyPathToSceneKeyPathArgs, options: ODC.RequestOptions = {}) {
 		// Prevents changes made for this function from affecting the original args object
-		args = { ... args };
+		args = { ...args };
 
 		// We are handling the appUI conversion ourselves to handle it separately
 		if (args.base === 'appUI' && args.keyPath) {
@@ -361,7 +361,7 @@ export class OnDeviceComponent {
 							keyPath: args.keyPath,
 							timeTaken: 0,
 							id: ''
-						} as {base: 'scene'; keyPath: string;} & ODC.ReturnTimeTaken);
+						} as { base: 'scene'; keyPath: string; } & ODC.ReturnTimeTaken);
 					} else {
 						if (remainingKeyPathPart) {
 							// Check if remainingKeyPathPart starts with #
@@ -372,7 +372,7 @@ export class OnDeviceComponent {
 										arrayGridChild = child;
 									}
 								}
-							} if(arrayGridChild?.children?.[+remainingKeyPathPart]) {
+							} if (arrayGridChild?.children?.[+remainingKeyPathPart]) {
 								arrayGridChild = arrayGridChild.children[+remainingKeyPathPart];
 							}
 						}
@@ -435,7 +435,7 @@ export class OnDeviceComponent {
 						await this.assignElementIdOnAllNodes();
 						appUIResponse = await ecp.getAppUI();
 						break;
-					} catch(e) {
+					} catch (e) {
 						if (Date.now() - startTime > timeout) {
 							throw e;
 						}
@@ -558,24 +558,24 @@ export class OnDeviceComponent {
 	}
 
 	public async getAllCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest(ODC.RequestType.getAllCount, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.getAllCount, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json as {
 			totalNodes: number;
-			nodeCountByType: {[key: string]: number}
+			nodeCountByType: { [key: string]: number }
 		} & ODC.ReturnTimeTaken;
 	}
 
 	public async getRootsCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest(ODC.RequestType.getRootsCount, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.getRootsCount, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json as {
 			totalNodes: number;
-			nodeCountByType: {[key: string]: number}
+			nodeCountByType: { [key: string]: number }
 		} & ODC.ReturnTimeTaken;
 	}
 
 	public async storeNodeReferences(args: ODC.StoreNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
-		const result = await this.sendRequest(ODC.RequestType.storeNodeReferences, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.storeNodeReferences, { ...args, convertResponseToJsonCompatible: false }, options);
 		const output = result.json as ODC.StoreNodeReferencesResponse;
 
 		const rootTree = [] as ODC.TreeNode[];
@@ -650,7 +650,7 @@ export class OnDeviceComponent {
 	}
 
 	public async assignElementIdOnAllNodes(args: ODC.AssignElementIdOnAllNodesArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest(ODC.RequestType.assignElementIdOnAllNodes, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.assignElementIdOnAllNodes, { ...args, convertResponseToJsonCompatible: false }, options);
 		const output = result.json as ODC.AssignElementIdOnAllNodesResponse;
 
 		return output;
@@ -685,7 +685,7 @@ export class OnDeviceComponent {
 				} else {
 					console.log('Encountered unexpected subtype ' + nodeTree.subtype);
 				}
-			} else if(parentIsTitleGroup) {
+			} else if (parentIsTitleGroup) {
 				// We don't want to append to currentNodeTreeKeyPathParts in this case
 			} else if (nodeTree.id) {
 				currentNodeTreeKeyPathParts.push('#' + nodeTree.id);
@@ -700,9 +700,9 @@ export class OnDeviceComponent {
 	}
 
 	public async deleteNodeReferences(args: ODC.DeleteNodeReferencesArgs = {}, options: ODC.RequestOptions = {}) {
-			await this.applySharedKeyPathLogic(args, options);
+		await this.applySharedKeyPathLogic(args, options);
 
-		const result = await this.sendRequest(ODC.RequestType.deleteNodeReferences, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.deleteNodeReferences, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
@@ -833,13 +833,17 @@ export class OnDeviceComponent {
 		return nodeFound;
 	}
 
-	/** deprecated will be removed in 3.0 */
+	/**
+	 * @deprecated will be removed in 3.0
+	 */
 	public async startResponsivenessTesting(args: ODC.StartResponsivenessTestingArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.startResponsivenessTesting, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
-	/** deprecated will be removed in 3.0 */
+	/**
+	 * @deprecated will be removed in 3.0
+	 */
 	public async getResponsivenessTestingData(args = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getResponsivenessTestingData, args, options);
 		return result.json as ODC.ReturnTimeTaken & {
@@ -869,7 +873,9 @@ export class OnDeviceComponent {
 		};
 	}
 
-	/** deprecated will be removed in 3.0 */
+	/**
+	 * @deprecated will be removed in 3.0
+	 */
 	public async stopResponsivenessTesting(args = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.stopResponsivenessTesting, args, options);
 		return result.json as ODC.ReturnTimeTaken;
@@ -915,17 +921,17 @@ export class OnDeviceComponent {
 
 	public async isSubtype(args: ODC.IsSubtypeArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
-		const result = await this.sendRequest(ODC.RequestType.isSubtype, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.isSubtype, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json.isSubtype as boolean;
 	}
 	//#endregion
 
 	//#region requests run on task thread
 	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}) {
-		const result = await this.sendRequest(ODC.RequestType.readRegistry, {...args, convertResponseToJsonCompatible: false}, options);
+		const result = await this.sendRequest(ODC.RequestType.readRegistry, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json as {
 			values: {
-				[section: string]: {[sectionItemKey: string]: string}
+				[section: string]: { [sectionItemKey: string]: string }
 			}
 		} & ODC.ReturnTimeTaken;
 	}
@@ -1051,7 +1057,7 @@ export class OnDeviceComponent {
 
 		if (args.field === undefined) {
 			const keyPathParts = args.keyPath.split('.');
-			return {...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.')};
+			return { ...args, field: keyPathParts.pop(), keyPath: keyPathParts.join('.') };
 		}
 
 		return args;
@@ -1293,7 +1299,7 @@ export class OnDeviceComponent {
 						error.message = `${json?.error?.message}`;
 						reject(error);
 					}
-				} catch(e) {
+				} catch (e) {
 					reject(e);
 				}
 			};
@@ -1302,7 +1308,7 @@ export class OnDeviceComponent {
 		const timeout = this.getTimeOut(options);
 		try {
 			return await utils.promiseTimeout(promise, timeout);
-		} catch(e) {
+		} catch (e) {
 			if ((e as Error).name === 'Timeout') {
 				let message = `${request.type} request timed out after ${timeout}ms`;
 

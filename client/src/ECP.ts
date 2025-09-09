@@ -1,5 +1,5 @@
 import type { HttpRequestOptions } from './RokuDevice';
-import type { RokuDevice } from './RokuDevice';
+import { RokuDevice } from './RokuDevice';
 import type { ActiveAppResponse } from './types/ActiveAppResponse';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
@@ -38,7 +38,17 @@ export class ECP {
 	public static readonly Key = Key;
 	public readonly Key = Key;
 
-	constructor(device: RokuDevice, config?: ConfigOptions) {
+	/**
+	 * For the remainder of 2.X, device can either be a RokuDevice instance or a config object for backwards compability but will be removed in 3.0
+	 */
+	constructor(device?: RokuDevice | ConfigOptions, config?: ConfigOptions) {
+		if (!device) {
+			device = new RokuDevice();
+		} else if (!(device instanceof RokuDevice)) {
+			config = device;
+			device = new RokuDevice();
+		}
+
 		this.device = device;
 		if (config) {
 			this.setConfig(config);
@@ -259,7 +269,7 @@ export class ECP {
 					if (await this.isActiveApp(channelId)) {
 						return;
 					}
-				} catch (e) {}
+				} catch (e) { }
 				await this.utils.sleep(100);
 			}
 			throw this.utils.makeError('sendLaunchChannelVerifyLaunch', `Could not launch channel with id of '${channelId}`);
