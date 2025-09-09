@@ -5,6 +5,8 @@ import * as Ajv from 'ajv';
 const ajv = new Ajv();
 
 import type { ConfigOptions, DeviceConfigOptions } from './types/ConfigOptions';
+import type { BoundingRect } from './types/OnDeviceComponent';
+import type { AppUIResponse, AppUIResponseChild } from './types/AppUIResponse';
 type PathType = typeof path;
 
 class Utils {
@@ -24,7 +26,7 @@ class Utils {
 		return this.path;
 	}
 
-	private getFsExtra() {
+	public getFsExtra() {
 		if (!this.fsExtra) {
 			this.fsExtra = this.require<typeof fsExtra>('fs-extra');
 		}
@@ -277,6 +279,87 @@ class Utils {
 
 	public randomInteger(max = 2147483647, min = 0) {
 		return Math.floor(Math.random() * (max - min + 1) ) + min;
+	}
+
+	public findNodesAtLocation(args: { appUIResponse: AppUIResponse, x: number, y: number, includeMatchesWithoutKeyPath?: boolean }) {
+		const matches = [] as AppUIResponseChild[];
+		this.findNodesAtLocationCore({...args , children: args.appUIResponse.screen.children, matches: matches});
+
+		const {x, y} = args;
+
+		// We now want to sort our matches to try and return the best one first
+		matches.sort((a, b) => {
+			const aOffest = this.calculateRectCenterPointOffsetFromLocation(x, y, a.sceneRect as BoundingRect);
+			const bOffset = this.calculateRectCenterPointOffsetFromLocation(x, y, b.sceneRect as BoundingRect);
+			const difference = (Math.abs(aOffest.x) + Math.abs(aOffest.y)) - (Math.abs(bOffset.x) + Math.abs(bOffset.y));
+			if (difference === 0) {
+				// If both items have the exact same size and position then we want to return the deepest one.
+				if (a.keyPath && b.keyPath) {
+					const aKeyPath = a.keyPath.split('.');
+					const bKeyPath = b.keyPath.split('.');
+					if (aKeyPath.length < bKeyPath.length) {
+						return difference + .1;
+					} else if (aKeyPath.length > bKeyPath.length) {
+						return difference - .1;
+					}
+				} else if (a.keyPath) {
+					return difference - .1;
+				} else {
+					return difference + .1;
+				}
+			}
+			return difference;
+		});
+
+		return {
+			matches
+		};
+	}
+
+	private findNodesAtLocationCore(args: {x: number, y: number, children: AppUIResponseChild[], matches: AppUIResponseChild[], isArrayGridChild?: boolean, includeMatchesWithoutKeyPath?: boolean}) {
+		let isArrayGridChild = args.isArrayGridChild ?? false;
+
+		const {x, y, children, matches} = args;
+
+		for (const child of children) {
+			let isLocationWithinNodeDimensions = false;
+			if (child.sceneRect) {
+				const rect = child.sceneRect;
+				isLocationWithinNodeDimensions = (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height);
+			}
+			const isVisible = (child.visible && !!child.opacity);
+
+			if (child.subtype == 'RowListItem') {
+				isArrayGridChild = true;
+			}
+
+			if ((isLocationWithinNodeDimensions && isVisible) || isArrayGridChild) {
+				if (isLocationWithinNodeDimensions && isVisible) {
+					if (child.keyPath != undefined || args.includeMatchesWithoutKeyPath) {
+						matches.push(child);
+					}
+				}
+
+				if (child.children?.length) {
+					this.findNodesAtLocationCore({x: x, y: y, children: child.children, matches: matches, isArrayGridChild: isArrayGridChild});
+				}
+			}
+		}
+	}
+
+	private calculateRectCenterPoint(rect: BoundingRect) {
+		return {
+			x: (rect.x - rect.width) / 2,
+			y: (rect.y - rect.height) / 2
+		};
+	}
+
+	private calculateRectCenterPointOffsetFromLocation(x: number, y: number, rect: BoundingRect) {
+		const centerPoint = this.calculateRectCenterPoint(rect);
+		return {
+			x: x - centerPoint.x,
+			y: y - centerPoint.y
+		};
 	}
 }
 

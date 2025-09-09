@@ -7,8 +7,17 @@ export async function getMock(mockFilePath: string) {
 	return await fsExtra.readFile(mockFilePath, 'utf8');
 }
 
-export async function getTestMock(contextOrSuite: Mocha.Context | Mocha.Suite, extension: MockFileFormat = 'json'): Promise<object | string> {
-	const mockFilePath = 'src/test/mocks/' + utils.generateFileNameForTest(contextOrSuite, extension);
+export async function getTestMock(contextOrSuiteOrString: Mocha.Context | Mocha.Suite | string, extension: MockFileFormat = 'json'): Promise<object | string> {
+	let relativePath: string;
+
+	if (typeof contextOrSuiteOrString === 'string') {
+		relativePath = `${contextOrSuiteOrString}.${extension}`;
+	} else {
+		relativePath = utils.generateFileNameForTest(contextOrSuiteOrString, extension);
+	}
+
+	const mockFilePath = 'src/test/mocks/' + relativePath;
+
 	const mockContents = await getMock(mockFilePath);
 	if (extension === 'json') {
 		return JSON.parse(mockContents);
@@ -17,9 +26,9 @@ export async function getTestMock(contextOrSuite: Mocha.Context | Mocha.Suite, e
 	}
 }
 
-export async function getNeedleMockResponse(contextOrSuite: Mocha.Context | Mocha.Suite, extension: MockFileFormat = 'json'): Promise<needle.NeedleResponse> {
+export async function getNeedleMockResponse(contextOrSuiteOrString: Mocha.Context | Mocha.Suite | string, extension: MockFileFormat = 'json'): Promise<needle.NeedleResponse> {
 	const mock: any = {
-		body: await getTestMock(contextOrSuite, extension)
+		body: await getTestMock(contextOrSuiteOrString, extension)
 	};
 	return mock;
 }

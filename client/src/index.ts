@@ -1,13 +1,13 @@
 import { utils } from './utils';
 export { utils };
 
-import { ECP } from './ECP';
-const ecp = new ECP();
-export { ECP, ecp };
-
 import { RokuDevice } from './RokuDevice';
 const device = new RokuDevice();
 export { RokuDevice, device };
+
+import { ECP } from './ECP';
+const ecp = new ECP(device);
+export { ECP, ecp };
 
 import { OnDeviceComponent } from './OnDeviceComponent';
 const odc = new OnDeviceComponent(device);
@@ -21,6 +21,7 @@ import { Suitest } from './Suitest';
 const suitest = new Suitest(ecp, odc);
 export { Suitest, suitest };
 
+export * from './types/AppUIResponse';
 export * from './types/ActiveAppResponse';
 export * from './types/ConfigOptions';
 export * from './types/OnDeviceComponent';

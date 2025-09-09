@@ -1,8 +1,11 @@
 import type { Socket } from 'net';
+import type { AppUIResponse } from './AppUIResponse';
 
 export enum RequestType {
+	assignElementIdOnAllNodes = 'assignElementIdOnAllNodes',
 	callFunc = 'callFunc',
 	cancelRequest = 'cancelRequest',
+	convertKeyPathToSceneKeyPath = 'convertKeyPathToSceneKeyPath',
 	createDirectory = 'createDirectory',
 	createChild = 'createChild',
 	deleteFile = 'deleteFile',
@@ -28,6 +31,7 @@ export enum RequestType {
 	isSubtype = 'isSubtype',
 	isShowingOnScreen = 'isShowingOnScreen',
 	onFieldChange = 'onFieldChange',
+	onFieldChangeOnce = 'onFieldChangeOnce',
 	readFile = 'readFile',
 	readRegistry = 'readRegistry',
 	removeNode = 'removeNode',
@@ -47,10 +51,12 @@ export enum RequestType {
 export type RequestArgs = CallFuncArgs | CreateChildArgs | GetFocusedNodeArgs | GetValueArgs | GetValuesArgs | HasFocusArgs | IsInFocusChainArgs | OnFieldChangeArgs | CancelRequestArgs | SetValueArgs | ReadRegistryArgs | WriteRegistryArgs | DeleteRegistrySectionsArgs | DeleteEntireRegistrySectionsArgs | StoreNodeReferencesArgs | GetNodesInfoArgs | FindNodesAtLocationArgs | CreateDirectoryArgs | DeleteEntireRegistrySectionsArgs | DeleteFileArgs | DeleteNodeReferencesArgs | DisableScreensaverArgs | FocusNodeArgs | GetAllCountArgs | GetDirectoryListingArgs | GetNodesWithPropertiesArgs | GetRootsCountArgs | GetServerHostArgs | GetVolumeListArgs | IsShowingOnScreenArgs | IsSubtypeArgs | ReadFileArgs | RenameFileArgs | SetSettingsArgs | StartResponsivenessTestingArgs | StatPathArgs | WriteFileArgs | RemoveNodeArgs |RemoveNodeChildrenArgs | DisableScreensaverArgs;
 
 export enum BaseType {
+	appUI = 'appUI',
+	elementId = 'elementId',
+	focusedNode = 'focusedNode',
 	global = 'global',
-	scene = 'scene',
 	nodeRef = 'nodeRef',
-	focusedNode = 'focusedNode'
+	scene = 'scene'
 }
 
 export declare type LogLevels = 'off' | 'error' | 'warn' | 'info' | 'debug' | 'verbose';
@@ -63,6 +69,9 @@ interface NodeRefKey {
 export interface BaseArgs extends NodeRefKey {
 	/** Specifies what the entry point is for this key path. Defaults to 'global' if not specified */
 	base?: BaseType |  keyof typeof BaseType;
+
+	/** If base type is appUI then a request will normally be made to the device using ecp.getAppUI. If you wish to avoid this extra call for multiple requests in a row you can pass in an AppUIResponse. */
+	appUIResponse?: AppUIResponse;
 }
 
 export interface BaseKeyPath extends BaseArgs, MaxChildDepth {
@@ -240,6 +249,11 @@ export interface StoreNodeReferencesArgs extends NodeRefKey {
 	includeBoundingRectInfo?: boolean;
 }
 
+export interface AssignElementIdOnAllNodesArgs {
+	/** True by default. If false will regenerate a new element id for all elements even if one was previously assigned */
+	maintainExistingElementId?: boolean;
+}
+
 export interface StoreNodeReferencesResponse extends ReturnTimeTaken {
 	flatTree: TreeNode[];
 	rootTree: TreeNode[];
@@ -250,6 +264,9 @@ export interface StoreNodeReferencesResponse extends ReturnTimeTaken {
 		height: number;
 		resolution: 'FHD' | 'HD';
 	}
+}
+
+export interface AssignElementIdOnAllNodesResponse extends ReturnTimeTaken {
 }
 
 export interface DeleteNodeReferencesArgs extends NodeRefKey {}
@@ -448,4 +465,9 @@ export interface SetSettingsArgs {
 
 export interface CancelRequestArgs {
 	id: string;
+}
+
+export interface ConvertKeyPathToSceneKeyPathArgs extends BaseKeyPath {
+	/** If we are trying to convert an appUI key path then we need to split up the key path for several edge cases */
+	arrayGridChildElementId?: string;
 }

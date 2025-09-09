@@ -174,6 +174,118 @@ describe('OnDeviceComponent', function () {
 		});
 	});
 
+	describe('getRootsCount', function () {
+		it('should have the correct fields and return a known node subtype', async () => {
+			const { totalNodes, nodeCountByType } = await odc.getRootsCount();
+			expect(totalNodes).to.be.greaterThan(0);
+			expect(nodeCountByType['MainScene']).to.equal(1);
+			for (const nodeSubtype in nodeCountByType) {
+				expect(nodeCountByType[nodeSubtype]).to.be.greaterThan(0);
+			}
+		});
+	});
+
+	describe('assignElementIdOnAllNodes', function () {
+		it('should have the correct fields for flatTree', async () => {
+			await odc.assignElementIdOnAllNodes();
+			const appUI = await ecp.getAppUI();
+			expect(appUI.screen.children[0].subtype).to.equal('MainScene');
+			expect(appUI.screen.children[0].uiElementId).to.equal('RTA_1');
+		});
+	});
+
+	describe('convertKeyPathToSceneKeyPath', function () {
+		it('should convert valid scene keyPath to a scene keyPath', async () => {
+			let response = await odc.convertKeyPathToSceneKeyPath({
+				base: 'scene',
+				keyPath: '#pagesContainerGroup'
+			});
+			expect(response.base).to.equal('scene');
+			expect(response.keyPath).to.equal('#pagesContainerGroup');
+
+			response = await odc.convertKeyPathToSceneKeyPath({
+				base: 'scene',
+				keyPath: '0'
+			});
+			expect(response.base).to.equal('scene');
+			expect(response.keyPath).to.equal('0');
+		});
+
+		it('should convert valid appUI keyPath to a scene keyPath', async () => {
+			let response = await odc.convertKeyPathToSceneKeyPath({
+				base: 'appUI',
+				keyPath: '#pagesContainerGroup'
+			});
+			expect(response.base).to.equal('scene');
+			expect(response.keyPath).to.equal('#pagesContainerGroup');
+
+			response = await odc.convertKeyPathToSceneKeyPath({
+				base: 'scene',
+				keyPath: '0'
+			});
+			expect(response.base).to.equal('scene');
+			expect(response.keyPath).to.equal('0');
+		});
+
+		it('should throw if the value does not exist', async () => {
+			try {
+				await odc.convertKeyPathToSceneKeyPath({
+					base: 'scene',
+					keyPath: '#doesnotexist'
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it('should throw if global value', async () => {
+			try {
+				const result = await odc.convertKeyPathToSceneKeyPath({
+					base: 'global',
+					keyPath: 'AuthManager'
+				});
+			} catch (e) {
+				// failed as expected
+				return;
+			}
+			assert.fail('Should have thrown an exception');
+		});
+
+		it('should return correct scene path for row with only one item', async () => {
+			const result = await odc.convertKeyPathToSceneKeyPath({
+				base: 'appUI',
+				keyPath: '#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.0.items.0.#rect'
+			});
+
+			expect(result.base).to.equal('scene');
+			expect(result.keyPath).to.equal('#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.0.items.0.#rect');
+		});
+
+		it('should return correct scene path for an ArrayGrid child after we have scrolled and require an absolute position for the content not just node tree position', async () => {
+			await odc.focusNode({ keyPath: '#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent' });
+			await odc.setValue({
+				keyPath: '#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent',
+				field: 'jumpToRowItem',
+				value: [1, 20]
+			});
+			await utils.sleep(500);
+			const appUIArgs = {
+				base: 'appUI' as const,
+				keyPath: '#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.1.items.6.#title'
+			};
+
+			const result = await odc.convertKeyPathToSceneKeyPath(appUIArgs);
+
+			const { value } = await odc.getValue(appUIArgs);
+			expect(value.text).to.equal('row 1  item 16');
+
+			expect(result.base).to.equal('scene');
+			expect(result.keyPath).to.equal('#pagesContainerGroup.0.#rowListWithoutCustomTitleComponent.1.items.16.#title');
+		});
+	});
+
 	describe('getNodesInfo', function () {
 		let storeResult: Unwrap<typeof odc.storeNodeReferences>;
 		before(async () => {

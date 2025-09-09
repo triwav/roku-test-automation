@@ -28,14 +28,13 @@ sub init()
 
 	landingPage = m.top.pagesContainer.createChild("LandingPage")
 	setFocus(landingPage)
-	
+
 	'To test the onFieldChangeRepeat
 	m.repeatingTimer = createObject("roSGNode","Timer")
 	m.repeatingTimer.observeFieldScoped("fire", "onRepeatingTimerFired")
 	m.repeatingTimer.duration = 1
 	m.repeatingTimer.repeat = true
 	m.repeatingTimer.control = "start"
-
 end sub
 
 sub onRepeatingTimerFired()

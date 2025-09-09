@@ -1,10 +1,10 @@
-import type { HttpRequestOptions} from './RokuDevice';
+import type { HttpRequestOptions } from './RokuDevice';
 import { RokuDevice } from './RokuDevice';
 import type { ActiveAppResponse } from './types/ActiveAppResponse';
 import type { ConfigOptions } from './types/ConfigOptions';
 import { utils } from './utils';
-import * as fsExtra from 'fs-extra';
 import type { MediaPlayerResponse } from './types/MediaPlayerResponse';
+import type { AppUIResponse, AppUIResponseChild } from './types/AppUIResponse';
 
 export enum Key {
 	Back = 'Back',
@@ -38,8 +38,18 @@ export class ECP {
 	public static readonly Key = Key;
 	public readonly Key = Key;
 
-	constructor(config?: ConfigOptions) {
-		this.device = new RokuDevice(config);
+	/**
+	 * For the remainder of 2.X, device can either be a RokuDevice instance or a config object for backwards compability but will be removed in 3.0
+	 */
+	constructor(device?: RokuDevice | ConfigOptions, config?: ConfigOptions) {
+		if (!device) {
+			device = new RokuDevice();
+		} else if (!(device instanceof RokuDevice)) {
+			config = device;
+			device = new RokuDevice();
+		}
+
+		this.device = device;
 		if (config) {
 			this.setConfig(config);
 		}
@@ -68,7 +78,7 @@ export class ECP {
 		return this.getRtaConfig()?.ECP;
 	}
 
-	public async sendText(text: string, options?: SendKeypressOptions & {raspTemplateVariable?: 'script-login' | 'script-password'}) {
+	public async sendText(text: string, options?: SendKeypressOptions & { raspTemplateVariable?: 'script-login' | 'script-password' }) {
 		this.addRaspFileStep(`text: ${options?.raspTemplateVariable ?? text}`);
 		for (const char of text) {
 			const value: any = `LIT_${char}`;
@@ -99,8 +109,8 @@ export class ECP {
 
 	public async sendKeyEvent(key: Key, keyEventOptions: SendKeyEventOptions, keypressOptions?: SendKeypressOptions) {
 		const { eventOptions, pressOptions } = this.normalizeOptions(keyEventOptions, keypressOptions);
-		const keydown = eventOptions?.keydown; 
-		const keyup = eventOptions?.keyup; 
+		const keydown = eventOptions?.keydown;
+		const keyup = eventOptions?.keyup;
 		const duration = eventOptions.duration;
 
 		if (keydown != keyup || duration) {
@@ -127,7 +137,7 @@ export class ECP {
 
 				if (wait) await this.utils.sleep(wait);
 			}
-		} else {	
+		} else {
 			await this.sendKeypress(key, pressOptions);
 		}
 	}
@@ -145,7 +155,7 @@ export class ECP {
 			pressOptions = {
 				wait: pressOptions
 			};
-		} 
+		}
 
 		return { eventOptions: eventOptions, pressOptions: pressOptions };
 	}
@@ -259,7 +269,7 @@ export class ECP {
 					if (await this.isActiveApp(channelId)) {
 						return;
 					}
-				} catch (e) {}
+				} catch (e) { }
 				await this.utils.sleep(100);
 			}
 			throw this.utils.makeError('sendLaunchChannelVerifyLaunch', `Could not launch channel with id of '${channelId}`);
@@ -287,6 +297,229 @@ export class ECP {
 			};
 		}
 		return response;
+	}
+
+	public async getAppUI() {
+		const result = await this.device.sendEcpGet(`query/app-ui`);
+
+		const children = result.body?.children;
+		if (!children || children[0].name != 'status' || children[0].value != 'OK' || children[1].name != 'topscreen' || children[1].children[0].name != 'plugin' || children[1].children[1].name != 'screen') {
+			throw this.utils.makeError('getAppUIInvalidResponse', 'Received invalid app-ui response from device');
+		}
+
+		const screen = children[1].children[1];
+
+		const response: AppUIResponse = {
+			plugin: children[1].children[0].attributes,
+			screen: {
+				focused: screen.attributes.focused == 'true',
+				type: screen.attributes.type,
+				children: this.convertChildrenForGetAppUI(screen.children)
+			}
+		};
+
+		const sceneNode = response.screen.children[0];
+		sceneNode.base = 'scene';
+		sceneNode.keyPath = '';
+
+		if (sceneNode.children) {
+			for (const [position, child] of sceneNode.children.entries()) {
+				this.generateKeyPathsFromAppUIResponse(child, { position: position });
+			}
+		}
+
+		this.calculateSceneBoundingRects(sceneNode);
+		return response;
+	}
+
+	private convertChildrenForGetAppUI(children: any[], parentIsRowListItem = false) {
+		const response: AppUIResponseChild[] = [];
+
+		// If we are a RowListItem then we are removing the duplicate Group returned in addition to the MarkupGrid to avoid confusion
+		if (parentIsRowListItem) {
+			children.pop(); // Remove the last child which is the Group
+		}
+
+		for (const [index, child] of children.entries()) {
+			// Do some conversions
+			if (child.attributes.name) {
+				child.attributes.id = child.attributes.name;
+			}
+
+			child.attributes.focusable = (child.attributes.focusable == 'true');
+			child.attributes.focused = (child.attributes.focused == 'true');
+			child.attributes.visible = (child.attributes.visible !== 'false');
+			child.attributes.inheritParentOpacity = (child.attributes.inheritParentOpacity !== 'false');
+			child.attributes.inheritParentTransform = (child.attributes.inheritParentTransform !== 'false');
+
+			const opacity = child.attributes.opacity ?? '100';
+			child.attributes.opacity = +opacity / 100;
+
+			if (child.attributes.translation) {
+				child.attributes.translation = this.convertAppUiArray(child.attributes.translation);
+			}
+
+			if (child.attributes.bounds) {
+				// If we have bounds then we need to ensure translation is set or else we won't be able to move in the SceneGraph Inspector
+				if (!child.attributes.translation) {
+					child.attributes.translation = [0, 0];
+				}
+				child.attributes.bounds = this.convertAppUiArray(child.attributes.bounds);
+			}
+
+			const childResponse: AppUIResponseChild = {
+				...child.attributes,
+				subtype: child.name == 'RenderableNode' ? 'Group' : child.name,
+			};
+
+			if (Array.isArray(child.children) && child.children.length > 0) {
+				childResponse.children = this.convertChildrenForGetAppUI(child.children ?? [], child.name == 'RowListItem');
+			} else {
+				// The response contains a property named children with the number of children but we are using the same name for the array so want to remove if no children
+				delete childResponse.children;
+			}
+
+			response.push(childResponse);
+		}
+
+		return response;
+	}
+
+	private calculateSceneBoundingRects(node: AppUIResponseChild, parent?: AppUIResponseChild, offset: number[] = [0, 0]) {
+		if (node.bounds) {
+			node.sceneRect = {
+				x: node.bounds[0] + offset[0],
+				y: node.bounds[1] + offset[1],
+				width: node.bounds[2],
+				height: node.bounds[3]
+			};
+
+			node['offset'] = offset;
+		}
+
+		const children = node.children ?? [];
+
+		for (const child of children) {
+			let childOffset = offset;
+
+			if (node.subtype === 'RowListItem') {
+				if (node.bounds) {
+					if (child.subtype !== 'MarkupGrid') {
+						// If we aren't the MarkupGrid child then we need to subtract the translation of the MarkupGrid to get the correct offset for the title
+						const markupGrid = children[children.length - 1];
+						if (markupGrid.subtype !== 'MarkupGrid') {
+							// Shouldn't happen but just in case
+							console.log('Expected last child of RowListItem to be MarkupGrid');
+						} else {
+							if (markupGrid.translation) {
+								childOffset = [
+									childOffset[0],
+									childOffset[1] - markupGrid.translation[1]
+								];
+							}
+						}
+					}
+
+					childOffset = [
+						childOffset[0],
+						node.bounds[1] + childOffset[1]
+					];
+				}
+			} else if (node.translation && (node.subtype !== 'MarkupGrid' || parent?.subtype !== 'RowListItem')) {
+				// We have to add to offsets from bounds values for correct positioning of MarkupGrid children
+				if (parent?.subtype === 'MarkupGrid' && node.bounds) {
+					childOffset = [
+						node.bounds[0] + childOffset[0],
+						node.bounds[1] + childOffset[1]
+					];
+				} else {
+					childOffset = [
+						node.translation[0] + childOffset[0],
+						node.translation[1] + childOffset[1]
+					];
+				}
+			}
+
+			this.calculateSceneBoundingRects(child, node, childOffset);
+		}
+	}
+
+	private generateKeyPathsFromAppUIResponse(node: AppUIResponseChild, keyPathContext: {
+		position: number;
+		duplicateIdsFound?: boolean;
+		parent?: AppUIResponseChild;
+	}, keyPathParts: string[] = []) {
+		const currentNodeKeyPathParts = [...keyPathParts];
+
+		// Only add key path if it doesn't already exist
+		let addKeyPath = !node.keyPath;
+
+		if (node.subtype == 'RowListItem') {
+			// Don't want to add key paths for RowListItem but want to add onto key path parts
+			addKeyPath = false;
+
+			currentNodeKeyPathParts.push(keyPathContext.position.toString());
+		} else if (keyPathContext.parent?.subtype == 'RowListItem') { // We have to make our magic key paths for RowList
+			// don't add key paths by default for RowListItem
+			addKeyPath = false;
+
+			// Title is always the first child of the RowListItem
+			if (keyPathContext.position == 0) {
+				currentNodeKeyPathParts.push('title');
+
+				if (node.subtype == 'Label') {
+					addKeyPath = true;
+				} else {
+					// We need to add it to the child instead so it is tied to the actual custom component
+					const child = node.children?.[0];
+					if (child) {
+						node.base = 'appUI';
+						child.keyPath = currentNodeKeyPathParts.join('.');
+					}
+				}
+			} else if (node.subtype === 'MarkupGrid') {
+				currentNodeKeyPathParts.push('items');
+			}
+		} else if (addKeyPath && node.id && !keyPathContext.duplicateIdsFound) {
+			currentNodeKeyPathParts.push(`#${node.id}`);
+		} else if (addKeyPath) {
+			currentNodeKeyPathParts.push(keyPathContext.position.toString());
+		}
+
+		if (addKeyPath) {
+			// We always need to use appUI as the base for the key path. Originally we would try to use scene for non ArrayGrid items but nodes that don't extend Group are excluded in the app-ui response so we can't use scene as the base because index based key path parts will then get off.
+			node.base = 'appUI';
+			node.keyPath = currentNodeKeyPathParts.join('.');
+		}
+
+		const children = node.children ?? [];
+		for (const [childPosition, childNode] of children.entries()) {
+			const duplicateIds = children.filter((child, index) => {
+				if (child.id) {
+					if (child.id == childNode.id && index != childPosition) {
+						return true;
+					}
+				}
+				return false;
+			});
+
+			keyPathContext = {
+				position: childPosition,
+				parent: node,
+				duplicateIdsFound: duplicateIds.length > 0,
+			};
+
+			this.generateKeyPathsFromAppUIResponse(childNode, keyPathContext, currentNodeKeyPathParts);
+		}
+	}
+
+	private convertAppUiArray(input?: string, fallback?: number[]) {
+		if (!input) {
+			return fallback;
+		}
+
+		// the app-ui api returns arrays with curly braces that we need to convert to square braces and then run JSON.parse on
+		return JSON.parse(input.replace(/[{}]/g, match => match === '{' ? '[' : ']'));
 	}
 
 	public getChannelId(channelId?: string) {
@@ -333,7 +566,7 @@ export class ECP {
 	}
 
 	public async getChanperf(options: HttpRequestOptions = {}) {
-		const {body} = await this.device.sendEcpGet(`query/chanperf`, undefined, options);
+		const { body } = await this.device.sendEcpGet(`query/chanperf`, undefined, options);
 
 		const response = this.simplifyEcpResponse(body);
 		const plugin = response.plugin;
@@ -426,7 +659,7 @@ export class ECP {
 		raspFileLines.push(`steps:`);
 		raspFileLines = raspFileLines.concat(this.raspFileSteps);
 		this.raspFileSteps = undefined;
-		fsExtra.writeFileSync(outputPath, raspFileLines.join('\n'));
+		utils.getFsExtra().writeFileSync(outputPath, raspFileLines.join('\n'));
 	}
 }
 

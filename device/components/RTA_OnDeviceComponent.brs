@@ -4,9 +4,11 @@ sub init()
 	m.task.observeFieldScoped("renderThreadRequest", "onRenderThreadRequestChange")
 	m.task.control = "RUN"
 	m.validRequestTypes = {
+		"assignElementIdOnAllNodes": processAssignElementIdOnAllNodesRequest
 		"callFunc": processCallFuncRequest
 		"callFunc": processCallFuncRequest
 		"cancelRequest": processCancelRequest
+		"convertKeyPathToSceneKeyPath": processConvertKeyPathToSceneKeyPath
 		"createChild": processCreateChildRequest
 		"deleteNodeReferences": processDeleteNodeReferencesRequest
 		"disableScreenSaver": processDisableScreenSaverRequest
@@ -36,11 +38,22 @@ sub init()
 	m.activeRequests = {}
 
 	m.nodeReferences = {}
+
+	m.currentElementId = 0
 end sub
 
 sub onRenderThreadRequestChange(event as Object)
 	request = event.getData()
-	RTA_logDebug("Received request: ", formatJson(request))
+
+	' Don't want to take the overhead if we are not logging debug
+	if RTA_canLog("debug") then
+		json = formatJson(request)
+		if json.len() > 1000 then
+			json = "large request showing first 1000 characters: " + json.left(1000) + "..."
+		end if
+
+		RTA_logDebug("Received request: ", json)
+	end if
 
 	requestType = request.type
 	request.timespan = createObject("roTimespan")
@@ -175,6 +188,162 @@ function processGetFocusedNodeRequest(request as Object) as Object
 	end if
 
 	return result
+end function
+
+function processConvertKeyPathToSceneKeyPath(request as Object) as Object
+	args = request.args
+
+	result = processGetValueRequest(args)
+	if RTA_isErrorObject(result) then
+		return result
+	end if
+
+	if result.found <> true then
+		return RTA_buildErrorResponseObject("No value found at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "'")
+	end if
+
+	node = result.value
+	if NOT RTA_isNode(node) then
+		return RTA_buildErrorResponseObject("Value at key path '" + RTA_getStringAtKeyPath(args, "keyPath") + "' was not a node")
+	end if
+
+	keyPathParts = []
+
+	' If we found the matching node then we are going to walk up the tree to build the scene key path. If we don't end up with scene at the top then then we know we didn't succeed
+	while true
+		parent = node.getParent()
+		if parent <> invalid then
+			nodeId = node.id
+			if nodeId <> "" then
+				keyPathParts.unshift("#" + nodeId)
+			else
+				position = RTA_getNodeParentIndex(node, parent)
+				keyPathParts.unshift(position.toStr())
+			end if
+
+			' If this is a child of global then we need to not continue as global will return the Scene when getParent is called but it won't be a valid key path
+			if m.global.isSameNode(node) then
+				exit while
+			end if
+
+			node = parent
+		else
+			' If we got to the top and the node is a scene then we can return the key path
+			if node.isSubtype("Scene") then
+				' One final check, we want to see if we have an arrayGridChildElementId that we also need to resolve
+				arrayGridChildElementId = args.arrayGridChildElementId
+				if RTA_isNonEmptyString(arrayGridChildElementId) then
+					result = generateArrayGridChildKeyPath(arrayGridChildElementId)
+					if RTA_isErrorObject(result) then
+						return result
+					end if
+
+					keyPathParts.push(result)
+				end if
+
+				keyPath = keyPathParts.join(".")
+
+				return {
+					"base": "scene"
+					"keyPath": keyPath
+				}
+			else
+				exit while
+			end if
+		end if
+	end while
+
+	' If we got to the top and the node is not a scene then we can't convert it to a scene key path
+	return RTA_buildErrorResponseObject("Could not convert key path to scene key path as the node was not a child of the Scene")
+end function
+
+function generateArrayGridChildKeyPath(arrayGridChildElementId)
+		result = processGetValueRequest({
+			"base": "elementId"
+			"keyPath": arrayGridChildElementId
+		})
+
+		if RTA_isErrorObject(result) then
+			return result
+		end if
+
+		if result.found <> true then
+			return RTA_buildErrorResponseObject("Could not get base for elementId request. Not found")
+		end if
+
+		arrayGridChild = result.value
+		if NOT RTA_isNode(arrayGridChild) then
+			return RTA_buildErrorResponseObject("Could not get base for elementId request. Not a node")
+		end if
+
+		itemPosition = []
+		arrayGridKeyPathParts = []
+		currentContentNode = invalid
+
+		while true
+			' Have to walk up the tree to build our key path.
+			if currentContentNode <> invalid then
+				' If we have reached the itemContent then we need to create the starting key path part
+				contentNodeParent = currentContentNode.getParent()
+
+				if contentNodeParent = invalid then
+					RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as currentContentNode parent was invalid")
+				else if contentNodeParent.isSubtype("ArrayGrid") = true then
+					if contentNodeParent.isSubtype("RowList") = true then
+						' If it's a RowList and we have one itemPosition then this is a title key path
+						if itemPosition.count() = 1 then
+							arrayGridKeyPathParts.unshift(itemPosition[0].toStr() + ".title")
+						else if itemPosition.count() = 2 then
+							arrayGridKeyPathParts.unshift(itemPosition[0].toStr() + ".items." + itemPosition[1].toStr())
+						else
+							return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as itemPosition had unexpected number of parts for RowList")
+						end if
+					else
+						if itemPosition.count() = 1 then
+							arrayGridKeyPathParts.unshift(itemPosition[0].toStr())
+						else
+							return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as itemPosition had unexpected number of parts for ArrayGrid")
+						end if
+					end if
+
+					return arrayGridKeyPathParts.join(".")
+				end if
+
+				index = RTA_getNodeParentIndex(currentContentNode, contentNodeParent)
+				if index = -1 then
+					return RTA_buildErrorResponseObject("Could not find itemContent parent index")
+				end if
+
+				itemPosition.unshift(index)
+				currentContentNode = contentNodeParent
+			else if arrayGridChild.hasField("itemContent") then
+				' Putting as the second logic gate instead of first to prevent getting triggered after after currentContentNode has been set
+				if arrayGridChild.itemContent = invalid then
+					return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path as itemContent was invalid")
+				end if
+
+				currentContentNode = arrayGridChild.itemContent
+			else
+				if arrayGridChild.id <> "" then
+					arrayGridKeyPathParts.unshift("#" + arrayGridChild.id)
+				else
+					index = RTA_getNodeParentIndex(arrayGridChild, arrayGridChild.getParent())
+					if index = -1 then
+						return RTA_buildErrorResponseObject("Could not find ArrayGrid child parent index")
+					end if
+
+					arrayGridKeyPathParts.unshift(index.toStr())
+				end if
+
+				arrayGridChild = arrayGridChild.getParent()
+
+				if arrayGridChild = invalid then
+					return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path")
+				end if
+			end if
+		end while
+
+		return RTA_buildErrorResponseObject("Could not convert arrayGridChildElementId to a key path")
 end function
 
 function processGetValueRequest(request as Object) as Object
@@ -578,13 +747,16 @@ end sub
 
 function processSetValueRequest(request as Object) as Object
 	args = request.args
+
+	' Need to call getBaseObject first as this will modify path for elementId based key paths
+	base = getBaseObject(args)
+
 	keyPath = RTA_getStringAtKeyPath(args, "keyPath")
 	field = args.field
 	if NOT RTA_isString(field) then
 		return RTA_buildErrorResponseObject("Missing valid 'field' param")
 	end if
 
-	base = getBaseObject(args)
 	if RTA_isErrorObject(base) then
 		return base
 	end if
@@ -804,6 +976,30 @@ function processStoreNodeReferencesRequest(request as Object) as Object
 	end if
 
 	m.nodeReferences[nodeRefKey] = storedNodes
+
+	return result
+end function
+
+function processAssignElementIdOnAllNodesRequest(request as Object) as Object
+	args = request.args
+
+	maintainExistingElementId = RTA_getBooleanAtKeyPath(args, "maintainExistingElementId", true)
+
+	if maintainExistingElementId = false then
+		m.currentElementId = 0
+	end if
+
+	result = {}
+
+	allNodes = m.top.getAll()
+	for each node in allNodes
+		if maintainExistingElementId AND node.getUIElementId() <> "" then
+			' Skipping as already stored
+		else
+			node.setUIElementId("RTA_" + m.currentElementId.toStr())
+			m.currentElementId++
+		end if
+	end for
 
 	return result
 end function
@@ -1522,6 +1718,26 @@ function getBaseObject(args as Object) as Dynamic
 		else
 			return base
 		end if
+	else if baseType = "elementId" then
+		' Element ID will always be the first part of the key path
+		keyPathParts = RTA_getStringAtKeyPath(args, "keyPath").split(".")
+
+		matchingElementId = keyPathParts.shift()
+		if matchingElementId = invalid then
+			return RTA_buildErrorResponseObject("Base type of elementId but no keyPath provided")
+		end if
+
+		allNodes = m.top.getAll()
+		for each node in allNodes
+			elementId = node.getUIElementId()
+			if elementId = matchingElementId then
+				' We have to modify the returned key path to exclude the elementId part of the key path. Still debating if it should be a separate argument or continue including in keyPath arg.
+				args.keyPath = keyPathParts.join(".")
+				return node
+			end if
+		end for
+
+		return RTA_buildErrorResponseObject("Could not find elementId '" + matchingElementId + "'")
 	end if
 	return RTA_buildErrorResponseObject("Invalid base type supplied '" + baseType + "'")
 end function

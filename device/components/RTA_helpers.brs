@@ -721,12 +721,21 @@ sub RTA_log(level as Integer, message as String, value = "nil" as Dynamic)
 	date.toLocalTime()
 	formattedDate = RTA_lpad(date.getMonth()) + "-" + RTA_lpad(date.getDayOfMonth()) + " " + RTA_lpad(date.getHours()) + ":" + RTA_lpad(date.getMinutes()) + ":" + RTA_lpad(date.getSeconds()) + "." + RTA_lpad(date.getMilliseconds(), 3)
 	message = formattedDate + " [RTA][" + levels[level] + "] " + message
+
 	if RTA_isString(value) AND value = "nil" then
 		print message
 	else
 		print message value
 	end if
 end sub
+
+function RTA_canLog(level as String) as Boolean
+	if RTA_isNumber(m.logLevel) AND m.logLevel < RTA_convertLogLevelStringToInteger(level) then
+		return false
+	end if
+
+	return true
+end function
 
 function RTA_lpad(value as Dynamic, padLength = 2 as Integer, padCharacter = "0" as String)
 	value = value.toStr()
