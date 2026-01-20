@@ -144,6 +144,42 @@ In addition, with the recent requirement for login and logout scripts, the follo
 `finishRaspFileCreation`  
 and a copy of [`utils.sleep`](#sleep) that also includes a pause in your rasp file.
 
+#### Key ECP Methods
+
+##### `getAppUI`
+
+> getAppUI(): [AppUIResponse](./client/src/types/AppUIResponse.ts)
+
+Gets the App UI tree from the device, providing detailed information about the currently displayed UI elements. This is useful for understanding the current UI structure and is used internally by many OnDeviceComponent methods. Note that nodes that are not renderable on screen such as Task, Timer, Animation, etc will not show up here so care must be taken when using index positions if you have any of these nodes in your node tree.
+
+```ts
+const appUI = await ecp.getAppUI();
+console.log('UI elements:', appUI.screen.children);
+```
+
+##### `getActiveApp`
+
+> getActiveApp(options?: HttpRequestOptions): Promise<{app: string, id: string, version: string, subtype: string}>
+
+Gets information about the currently running application.
+
+```ts
+const activeApp = await ecp.getActiveApp();
+console.log('Active app ID:', activeApp.id);
+```
+
+##### `getMediaPlayer`
+
+> getMediaPlayer(options?: HttpRequestOptions): Promise<MediaPlayerInfo>
+
+Gets detailed information about the current media player state, including playback position, duration, and buffering status.
+
+```ts
+const player = await ecp.getMediaPlayer();
+console.log('Current position:', player.position);
+console.log('Duration:', player.duration);
+```
+
 ---
 
 ### `OnDeviceComponent`
@@ -293,6 +329,35 @@ await odc.callFunc({
 });
 ```
 
+#### `getComponentGlobalAAKeyPath`
+
+> getComponentGlobalAAKeyPath(args: [ODC.GetComponentGlobalAAKeyPath](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetComponentGlobalAAKeyPath), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {found: boolean, value?, timeTaken: number}
+
+Retrieves a value from a component's global AA (associative array) using a key path. This is useful for accessing component-level state that's stored in the component's m object.
+
+```ts
+const result = await odc.getComponentGlobalAAKeyPath({
+  base: 'scene',
+  keyPath: '#myComponent',
+  componentGlobalAAKeyPath: 'someStateValue'
+});
+```
+
+#### `setComponentGlobalAAKeyPath`
+
+> setComponentGlobalAAKeyPath(args: [ODC.SetComponentGlobalAAKeyPath](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20SetComponentGlobalAAKeyPath), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {value, timeTaken: number}
+
+Sets a value in a component's global AA using a key path. Allows you to modify component-level state directly.
+
+```ts
+await odc.setComponentGlobalAAKeyPath({
+  base: 'scene',
+  keyPath: '#myComponent',
+  componentGlobalAAKeyPath: 'someStateValue',
+  componentGlobalAAKeyPathValue: 'new value'
+});
+```
+
 #### `getFocusedNode`
 
 > getFocusedNode(args: [ODC.GetFocusedNodeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetFocusedNodeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {node?: NodeRepresentation, ref?: number, keyPath?: string, timeTaken: number}
@@ -391,6 +456,108 @@ There are number of comparison operators that can be used:
 
 **NOTE** Not all comparison types can be used on all types. For example `>=` can only be used on number types.
 
+#### `convertKeyPathToSceneKeyPath`
+
+> convertKeyPathToSceneKeyPath(args: [ODC.ConvertKeyPathToSceneKeyPathArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20ConvertKeyPathToSceneKeyPathArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {base: 'scene', keyPath: string, timeTaken: number}
+
+Converts an appUI or other base key path to a scene-based key path. Useful when you need to work with scene references but only have appUI paths.
+
+```ts
+const sceneKeyPath = await odc.convertKeyPathToSceneKeyPath({
+  base: 'appUI',
+  keyPath: '#myComponent.#childNode'
+});
+```
+
+#### `assignElementIdOnAllNodes`
+
+> assignElementIdOnAllNodes(args: [ODC.AssignElementIdOnAllNodesArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20AssignElementIdOnAllNodesArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): [AssignElementIdOnAllNodesResponse](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20AssignElementIdOnAllNodesResponse)
+
+Assigns a unique element ID to all nodes in the scene graph. This is primarily used internally but can be useful for advanced node tracking.
+
+#### `findNodesAtLocation`
+
+> findNodesAtLocation(args: [ODC.FindNodesAtLocationArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20FindNodesAtLocationArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {matches: TreeNode[]}
+
+Finds all visible nodes at a specific x,y screen coordinate. Returns nodes sorted by proximity to the specified point, with the closest match first.
+
+```ts
+const result = await odc.findNodesAtLocation({
+  x: 960,
+  y: 540
+});
+console.log('Nodes at center of screen:', result.matches);
+```
+
+#### `focusNode`
+
+> focusNode(args: [ODC.FocusNodeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20FocusNodeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Programmatically sets focus to a specific node.
+
+```ts
+await odc.focusNode({
+  keyPath: '#loginButton'
+});
+```
+
+#### `createChild`
+
+> createChild(args: [ODC.CreateChildArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20CreateChildArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Creates a new child node under a parent node.
+
+```ts
+await odc.createChild({
+  base: 'scene',
+  keyPath: '#myContainer',
+  subtype: 'Label',
+  fields: {
+    text: 'Hello World',
+    id: 'myLabel'
+  }
+});
+```
+
+#### `removeNode`
+
+> removeNode(args: [ODC.RemoveNodeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RemoveNodeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Removes a node from the scene graph.
+
+```ts
+await odc.removeNode({
+  keyPath: '#nodeToRemove'
+});
+```
+
+#### `isShowingOnScreen`
+
+> isShowingOnScreen(args: [ODC.IsShowingOnScreenArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20IsShowingOnScreenArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {isShowing: boolean, isFullyShowing: boolean, timeTaken: number}
+
+Checks if a node is currently showing on screen and if it's fully visible.
+
+```ts
+const result = await odc.isShowingOnScreen({
+  keyPath: '#myButton'
+});
+console.log('Is showing:', result.isShowing);
+console.log('Is fully showing:', result.isFullyShowing);
+```
+
+#### `isSubtype`
+
+> isSubtype(args: [ODC.IsSubtypeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20IsSubtypeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): boolean
+
+Checks if a node is a subtype of a specified type.
+
+```ts
+const isButton = await odc.isSubtype({
+  keyPath: '#myNode',
+  subtype: 'Button'
+});
+```
+
 #### `getAllCount`
 
 > getAllCount(args: [ODC.GetAllCountArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetAllCountArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {totalNodes: number, nodeCountByType: {[key: string]: number}, timeTaken: number}
@@ -439,6 +606,107 @@ Allows for deleting sections from the registry. Similar functionality can be ach
 
 Provides a way to clear out all sections in registry. Uses `deleteRegistrySections` under the hood but makes it clearer what is being done.
 
+#### `getVolumeList`
+
+> getVolumeList(args: [ODC.GetVolumeListArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetVolumeListArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {list: string[], timeTaken: number}
+
+Gets a list of available volumes on the device.
+
+```ts
+const volumes = await odc.getVolumeList();
+console.log('Available volumes:', volumes.list);
+```
+
+#### `getDirectoryListing`
+
+> getDirectoryListing(args: [ODC.GetDirectoryListingArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetDirectoryListingArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {list: string[], timeTaken: number}
+
+Gets a list of files and directories at a specified path.
+
+```ts
+const listing = await odc.getDirectoryListing({
+  path: 'tmp:/'
+});
+console.log('Files:', listing.list);
+```
+
+#### `statPath`
+
+> statPath(args: [ODC.StatPathArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20StatPathArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {ctime: Date, hidden: boolean, mtime: Date, permissions: 'rw' | 'r', size: number, sizeex: number, type: 'file' | 'directory', timeTaken: number}
+
+Gets file or directory information at a specified path.
+
+```ts
+const fileInfo = await odc.statPath({
+  path: 'tmp:/myfile.txt'
+});
+console.log('File size:', fileInfo.size);
+console.log('Modified:', fileInfo.mtime);
+```
+
+#### `createDirectory`
+
+> createDirectory(args: [ODC.CreateDirectoryArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20CreateDirectoryArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Creates a new directory at the specified path.
+
+```ts
+await odc.createDirectory({
+  path: 'tmp:/mydir'
+});
+```
+
+#### `deleteFile`
+
+> deleteFile(args: [ODC.DeleteFileArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20DeleteFileArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Deletes a file at the specified path.
+
+```ts
+await odc.deleteFile({
+  path: 'tmp:/myfile.txt'
+});
+```
+
+#### `renameFile`
+
+> renameFile(args: [ODC.RenameFileArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RenameFileArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Renames a file on the device.
+
+```ts
+await odc.renameFile({
+  fromPath: 'tmp:/oldname.txt',
+  toPath: 'tmp:/newname.txt'
+});
+```
+
+#### `readFile`
+
+> readFile(args: [ODC.ReadFileArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20ReadFileArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {json: {timeTaken: number}, binaryPayload: Buffer}
+
+Reads a file from the device.
+
+```ts
+const fileData = await odc.readFile({
+  path: 'tmp:/myfile.txt'
+});
+console.log('File contents:', fileData.binaryPayload.toString());
+```
+
+#### `writeFile`
+
+> writeFile(args: [ODC.WriteFileArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20WriteFileArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Writes data to a file on the device.
+
+```ts
+await odc.writeFile({
+  path: 'tmp:/myfile.txt',
+  binaryPayload: Buffer.from('Hello World')
+});
+```
+
 #### `removeNodeChildren`
 
 > removeNodeChildren(args: [ODC.RemoveNodeChildrenArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%RemoveNodeChildrenArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
@@ -450,6 +718,29 @@ Allows removing children of the node at the specified key path
 > getApplicationStartTime(args: [ODC.GetApplicationStartTimeArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%GetApplicationStartTimeArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {startTime: number, timeTaken: number}
 
 Gives access to Roku's [roAppManager.getUptime()](https://developer.roku.com/en-gb/docs/references/brightscript/interfaces/ifappmanager.md#getuptime-as-object) to allow a highly accurate time since application load that can be useful in performance tests.
+
+#### `getServerHost`
+
+> getServerHost(args: [ODC.GetServerHostArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20GetServerHostArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {host: string, timeTaken: number}
+
+Gets the server host that the device is communicating with.
+
+```ts
+const hostInfo = await odc.getServerHost();
+console.log('Connected to:', hostInfo.host);
+```
+
+#### `setSettings`
+
+> setSettings(args: [ODC.SetSettingsArgs](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20SetSettingsArgs), options: [ODC.RequestOptions](./client/src/types/OnDeviceComponent.ts#:~:text=export%20interface%20RequestOptions)): {timeTaken: number}
+
+Updates OnDeviceComponent settings like log level.
+
+```ts
+await odc.setSettings({
+  logLevel: 'verbose'
+});
+```
 
 #### `disableScreenSaver`
 

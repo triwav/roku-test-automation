@@ -52,6 +52,9 @@ export class OnDeviceComponent {
 	}
 
 	//#region requests run on render thread
+	/**
+	 * Calls a function on a node in the scene graph
+	 */
 	public async callFunc(args: ODC.CallFuncArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
@@ -61,6 +64,9 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets a value from a component's global AA (associative array) using a key path
+	 */
 	public async getComponentGlobalAAKeyPath(args: ODC.GetComponentGlobalAAKeyPath, options: ODC.RequestOptions = {}) {
 		const callFuncArgs: ODC.CallFuncArgs = {
 			...args,
@@ -83,6 +89,9 @@ export class OnDeviceComponent {
 		return output;
 	}
 
+	/**
+	 * Sets a value in a component's global AA using a key path
+	 */
 	public async setComponentGlobalAAKeyPath(args: ODC.SetComponentGlobalAAKeyPath, options: ODC.RequestOptions = {}) {
 		const callFuncArgs: ODC.CallFuncArgs = {
 			...args,
@@ -106,6 +115,9 @@ export class OnDeviceComponent {
 		return output;
 	}
 
+	/**
+	 * Gets a value from the scene graph at a specified key path
+	 */
 	public async getValue(args: ODC.GetValueArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
@@ -116,6 +128,9 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets multiple values from the scene graph in a single request
+	 */
 	public async getValues(args: ODC.GetValuesArgs, options: ODC.RequestOptions = {}) {
 		if (this.hasMultipleAppUIRequests(args)) {
 			// If we have multiple appUI requests we get the appUIResponse first and assign to each to avoid multiple calls
@@ -144,6 +159,9 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets detailed information about multiple nodes including their subtypes, fields, and children
+	 */
 	public async getNodesInfo(args: ODC.GetNodesInfoArgs, options: ODC.RequestOptions = {}) {
 		if (this.hasMultipleAppUIRequests(args)) {
 			// If we have multiple appUI requests we get the appUIResponse first and assign to each to avoid multiple calls
@@ -181,6 +199,9 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets the currently focused node in the scene graph
+	 */
 	public async getFocusedNode(args: ODC.GetFocusedNodeArgs = {}, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
@@ -192,6 +213,9 @@ export class OnDeviceComponent {
 		};
 	}
 
+	/**
+	 * Checks if a node has focus
+	 */
 	public async hasFocus(args: ODC.HasFocusArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
@@ -199,6 +223,9 @@ export class OnDeviceComponent {
 		return result.json.hasFocus as boolean;
 	}
 
+	/**
+	 * Checks if a node is in the focus chain
+	 */
 	public async isInFocusChain(args: ODC.IsInFocusChainArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
@@ -206,6 +233,9 @@ export class OnDeviceComponent {
 		return result.json.isInFocusChain as boolean;
 	}
 
+	/**
+	 * Observes a field and returns when it changes once, optionally matching a specific value
+	 */
 	public async onFieldChangeOnce(args: ODC.OnFieldChangeOnceArgs, options: ODC.RequestOptions = {}) {
 		// If observerFireTimeout is not supplied then we default to the timeout
 		if (!args.observerFireTimeout) {
@@ -241,6 +271,9 @@ export class OnDeviceComponent {
 		}
 	}
 
+	/**
+	 * Sets up a continuous observer on a field that calls a callback whenever the field changes
+	 */
 	public async onFieldChange(args: ODC.OnFieldChangeArgs, options: ODC.RequestOptions = {}, callback: (response: ODC.OnFieldChangeResponse) => Promise<void> | void) {
 		await this.applySharedKeyPathLogic(args, options);
 		args = this.breakOutFieldFromKeyPath(args);
@@ -301,6 +334,9 @@ export class OnDeviceComponent {
 		return cancelObserverFunc;
 	}
 
+	/**
+	 * Sets a value at a specified key path in the scene graph
+	 */
 	public async setValue(args: ODC.SetValueArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
@@ -327,7 +363,11 @@ export class OnDeviceComponent {
 		}
 	}
 
-	/** Needed to convert appUI key path to scene but might be useful in other cases as well. Takes in a key path and will try and call getParent() on each node in the tree until it gets to the Scene */
+	/**
+	 * Converts an appUI or other base key path to a scene-based key path.
+	 * Needed to convert appUI key path to scene but might be useful in other cases as well.
+	 * Takes in a key path and will try and call getParent() on each node in the tree until it gets to the Scene
+	 */
 	public async convertKeyPathToSceneKeyPath(args: ODC.ConvertKeyPathToSceneKeyPathArgs, options: ODC.RequestOptions = {}) {
 		// Prevents changes made for this function from affecting the original args object
 		args = { ...args };
@@ -557,6 +597,9 @@ export class OnDeviceComponent {
 		throw new Error(`Could not convert appUI key path`);
 	}
 
+	/**
+	 * Gets the count of all nodes in the scene graph
+	 */
 	public async getAllCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getAllCount, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json as {
@@ -565,6 +608,9 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets the count of root nodes in the scene graph
+	 */
 	public async getRootsCount(args: ODC.GetRootsCountArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getRootsCount, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json as {
@@ -649,6 +695,9 @@ export class OnDeviceComponent {
 		return output;
 	}
 
+	/**
+	 * Assigns a unique element ID to all nodes in the scene graph for reference purposes
+	 */
 	public async assignElementIdOnAllNodes(args: ODC.AssignElementIdOnAllNodesArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.assignElementIdOnAllNodes, { ...args, convertResponseToJsonCompatible: false }, options);
 		const output = result.json as ODC.AssignElementIdOnAllNodesResponse;
@@ -706,6 +755,9 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Finds nodes in the scene graph that match specified property criteria
+	 */
 	public async getNodesWithProperties(args: ODC.GetNodesWithPropertiesArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 
@@ -777,6 +829,9 @@ export class OnDeviceComponent {
 		};
 	}
 
+	/**
+	 * Finds all visible nodes at a specific x,y screen coordinate, sorted by proximity to the point
+	 */
 	public async findNodesAtLocation(args: ODC.FindNodesAtLocationArgs, options: ODC.RequestOptions = {}) {
 		let nodeTreeResponse = args.nodeTreeResponse;
 		if (!nodeTreeResponse) {
@@ -881,35 +936,53 @@ export class OnDeviceComponent {
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Disables the screen saver
+	 */
 	public async disableScreenSaver(args: ODC.DisableScreensaverArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.disableScreenSaver, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Sets focus to a specific node
+	 */
 	public async focusNode(args: ODC.FocusNodeArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.focusNode, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Creates a new child node under a parent node
+	 */
 	public async createChild(args: ODC.CreateChildArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.createChild, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Removes a node from the scene graph
+	 */
 	public async removeNode(args: ODC.RemoveNodeArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.removeNode, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Removes all children from a node
+	 */
 	public async removeNodeChildren(args: ODC.RemoveNodeChildrenArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.removeNodeChildren, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Checks if a node is currently showing on screen and if it's fully visible
+	 */
 	public async isShowingOnScreen(args: ODC.IsShowingOnScreenArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.isShowingOnScreen, args, options);
@@ -919,6 +992,9 @@ export class OnDeviceComponent {
 		};
 	}
 
+	/**
+	 * Checks if a node is a subtype of a specified type
+	 */
 	public async isSubtype(args: ODC.IsSubtypeArgs, options: ODC.RequestOptions = {}) {
 		await this.applySharedKeyPathLogic(args, options);
 		const result = await this.sendRequest(ODC.RequestType.isSubtype, { ...args, convertResponseToJsonCompatible: false }, options);
@@ -927,6 +1003,9 @@ export class OnDeviceComponent {
 	//#endregion
 
 	//#region requests run on task thread
+	/**
+	 * Reads from the device's registry
+	 */
 	public async readRegistry(args: ODC.ReadRegistryArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.readRegistry, { ...args, convertResponseToJsonCompatible: false }, options);
 		return result.json as {
@@ -936,16 +1015,25 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Writes to the device's registry
+	 */
 	public async writeRegistry(args: ODC.WriteRegistryArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.writeRegistry, args, options);
 		return result.json;
 	}
 
+	/**
+	 * Deletes specified sections from the registry
+	 */
 	public async deleteRegistrySections(args: ODC.DeleteRegistrySectionsArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.deleteRegistrySections, args, options);
 		return result.json;
 	}
 
+	/**
+	 * Deletes all sections from the registry
+	 */
 	public async deleteEntireRegistry(args: ODC.DeleteEntireRegistrySectionsArgs = {}, options: ODC.RequestOptions = {}) {
 		const deleteSectionsArgs: ODC.DeleteRegistrySectionsArgs = {
 			sections: [],
@@ -954,6 +1042,9 @@ export class OnDeviceComponent {
 		return await this.deleteRegistrySections(deleteSectionsArgs, options);
 	}
 
+	/**
+	 * Gets a list of available volumes on the device
+	 */
 	public async getVolumeList(args: ODC.GetVolumeListArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getVolumeList, args, options);
 		return result.json as {
@@ -961,6 +1052,9 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets a list of files and directories at a specified path
+	 */
 	public async getDirectoryListing(args: ODC.GetDirectoryListingArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getDirectoryListing, args, options);
 		return result.json as {
@@ -968,6 +1062,9 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets file or directory information at a specified path
+	 */
 	public async statPath(args: ODC.StatPathArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.statPath, args, options);
 		const body = result.json;
@@ -985,21 +1082,33 @@ export class OnDeviceComponent {
 		} & ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Creates a new directory at the specified path
+	 */
 	public async createDirectory(args: ODC.CreateDirectoryArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.createDirectory, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Deletes a file at the specified path
+	 */
 	public async deleteFile(args: ODC.DeleteFileArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.deleteFile, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Renames a file on the device
+	 */
 	public async renameFile(args: ODC.RenameFileArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.renameFile, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Reads a file from the device
+	 */
 	public async readFile(args: ODC.ReadFileArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.readFile, args, options);
 		return result as {
@@ -1008,11 +1117,17 @@ export class OnDeviceComponent {
 		};
 	}
 
+	/**
+	 * Writes data to a file on the device
+	 */
 	public async writeFile(args: ODC.WriteFileArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.writeFile, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Gets the application start time using roAppManager.getUptime()
+	 */
 	public async getApplicationStartTime(args: ODC.GetApplicationStartTimeArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getApplicationStartTime, args, options);
 		return result.json as {
@@ -1020,6 +1135,10 @@ export class OnDeviceComponent {
 		};
 	}
 
+	/**
+	 * Gets the server host that the device is communicating with
+	 * TODO rename in 3.0 as getClientHost
+	 */
 	public async getServerHost(args: ODC.GetServerHostArgs = {}, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.getServerHost, args, options);
 		return result.json as {
@@ -1029,11 +1148,17 @@ export class OnDeviceComponent {
 	//#endregion
 
 	//#region requests run on both
+	/**
+	 * Updates OnDeviceComponent settings like log level
+	 */
 	public async setSettings(args: ODC.SetSettingsArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.setSettings, args, options);
 		return result.json as ODC.ReturnTimeTaken;
 	}
 
+	/**
+	 * Cancels an active request by its ID
+	 */
 	public async cancelRequest(args: ODC.CancelRequestArgs, options: ODC.RequestOptions = {}) {
 		const result = await this.sendRequest(ODC.RequestType.cancelRequest, args, options);
 

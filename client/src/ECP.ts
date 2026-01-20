@@ -299,6 +299,9 @@ export class ECP {
 		return response;
 	}
 
+	/**
+	 * Gets the App UI tree from the device, providing detailed information about the currently displayed UI elements. Note that nodes that are not renderable on screen such as Task, Timer, Animation, etc will not show up here so care must be taken when using index positions if you have any of these nodes in your node tree.
+	 */
 	public async getAppUI() {
 		const result = await this.device.sendEcpGet(`query/app-ui`);
 
