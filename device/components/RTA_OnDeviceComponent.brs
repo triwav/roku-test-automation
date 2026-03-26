@@ -1744,7 +1744,11 @@ end function
 
 sub sendResponseToTask(request as Object, response as Object)
 	if RTA_getBooleanAtKeyPath(request, "args.convertResponseToJsonCompatible", true) then
-		response = recursivelyConvertValueToJsonCompatible(response, RTA_getNumberAtKeyPath(request, "args.responseMaxChildDepth"))
+		try
+			response = recursivelyConvertValueToJsonCompatible(response, RTA_getNumberAtKeyPath(request, "args.responseMaxChildDepth"))
+		catch e
+			response = RTA_buildErrorResponseObject("Error converting value to json compatible: " + e.message)
+		end try
 	end if
 
 	response.id = request.id
@@ -1753,14 +1757,35 @@ sub sendResponseToTask(request as Object, response as Object)
 	m.task.renderThreadResponse = response
 end sub
 
-function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth as Integer, depth = -1 as Integer) as Object
+function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth as Integer, depth = -1 as Integer, recursiveObjects = [] as Object) as Object
+	if RTA_isString(value) = false then
+		recursionTest = formatJson(value, 512)
+		' Empty string for a nonstring object means this is a recursive object that can't be fully converted to json
+		if recursionTest = "" then
+			' Check if we have access to IsSameObject
+			utils = createObject("roUtils")
+			if utils = invalid then
+				' If we don't have access just throw an error
+				return RTA_buildErrorResponseObject("Recursion detected")
+			end if
+
+			for each recursiveObject in recursiveObjects
+				if utils.isSameObject(recursiveObject, value) then
+					return "[[RECURSION]]"
+				end if
+			end for
+
+			recursiveObjects.push(value)
+		end if
+	end if
+
 	if RTA_isArray(value) then
 		for i = 0 to RTA_getLastIndex(value)
-			value[i] = recursivelyConvertValueToJsonCompatible(value[i], maxChildDepth, depth)
+			value[i] = recursivelyConvertValueToJsonCompatible(value[i], maxChildDepth, depth, recursiveObjects)
 		end for
 	else if RTA_isAA(value) then
 		for each key in value
-			value[key] = recursivelyConvertValueToJsonCompatible(value[key], maxChildDepth, depth)
+			value[key] = recursivelyConvertValueToJsonCompatible(value[key], maxChildDepth, depth, recursiveObjects)
 		end for
 	else if RTA_isNode(value) then
 		depth++
@@ -1772,11 +1797,11 @@ function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth 
 		else
 			value = node.getFields()
 			value.delete("focusedChild")
-			value = recursivelyConvertValueToJsonCompatible(value, maxChildDepth, depth)
+			value = recursivelyConvertValueToJsonCompatible(value, maxChildDepth, depth, recursiveObjects)
 			if maxChildDepth > depth then
 				children = []
 				for each child in node.getChildren(-1, 0)
-					children.push(recursivelyConvertValueToJsonCompatible(child, maxChildDepth, depth))
+					children.push(recursivelyConvertValueToJsonCompatible(child, maxChildDepth, depth, recursiveObjects))
 				end for
 				value.children = children
 			end if
@@ -1784,5 +1809,6 @@ function recursivelyConvertValueToJsonCompatible(value as Object, maxChildDepth 
 
 		value.subtype = node.subtype()
 	end if
+
 	return value
 end function

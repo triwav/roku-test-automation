@@ -10,6 +10,51 @@ sub init()
 
 	m.poster = m.top.findNode("poster")
 
+	loopingNode = createObject("roSGNode", "Group")
+	loopingNode.update({
+		"loopingNode": loopingNode
+	}, true)
+
+	loopNodeChildNode = createObject("roSGNode", "Group")
+	loopNodeChildNode.update({
+		"aaContainingLoop": {
+			"loopingNode": loopNodeChildNode
+		}
+	}, true)
+
+	loopAASingleChildNode = createObject("roSGNode", "Group")
+	loop = {}
+	loop["loop"] = loop
+	loopAASingleChildNode.update({
+		"aaContainingLoop": loop
+	}, true)
+
+	loopArraySingleChildNode = createObject("roSGNode", "Group")
+	loop = []
+	loop.push(loop)
+	loopArraySingleChildNode.update({
+		"arrayContainingLoop": loop
+	}, true)
+
+
+	loopAAChildNode = createObject("roSGNode", "Group")
+	loop = {}
+	loop["loop"] = loop
+	loopAAChildNode.update({
+		"aaContainingLoop": {
+			"loop": loop
+			"nonLoopingValue": true
+		}
+	}, true)
+
+	loopArrayChildNode = createObject("roSGNode", "Group")
+	loop = []
+	loop.push("nonLoopingValue")
+	loop.push(loop)
+	loopArrayChildNode.update({
+		"arrayContainingLoop": loop
+	}, true)
+
 	m.global.addFields({
 		"AuthManager": createObject("roSGNode", "AuthManager")
 		"booleanValue": true
@@ -19,6 +64,12 @@ sub init()
 		"arrayValue": [{ "name": "firstItem" }, { "name": "secondItem" }, { "name": "lastItem" }]
 		"launchComplete": false,
 		"repeatingTimerFireCount": 0
+		"loopingNode": loopingNode
+		"loopNodeChild": loopNodeChildNode
+		"loopAAChild": loopAAChildNode
+		"loopArrayChild": loopArrayChildNode
+		"loopAASingleChildNode": loopAASingleChildNode
+		"loopArraySingleChildNode": loopArraySingleChildNode
 	})
 
 	m.timer = createObject("roSGNode", "Timer")

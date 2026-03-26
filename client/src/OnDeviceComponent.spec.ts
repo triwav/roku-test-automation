@@ -854,15 +854,15 @@ describe('OnDeviceComponent', function () {
 						backExitsScene: 'boolean',
 						backgroundColor: 'color',
 						backgroundUri: 'uri',
-						change: 'std::type_index',
-						childRenderOrder: 'std::type_index',
+						change: 'string',
+						childRenderOrder: 'string',
 						clippingRect: 'rect2d',
-						currentDesignResolution: 'std::type_index',
-						dialog: 'std::type_index',
+						currentDesignResolution: 'std::shared_ptr<std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::any, std::less<void>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::any> > > >',
+						dialog: 'std::shared_ptr<Roku::SceneGraph::DialogBase>',
 						enableRenderTracking: 'boolean',
 						focusable: 'boolean',
-						focusedChild: 'std::type_index',
-						graphicsFeatures: 'std::type_index',
+						focusedChild: 'node',
+						graphicsFeatures: 'std::shared_ptr<std::map<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >, std::any, std::less<void>, std::allocator<std::pair<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const, std::any> > > >',
 						id: 'string',
 						inheritParentOpacity: 'boolean',
 						inheritParentTransform: 'boolean',
@@ -870,9 +870,9 @@ describe('OnDeviceComponent', function () {
 						muteAudioGuide: 'boolean',
 						opacity: 'float',
 						pagesContainer: 'node',
-						palette: 'std::type_index',
+						palette: 'std::shared_ptr<Roku::SceneGraph::RSGPalette>',
 						renderPass: 'integer',
-						renderTracking: 'std::type_index',
+						renderTracking: 'string',
 						rotation: 'float',
 						scale: 'vector2d',
 						scaleRotateCenter: 'vector2d',
@@ -881,7 +881,7 @@ describe('OnDeviceComponent', function () {
 					};
 					expect(Object.keys(value).length).to.equal(Object.keys(expectedValues).length);
 					for (const key in expectedValues) {
-						expect(value[key]).to.equal(expectedValues[key]);
+						expect(value[key]).to.equal(expectedValues[key], `Field ${key} should have type ${expectedValues[key]}`);
 					}
 				});
 
@@ -961,6 +961,59 @@ describe('OnDeviceComponent', function () {
 					const { found } = await odc.getValue({ base: 'global', keyPath: 'intValue.sceneSubBoundingRect(item0_1)()' });
 					expect(found).to.false;
 				});
+			});
+		});
+
+		describe('circular reference handling', function () {
+			it('should not stack overflow on direct child node property self referencing itself', async () => {
+				const { value } = await odc.getValue({
+					base: 'global',
+					keyPath: 'loopingNode',
+					responseMaxChildDepth: 0
+				});
+
+				expect(value.loopingNode).to.be.an('object');
+				expect(Object.keys(value.loopingNode)).to.have.lengthOf(2);
+				expect(Object.keys(value.loopingNode)).to.have.members(['id', 'subtype']);
+				expect(value.loopingNode).to.have.property('subtype', 'Group');
+			});
+
+			it('should not stack overflow when aa child property references itself', async () => {
+				const { value } = await odc.getValue({
+					base: 'global',
+					keyPath: 'loopAAChild',
+				});
+				expect(value.aaContainingLoop.nonLoopingValue).to.be.true;
+				expect(value.aaContainingLoop.loop.loop).to.equal('[[RECURSION]]');
+			});
+
+			it('should not stack overflow when array child property references itself', async () => {
+				const { value } = await odc.getValue({
+					base: 'global',
+					keyPath: 'loopArrayChild',
+				});
+				expect(value.arrayContainingLoop).to.be.array();
+				expect(value.arrayContainingLoop).to.have.lengthOf(2);
+				expect(value.arrayContainingLoop[0]).to.equal('nonLoopingValue');
+				expect(value.arrayContainingLoop[1]).to.equal('[[RECURSION]]');
+			});
+
+			it('should not stack overflow when aa child property references itself and has only the looping aa', async () => {
+				const { value } = await odc.getValue({
+					base: 'global',
+					keyPath: 'loopAASingleChildNode',
+				});
+				expect(value.aaContainingLoop.loop).to.equal('[[RECURSION]]');
+			});
+
+			it('should not stack overflow when array child property references itself and has only the looping array', async () => {
+				const { value } = await odc.getValue({
+					base: 'global',
+					keyPath: 'loopArraySingleChildNode',
+				});
+				expect(value.arrayContainingLoop).to.be.array;
+				expect(value.arrayContainingLoop).to.have.lengthOf(1);
+				expect(value.arrayContainingLoop[0]).to.equal('[[RECURSION]]');
 			});
 		});
 	});
